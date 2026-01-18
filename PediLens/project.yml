@@ -1,0 +1,84 @@
+name: PediLens
+options:
+  bundleIdPrefix: com.pedilens
+  deploymentTarget:
+    iOS: "16.0"
+  developmentLanguage: en
+  
+settings:
+  base:
+    PRODUCT_NAME: PediLens
+    PRODUCT_BUNDLE_IDENTIFIER: com.pedilens.app
+    SWIFT_VERSION: "5.9"
+    IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+    TARGETED_DEVICE_FAMILY: "1,2"
+    ENABLE_BITCODE: NO
+    SWIFT_EMIT_LOC_STRINGS: YES
+    GENERATE_INFOPLIST_FILE: NO
+    INFOPLIST_FILE: PediLens/Info.plist
+    CODE_SIGN_ENTITLEMENTS: PediLens/PediLens.entitlements
+    ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+
+targets:
+  PediLens:
+    type: application
+    platform: iOS
+    sources:
+      - path: PediLens
+        excludes:
+          - "*.md"
+          - "SETUP_INSTRUCTIONS.md"
+          - "README.md"
+    resources:
+      - path: PediLens/Resources
+        type: folder
+    settings:
+      base:
+        INFOPLIST_FILE: PediLens/Info.plist
+        CODE_SIGN_ENTITLEMENTS: PediLens/PediLens.entitlements
+        PRODUCT_BUNDLE_IDENTIFIER: com.pedilens.app
+    dependencies:
+      - framework: CoreData.framework
+      - framework: CloudKit.framework
+      - framework: Security.framework
+      - framework: LocalAuthentication.framework
+      - framework: CoreLocation.framework
+      - framework: AVFoundation.framework
+      - framework: Vision.framework
+      - framework: CoreML.framework
+      - framework: PDFKit.framework
+      - framework: CryptoKit.framework
+    preBuildScripts: []
+    postBuildScripts: []
+    
+  PediLensTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - PediLensTests
+    dependencies:
+      - target: PediLens
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.pedilens.app.tests
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/PediLens.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PediLens"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+
+schemes:
+  PediLens:
+    build:
+      targets:
+        PediLens: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - PediLensTests
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release

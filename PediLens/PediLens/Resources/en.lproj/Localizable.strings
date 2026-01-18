@@ -1,0 +1,173 @@
+/* 
+ * Localizable.strings
+ * PediLens
+ * 
+ * English localization strings
+ */
+
+// MARK: - App General
+"app.name" = "PediLens";
+"app.tagline" = "Diabetic Foot Ulcer Documentation";
+
+// MARK: - Authentication
+"auth.faceID.reason" = "Authenticate to access patient records";
+"auth.touchID.reason" = "Authenticate to access patient records";
+"auth.required" = "Authentication Required";
+"auth.failed" = "Authentication failed. Please try again.";
+"auth.unavailable" = "Biometric authentication is not available on this device.";
+"auth.locked" = "Too many failed attempts. Please try again later.";
+
+// MARK: - Camera
+"camera.permission.title" = "Camera Access Required";
+"camera.permission.message" = "PediLens needs camera access to capture wound photos for documentation and tracking.";
+"camera.permission.settings" = "Open Settings";
+"camera.unavailable" = "Camera is not available";
+"camera.capture" = "Capture";
+"camera.retake" = "Retake";
+"camera.use" = "Use Photo";
+"camera.livePhoto" = "Live Photo";
+"camera.hdr" = "HDR";
+"camera.nightMode" = "Night Mode";
+
+// MARK: - Location
+"location.permission.title" = "Location Access";
+"location.permission.message" = "PediLens uses your location to tag wound documentation sessions for better record keeping.";
+
+// MARK: - Storage
+"storage.warning.title" = "Storage Warning";
+"storage.warning.message" = "Storage is %d%% full. Consider deleting old records or exporting data.";
+"storage.full" = "Storage is full. Cannot capture new photos.";
+"storage.manage" = "Manage Storage";
+
+// MARK: - Wound Records
+"wound.new" = "New Wound Record";
+"wound.location" = "Wound Location";
+"wound.location.placeholder" = "e.g., Left foot, plantar surface";
+"wound.status.active" = "Active";
+"wound.status.healing" = "Healing";
+"wound.status.healed" = "Healed";
+"wound.status.archived" = "Archived";
+"wound.delete.title" = "Delete Wound Record?";
+"wound.delete.message" = "This will permanently delete all photos and measurements. This action cannot be undone.";
+"wound.delete.export" = "Export Before Deleting";
+"wound.delete.confirm" = "Delete";
+
+// MARK: - Measurements
+"measurement.length" = "Length";
+"measurement.width" = "Width";
+"measurement.area" = "Area";
+"measurement.depth" = "Depth";
+"measurement.volume" = "Volume";
+"measurement.perimeter" = "Perimeter";
+"measurement.calibrate" = "Calibrate";
+"measurement.uncalibrated.warning" = "Measurements are estimates. Use a reference object for accurate measurements.";
+"measurement.history" = "Measurement History";
+
+// MARK: - Patient Management
+"patient.new" = "New Patient";
+"patient.name" = "Patient Name";
+"patient.id" = "Patient ID";
+"patient.dateOfBirth" = "Date of Birth";
+"patient.notes" = "Notes";
+"patient.search" = "Search Patients";
+"patient.select" = "Select Patient";
+"patient.required" = "Patient identification is required";
+"patient.statistics" = "Statistics";
+"patient.totalWounds" = "Total Wounds";
+"patient.activeWounds" = "Active Wounds";
+
+// MARK: - User Roles
+"role.select.title" = "Select Your Role";
+"role.doctor" = "Doctor / Healthcare Provider";
+"role.doctor.description" = "Manage multiple patients and their wound records";
+"role.patient" = "Patient";
+"role.patient.description" = "Track your own wound healing progress";
+
+// MARK: - Timeline
+"timeline.title" = "Timeline";
+"timeline.empty" = "No capture sessions yet";
+"timeline.filter" = "Filter";
+"timeline.sort" = "Sort";
+"timeline.compare" = "Compare";
+
+// MARK: - Notes
+"note.add" = "Add Note";
+"note.category.improved" = "Improved";
+"note.category.unchanged" = "Unchanged";
+"note.category.worsened" = "Worsened";
+"note.category.general" = "General";
+
+// MARK: - Export
+"export.title" = "Export Data";
+"export.format.pdf" = "PDF Report";
+"export.format.images" = "Images with Metadata";
+"export.format.native" = "PediLens Format";
+"export.options" = "Export Options";
+"export.includePhotos" = "Include Photos";
+"export.includeMeasurements" = "Include Measurements";
+"export.includeNotes" = "Include Notes";
+"export.anonymize" = "Anonymize Patient Data";
+"export.dateRange" = "Date Range";
+"export.hipaa.warning" = "HIPAA Compliance: You are responsible for ensuring secure transmission and storage of exported patient data.";
+"export.success" = "Export completed successfully";
+"export.failed" = "Export failed";
+
+// MARK: - Sync
+"sync.status.synced" = "Synced";
+"sync.status.syncing" = "Syncing...";
+"sync.status.pending" = "Pending Sync";
+"sync.status.offline" = "Offline";
+"sync.status.error" = "Sync Error";
+"sync.enable" = "Enable iCloud Sync";
+"sync.disable" = "Disable iCloud Sync";
+"sync.conflict.title" = "Sync Conflict";
+"sync.conflict.message" = "This record was modified on another device. Choose which version to keep.";
+"sync.conflict.local" = "Keep Local Version";
+"sync.conflict.cloud" = "Keep Cloud Version";
+"sync.conflict.both" = "Keep Both";
+
+// MARK: - Errors
+"error.generic" = "An error occurred";
+"error.tryAgain" = "Try Again";
+"error.cancel" = "Cancel";
+"error.ok" = "OK";
+"error.network" = "Network connection error";
+"error.storage" = "Storage error";
+"error.camera" = "Camera error";
+"error.encryption" = "Encryption error";
+
+// MARK: - Buttons
+"button.save" = "Save";
+"button.cancel" = "Cancel";
+"button.delete" = "Delete";
+"button.edit" = "Edit";
+"button.done" = "Done";
+"button.next" = "Next";
+"button.back" = "Back";
+"button.close" = "Close";
+"button.share" = "Share";
+
+// MARK: - Units
+"unit.mm" = "mm";
+"unit.cm" = "cm";
+"unit.mm2" = "mm²";
+"unit.cm2" = "cm²";
+"unit.mm3" = "mm³";
+"unit.cm3" = "cm³";
+"unit.inches" = "in";
+"unit.in2" = "in²";
+"unit.in3" = "in³";
+
+// MARK: - Accessibility
+"accessibility.camera.capture" = "Capture photo";
+"accessibility.camera.flash" = "Toggle flash";
+"accessibility.measurement.boundary" = "Wound boundary";
+"accessibility.timeline.entry" = "Capture session from %@";
+
+// MARK: - Wound Detection
+"detection.analyzing" = "Analyzing wound...";
+"detection.confidence" = "Detection Confidence: %d%%";
+"detection.manual" = "Manual Boundary";
+"detection.automatic" = "Automatic Detection";
+"detection.refine" = "Refine Detection";
+"detection.failed" = "Automatic detection failed. Please mark the boundary manually.";

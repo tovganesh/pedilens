@@ -22,7 +22,7 @@ This implementation plan breaks down the PediLens native iOS app into discrete, 
     - Implement key generation and retrieval
     - _Requirements: 5.3, 9.1_
   
-  - [~] 2.2 Write property test for encryption round-trip
+  - [x] 2.2 Write property test for encryption round-trip
     - **Property 18: Data Encryption at Rest**
     - **Validates: Requirements 5.3, 9.1**
   
