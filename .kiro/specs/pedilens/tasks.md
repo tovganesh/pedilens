@@ -26,13 +26,13 @@ This implementation plan breaks down the PediLens native iOS app into discrete, 
     - **Property 18: Data Encryption at Rest**
     - **Validates: Requirements 5.3, 9.1**
   
-  - [~] 2.3 Implement biometric authentication
+  - [x] 2.3 Implement biometric authentication
     - Use LocalAuthentication framework for Face ID/Touch ID
     - Implement fallback to device passcode
     - Add session timeout logic (5 minutes)
     - _Requirements: 5.4, 9.2_
   
-  - [~] 2.4 Write property test for authentication requirement
+  - [x] 2.4 Write property test for authentication requirement
     - **Property 19: Authentication Requirement**
     - **Validates: Requirements 5.4, 9.2**
 

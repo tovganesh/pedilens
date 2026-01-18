@@ -7,33 +7,23 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		0ECCC2F9F469B3CF49E8641E /* Security.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 79A03E3DA6E289DF1B7D2952 /* Security.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		12EDF0E39D2B89EF77A5A778 /* LocalAuthentication.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC82D786B78DDD34057299C8 /* LocalAuthentication.framework */; };
 		146F47BFE2FBA850DAD5FDCC /* SecurityManagerPropertyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 375DAED9F93EDD4F41E688C6 /* SecurityManagerPropertyTests.swift */; };
-		1761CE26BBF8438F13334FB3 /* CoreData.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = B456FBFE09FF1B26571490FD /* CoreData.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		1A80893888B5BE2A541EC533 /* FileStorageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8ACD409062A80C28C7CCDF60 /* FileStorageManager.swift */; };
-		1E0A4D53E0D86BB59ECE9389 /* AVFoundation.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = B6E518F7C25DB3110238D316 /* AVFoundation.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		251F42890D0C4B0CE19A89E6 /* SecurityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C105D781E00C00030C27679C /* SecurityManager.swift */; };
 		2788D4291EAF9B8C53AC35B4 /* CryptoKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3CC3B9910FDBBDC923F7C817 /* CryptoKit.framework */; };
 		4439430C7131442AA4832243 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AAE51C5953A2EDEB530652A4 /* Assets.xcassets */; };
 		44643D092AC0D28E85C9E3DA /* PediLensApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 956BF8C8109F97228EB87449 /* PediLensApp.swift */; };
-		4721E4283687B95E0CBFD45D /* PDFKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 4A63FC4B50B3E3CBF7C949F5 /* PDFKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		54FC41DB113A9D31DE1DE6B7 /* PDFKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4A63FC4B50B3E3CBF7C949F5 /* PDFKit.framework */; };
 		5942DFEE0A98B587C1DFB4CC /* CloudKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 747A982603A4C6C64C6B381D /* CloudKit.framework */; };
 		6B1B746CE9356E56DC161667 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2C231C6CDF9B5FC03EBCE79 /* ContentView.swift */; };
-		7A4B72F9956120916C47F6FC /* CoreLocation.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = B14A13950B8F8FBDABA0C091 /* CoreLocation.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		857CE8C0EF693D9E15585C60 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 79A03E3DA6E289DF1B7D2952 /* Security.framework */; };
 		93C87925D306CC65C5102116 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B6E518F7C25DB3110238D316 /* AVFoundation.framework */; };
-		93D6B4AF4133D571E19F2803 /* CloudKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 747A982603A4C6C64C6B381D /* CloudKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		99999F92009DE86566CFA65B /* PersistenceController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 932C22C1E7D854D20D361C68 /* PersistenceController.swift */; };
 		AC4E8808C773071FE0467BBF /* CoreData.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B456FBFE09FF1B26571490FD /* CoreData.framework */; };
-		B29D5F404B28323580FE66BE /* LocalAuthentication.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = AC82D786B78DDD34057299C8 /* LocalAuthentication.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
-		B898BB66B16E25E46EDC2CFB /* Vision.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 131A8064124285A2A10F3F14 /* Vision.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		BDAB44D6A4767F0A982C98D5 /* CoreLocation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B14A13950B8F8FBDABA0C091 /* CoreLocation.framework */; };
-		C86B7D9952A86A07088652AC /* CoreML.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 8C066B7128D95B36BD8E9F68 /* CoreML.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		C8BC6C1A2040DD0060611A49 /* CoreML.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8C066B7128D95B36BD8E9F68 /* CoreML.framework */; };
 		CA9DD36CDC5A9E613995C0C5 /* Vision.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 131A8064124285A2A10F3F14 /* Vision.framework */; };
-		D19739D6FA4A25B5C16D3BF1 /* CryptoKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 3CC3B9910FDBBDC923F7C817 /* CryptoKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		E41783CEB8BBEE484D4E070D /* PediLens.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = B328E2110CE00F916EE7E722 /* PediLens.xcdatamodeld */; };
 		E4C0E614DA46937CDAFE9510 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 31CC1434BB8F77795CD5CF3F /* Localizable.strings */; };
 		E6226C478F5F3A6D6574DFF7 /* Localization.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF53FAC258AB490DBE2EBAD1 /* Localization.swift */; };
@@ -51,50 +41,27 @@
 		};
 /* End PBXContainerItemProxy section */
 
-/* Begin PBXCopyFilesBuildPhase section */
-		34D8BB4276CED6D611D20982 /* Embed Frameworks */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 10;
-			files = (
-				1761CE26BBF8438F13334FB3 /* CoreData.framework in Embed Frameworks */,
-				93D6B4AF4133D571E19F2803 /* CloudKit.framework in Embed Frameworks */,
-				0ECCC2F9F469B3CF49E8641E /* Security.framework in Embed Frameworks */,
-				B29D5F404B28323580FE66BE /* LocalAuthentication.framework in Embed Frameworks */,
-				7A4B72F9956120916C47F6FC /* CoreLocation.framework in Embed Frameworks */,
-				1E0A4D53E0D86BB59ECE9389 /* AVFoundation.framework in Embed Frameworks */,
-				B898BB66B16E25E46EDC2CFB /* Vision.framework in Embed Frameworks */,
-				C86B7D9952A86A07088652AC /* CoreML.framework in Embed Frameworks */,
-				4721E4283687B95E0CBFD45D /* PDFKit.framework in Embed Frameworks */,
-				D19739D6FA4A25B5C16D3BF1 /* CryptoKit.framework in Embed Frameworks */,
-			);
-			name = "Embed Frameworks";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXCopyFilesBuildPhase section */
-
 /* Begin PBXFileReference section */
 		06B145390FEF159F05FB3CC1 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
-		131A8064124285A2A10F3F14 /* Vision.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Vision.framework; sourceTree = "<group>"; };
+		131A8064124285A2A10F3F14 /* Vision.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Vision.framework; path = System/Library/Frameworks/Vision.framework; sourceTree = SDKROOT; };
 		1B9E005E1BAC29CF028E4BD8 /* SecurityManager_README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = SecurityManager_README.md; sourceTree = "<group>"; };
 		375DAED9F93EDD4F41E688C6 /* SecurityManagerPropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecurityManagerPropertyTests.swift; sourceTree = "<group>"; };
-		3CC3B9910FDBBDC923F7C817 /* CryptoKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = CryptoKit.framework; sourceTree = "<group>"; };
-		4A63FC4B50B3E3CBF7C949F5 /* PDFKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = PDFKit.framework; sourceTree = "<group>"; };
+		3CC3B9910FDBBDC923F7C817 /* CryptoKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CryptoKit.framework; path = System/Library/Frameworks/CryptoKit.framework; sourceTree = SDKROOT; };
+		4A63FC4B50B3E3CBF7C949F5 /* PDFKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = PDFKit.framework; path = System/Library/Frameworks/PDFKit.framework; sourceTree = SDKROOT; };
 		6CEA2955822A64E3493E7CDF /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		7453578E3ED202ED024F310C /* SecurityManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecurityManagerTests.swift; sourceTree = "<group>"; };
-		747A982603A4C6C64C6B381D /* CloudKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = CloudKit.framework; sourceTree = "<group>"; };
-		79A03E3DA6E289DF1B7D2952 /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Security.framework; sourceTree = "<group>"; };
+		747A982603A4C6C64C6B381D /* CloudKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CloudKit.framework; path = System/Library/Frameworks/CloudKit.framework; sourceTree = SDKROOT; };
+		79A03E3DA6E289DF1B7D2952 /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
 		8ACD409062A80C28C7CCDF60 /* FileStorageManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileStorageManager.swift; sourceTree = "<group>"; };
-		8C066B7128D95B36BD8E9F68 /* CoreML.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = CoreML.framework; sourceTree = "<group>"; };
+		8C066B7128D95B36BD8E9F68 /* CoreML.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreML.framework; path = System/Library/Frameworks/CoreML.framework; sourceTree = SDKROOT; };
 		932C22C1E7D854D20D361C68 /* PersistenceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceController.swift; sourceTree = "<group>"; };
 		956BF8C8109F97228EB87449 /* PediLensApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PediLensApp.swift; sourceTree = "<group>"; };
 		9D02041AAE18F9C41344CDC3 /* PediLensTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = PediLensTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		AAE51C5953A2EDEB530652A4 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		AC82D786B78DDD34057299C8 /* LocalAuthentication.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = LocalAuthentication.framework; sourceTree = "<group>"; };
-		B14A13950B8F8FBDABA0C091 /* CoreLocation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = CoreLocation.framework; sourceTree = "<group>"; };
-		B456FBFE09FF1B26571490FD /* CoreData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = CoreData.framework; sourceTree = "<group>"; };
-		B6E518F7C25DB3110238D316 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = AVFoundation.framework; sourceTree = "<group>"; };
+		AC82D786B78DDD34057299C8 /* LocalAuthentication.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = LocalAuthentication.framework; path = System/Library/Frameworks/LocalAuthentication.framework; sourceTree = SDKROOT; };
+		B14A13950B8F8FBDABA0C091 /* CoreLocation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreLocation.framework; path = System/Library/Frameworks/CoreLocation.framework; sourceTree = SDKROOT; };
+		B456FBFE09FF1B26571490FD /* CoreData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreData.framework; path = System/Library/Frameworks/CoreData.framework; sourceTree = SDKROOT; };
+		B6E518F7C25DB3110238D316 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
 		C105D781E00C00030C27679C /* SecurityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecurityManager.swift; sourceTree = "<group>"; };
 		C2C231C6CDF9B5FC03EBCE79 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		C3EC3B5F378C1F356D449F77 /* PediLens.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PediLens.entitlements; sourceTree = "<group>"; };
@@ -264,7 +231,6 @@
 				BB757BC57EC08BCE3C6E1455 /* Sources */,
 				8F801581DB645870265F3F23 /* Resources */,
 				FE38F2CC80A4784C0CD1C08C /* Frameworks */,
-				34D8BB4276CED6D611D20982 /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
@@ -376,6 +342,9 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.pedilens.app.tests;
 				SDKROOT = iphoneos;
+				SWIFT_EMIT_MODULE_INTERFACE = NO;
+				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_OBJC_INTERFACE_HEADER_NAME = "";
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PediLens.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PediLens";
 			};
@@ -440,6 +409,7 @@
 				SDKROOT = iphoneos;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_ENABLE_EMIT_CONST_VALUES = NO;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.9;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -457,6 +427,9 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.pedilens.app.tests;
 				SDKROOT = iphoneos;
+				SWIFT_EMIT_MODULE_INTERFACE = NO;
+				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_OBJC_INTERFACE_HEADER_NAME = "";
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PediLens.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PediLens";
 			};
@@ -528,6 +501,7 @@
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_ENABLE_EMIT_CONST_VALUES = NO;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.9;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -540,10 +514,6 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = PediLens/PediLens.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"\".\"",
-				);
 				INFOPLIST_FILE = PediLens/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -551,6 +521,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.pedilens.app;
 				SDKROOT = iphoneos;
+				SWIFT_EMIT_MODULE_INTERFACE = NO;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
@@ -561,10 +532,6 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = PediLens/PediLens.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"\".\"",
-				);
 				INFOPLIST_FILE = PediLens/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -572,6 +539,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.pedilens.app;
 				SDKROOT = iphoneos;
+				SWIFT_EMIT_MODULE_INTERFACE = NO;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;

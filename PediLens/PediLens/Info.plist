@@ -26,6 +26,8 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>PediLens needs camera access to capture wound photos for documentation and tracking.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>PediLens uses Face ID or Touch ID to securely protect your medical data and ensure only you can access patient records.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>PediLens uses your location to tag wound documentation sessions for better record keeping.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
