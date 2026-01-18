@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="22758" systemVersion="23F79" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
+    <entity name="User" representedClassName="User" syncable="YES" codeGenerationType="class">
+        <attribute name="createdAt" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="iCloudSyncEnabled" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="id" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="role" attributeType="String" defaultValueString="patient"/>
+        <relationship name="patients" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="Patient" inverseName="user" inverseEntity="Patient"/>
+    </entity>
+    <entity name="Patient" representedClassName="Patient" syncable="YES" codeGenerationType="class">
+        <attribute name="createdAt" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="dateOfBirth" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="name" attributeType="String"/>
+        <attribute name="notes" optional="YES" attributeType="String"/>
+        <attribute name="patientID" attributeType="String"/>
+        <relationship name="user" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="User" inverseName="patients" inverseEntity="User"/>
+        <relationship name="woundRecords" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="WoundRecord" inverseName="patient" inverseEntity="WoundRecord"/>
+    </entity>
+    <entity name="WoundRecord" representedClassName="WoundRecord" syncable="YES" codeGenerationType="class">
+        <attribute name="id" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="initialAssessmentDate" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="lastUpdated" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="location" attributeType="String"/>
+        <attribute name="status" attributeType="String" defaultValueString="active"/>
+        <relationship name="captureSessions" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="CaptureSession" inverseName="woundRecord" inverseEntity="CaptureSession"/>
+        <relationship name="patient" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Patient" inverseName="woundRecords" inverseEntity="Patient"/>
+    </entity>
+    <entity name="CaptureSession" representedClassName="CaptureSession" syncable="YES" codeGenerationType="class">
+        <attribute name="depthDataPath" optional="YES" attributeType="String"/>
+        <attribute name="id" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="latitude" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="livePhotoVideoPath" optional="YES" attributeType="String"/>
+        <attribute name="locationAvailable" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="longitude" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="photoPath" attributeType="String"/>
+        <attribute name="timestamp" attributeType="Date" usesScalarValueType="NO"/>
+        <relationship name="measurement" optional="YES" maxCount="1" deletionRule="Cascade" destinationEntity="Measurement" inverseName="captureSession" inverseEntity="Measurement"/>
+        <relationship name="notes" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="Note" inverseName="captureSession" inverseEntity="Note"/>
+        <relationship name="woundRecord" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="WoundRecord" inverseName="captureSessions" inverseEntity="WoundRecord"/>
+    </entity>
+    <entity name="Photo" representedClassName="Photo" syncable="YES" codeGenerationType="class">
+        <attribute name="fullResolutionPath" attributeType="String"/>
+        <attribute name="id" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="metadata" optional="YES" attributeType="Binary"/>
+        <attribute name="thumbnailData" optional="YES" attributeType="Binary"/>
+    </entity>
+    <entity name="Measurement" representedClassName="Measurement" syncable="YES" codeGenerationType="class">
+        <attribute name="areaMM2" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="boundaryPoints" attributeType="Binary"/>
+        <attribute name="calibrationData" attributeType="Binary"/>
+        <attribute name="depthMM" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="detectionConfidence" attributeType="Float" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="id" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="isManuallyAdjusted" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="lengthMM" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="perimeterMM" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="volumeMM3" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="widthMM" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <relationship name="captureSession" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="CaptureSession" inverseName="measurement" inverseEntity="CaptureSession"/>
+    </entity>
+    <entity name="Note" representedClassName="Note" syncable="YES" codeGenerationType="class">
+        <attribute name="category" attributeType="String" defaultValueString="general"/>
+        <attribute name="createdAt" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="text" attributeType="String"/>
+        <relationship name="captureSession" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="CaptureSession" inverseName="notes" inverseEntity="CaptureSession"/>
+    </entity>
+</model>
