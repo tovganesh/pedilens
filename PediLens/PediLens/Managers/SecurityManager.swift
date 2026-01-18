@@ -9,6 +9,7 @@
 import Foundation
 import Security
 import CryptoKit
+import LocalAuthentication
 
 /// Protocol defining security operations for data encryption and key management
 protocol SecurityManagerProtocol {
@@ -29,6 +30,9 @@ enum SecurityError: LocalizedError {
     case decryptionFailed
     case invalidData
     case authenticationFailed
+    case authenticationNotAvailable
+    case authenticationCancelled
+    case sessionExpired
     
     var errorDescription: String? {
         switch self {
@@ -48,6 +52,12 @@ enum SecurityError: LocalizedError {
             return "Invalid data format"
         case .authenticationFailed:
             return "User authentication failed"
+        case .authenticationNotAvailable:
+            return "Biometric authentication is not available on this device"
+        case .authenticationCancelled:
+            return "Authentication was cancelled by user"
+        case .sessionExpired:
+            return "Session has expired. Please authenticate again"
         }
     }
 }
@@ -66,6 +76,15 @@ class SecurityManager: SecurityManagerProtocol {
     
     /// Keychain account identifier for the encryption key
     private let keychainAccount = "pedilens-master-key"
+    
+    /// Session timeout duration (5 minutes)
+    private let sessionTimeout: TimeInterval = 5 * 60
+    
+    /// Last authentication timestamp
+    private var lastAuthenticationTime: Date?
+    
+    /// Lock for thread-safe access to lastAuthenticationTime
+    private let authenticationLock = NSLock()
     
     // MARK: - Initialization
     
@@ -173,12 +192,129 @@ class SecurityManager: SecurityManagerProtocol {
     /// - Returns: True if authentication succeeds
     /// - Throws: SecurityError if authentication fails
     func authenticateUser() async throws -> Bool {
-        // This is a placeholder for LocalAuthentication integration
-        // Will be implemented in task 2.3
-        return true
+        // Check if session is still valid
+        if isSessionValid() {
+            return true
+        }
+        
+        let context = LAContext()
+        var error: NSError?
+        
+        // Check if biometric authentication is available
+        guard context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error) else {
+            if let error = error {
+                print("Biometric authentication not available: \(error.localizedDescription)")
+                throw SecurityError.authenticationNotAvailable
+            }
+            throw SecurityError.authenticationNotAvailable
+        }
+        
+        // Set up authentication context
+        context.localizedCancelTitle = "Cancel"
+        
+        // Determine the authentication type available
+        let reason = biometricType(for: context)
+        
+        do {
+            // Perform authentication
+            let success = try await context.evaluatePolicy(
+                .deviceOwnerAuthentication,
+                localizedReason: reason
+            )
+            
+            if success {
+                // Update last authentication time
+                updateLastAuthenticationTime()
+                return true
+            } else {
+                throw SecurityError.authenticationFailed
+            }
+        } catch let laError as LAError {
+            // Handle specific LocalAuthentication errors
+            switch laError.code {
+            case .userCancel, .appCancel, .systemCancel:
+                throw SecurityError.authenticationCancelled
+            case .authenticationFailed:
+                throw SecurityError.authenticationFailed
+            case .biometryNotAvailable, .biometryNotEnrolled:
+                throw SecurityError.authenticationNotAvailable
+            default:
+                throw SecurityError.authenticationFailed
+            }
+        } catch {
+            throw SecurityError.authenticationFailed
+        }
+    }
+    
+    /// Checks if the current session is still valid (within timeout period)
+    /// - Returns: True if session is valid, false if expired or no session exists
+    func isSessionValid() -> Bool {
+        authenticationLock.lock()
+        defer { authenticationLock.unlock() }
+        
+        guard let lastAuth = lastAuthenticationTime else {
+            return false
+        }
+        
+        let elapsed = Date().timeIntervalSince(lastAuth)
+        return elapsed < sessionTimeout
+    }
+    
+    /// Invalidates the current session, requiring re-authentication
+    func invalidateSession() {
+        authenticationLock.lock()
+        defer { authenticationLock.unlock() }
+        
+        lastAuthenticationTime = nil
+    }
+    
+    /// Returns the time remaining in the current session
+    /// - Returns: Time remaining in seconds, or nil if no valid session
+    func sessionTimeRemaining() -> TimeInterval? {
+        authenticationLock.lock()
+        defer { authenticationLock.unlock() }
+        
+        guard let lastAuth = lastAuthenticationTime else {
+            return nil
+        }
+        
+        let elapsed = Date().timeIntervalSince(lastAuth)
+        let remaining = sessionTimeout - elapsed
+        
+        return remaining > 0 ? remaining : nil
     }
     
     // MARK: - Private Methods
+    
+    /// Updates the last authentication timestamp
+    private func updateLastAuthenticationTime() {
+        authenticationLock.lock()
+        defer { authenticationLock.unlock() }
+        
+        lastAuthenticationTime = Date()
+    }
+    
+    /// Determines the biometric type available on the device
+    /// - Parameter context: The LAContext to check
+    /// - Returns: A localized reason string for authentication
+    private func biometricType(for context: LAContext) -> String {
+        if #available(iOS 11.0, *) {
+            switch context.biometryType {
+            case .faceID:
+                return "Authenticate with Face ID to access PediLens"
+            case .touchID:
+                return "Authenticate with Touch ID to access PediLens"
+            case .opticID:
+                return "Authenticate with Optic ID to access PediLens"
+            case .none:
+                return "Authenticate with your device passcode to access PediLens"
+            @unknown default:
+                return "Authenticate to access PediLens"
+            }
+        } else {
+            return "Authenticate to access PediLens"
+        }
+    }
     
     /// Gets existing encryption key or creates a new one if it doesn't exist
     /// - Returns: The encryption key data

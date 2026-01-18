@@ -257,4 +257,41 @@ final class SecurityManagerTests: XCTestCase {
         // Then: Binary data should be preserved exactly
         XCTAssertEqual(decrypted, binaryData)
     }
+    
+    // MARK: - Session Management Tests
+    
+    func testIsSessionValid_WhenNoAuthentication_ReturnsFalse() {
+        // Given: No authentication has occurred
+        securityManager.invalidateSession()
+        
+        // When: Check if session is valid
+        let isValid = securityManager.isSessionValid()
+        
+        // Then: Should return false
+        XCTAssertFalse(isValid)
+    }
+    
+    func testInvalidateSession_ClearsAuthenticationState() {
+        // Given: A session exists (we'll simulate by checking the method exists)
+        // When: Invalidate the session
+        securityManager.invalidateSession()
+        
+        // Then: Session should not be valid
+        XCTAssertFalse(securityManager.isSessionValid())
+    }
+    
+    func testSessionTimeRemaining_WhenNoSession_ReturnsNil() {
+        // Given: No active session
+        securityManager.invalidateSession()
+        
+        // When: Check time remaining
+        let timeRemaining = securityManager.sessionTimeRemaining()
+        
+        // Then: Should return nil
+        XCTAssertNil(timeRemaining)
+    }
+    
+    // Note: Full biometric authentication tests require a physical device or simulator with enrolled biometrics
+    // These tests verify the session management logic, while actual biometric authentication
+    // should be tested manually on device
 }
