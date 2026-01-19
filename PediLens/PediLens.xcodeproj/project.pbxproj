@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		12EDF0E39D2B89EF77A5A778 /* LocalAuthentication.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC82D786B78DDD34057299C8 /* LocalAuthentication.framework */; };
 		146F47BFE2FBA850DAD5FDCC /* SecurityManagerPropertyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 375DAED9F93EDD4F41E688C6 /* SecurityManagerPropertyTests.swift */; };
+		176F7A1D386307A89D085D68 /* FileStorageManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DE1982DD9305D592AC5DD6E /* FileStorageManagerTests.swift */; };
 		1A80893888B5BE2A541EC533 /* FileStorageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8ACD409062A80C28C7CCDF60 /* FileStorageManager.swift */; };
 		251F42890D0C4B0CE19A89E6 /* SecurityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C105D781E00C00030C27679C /* SecurityManager.swift */; };
 		2788D4291EAF9B8C53AC35B4 /* CryptoKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3CC3B9910FDBBDC923F7C817 /* CryptoKit.framework */; };
@@ -16,10 +17,12 @@
 		44643D092AC0D28E85C9E3DA /* PediLensApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 956BF8C8109F97228EB87449 /* PediLensApp.swift */; };
 		54FC41DB113A9D31DE1DE6B7 /* PDFKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4A63FC4B50B3E3CBF7C949F5 /* PDFKit.framework */; };
 		5942DFEE0A98B587C1DFB4CC /* CloudKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 747A982603A4C6C64C6B381D /* CloudKit.framework */; };
+		63662FD7DB7621DA6B1B66DF /* UserRole.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38C24940654E5BBECA53AD4A /* UserRole.swift */; };
 		6B1B746CE9356E56DC161667 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2C231C6CDF9B5FC03EBCE79 /* ContentView.swift */; };
 		857CE8C0EF693D9E15585C60 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 79A03E3DA6E289DF1B7D2952 /* Security.framework */; };
 		93C87925D306CC65C5102116 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B6E518F7C25DB3110238D316 /* AVFoundation.framework */; };
 		99999F92009DE86566CFA65B /* PersistenceController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 932C22C1E7D854D20D361C68 /* PersistenceController.swift */; };
+		A91C423C9E248BCAEFFBD49C /* PersistenceControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D4C1A115AEEA1397CFC075A /* PersistenceControllerTests.swift */; };
 		AC4E8808C773071FE0467BBF /* CoreData.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B456FBFE09FF1B26571490FD /* CoreData.framework */; };
 		BDAB44D6A4767F0A982C98D5 /* CoreLocation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B14A13950B8F8FBDABA0C091 /* CoreLocation.framework */; };
 		C8BC6C1A2040DD0060611A49 /* CoreML.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8C066B7128D95B36BD8E9F68 /* CoreML.framework */; };
@@ -46,9 +49,12 @@
 		131A8064124285A2A10F3F14 /* Vision.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Vision.framework; path = System/Library/Frameworks/Vision.framework; sourceTree = SDKROOT; };
 		1B9E005E1BAC29CF028E4BD8 /* SecurityManager_README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = SecurityManager_README.md; sourceTree = "<group>"; };
 		375DAED9F93EDD4F41E688C6 /* SecurityManagerPropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecurityManagerPropertyTests.swift; sourceTree = "<group>"; };
+		38C24940654E5BBECA53AD4A /* UserRole.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserRole.swift; sourceTree = "<group>"; };
 		3CC3B9910FDBBDC923F7C817 /* CryptoKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CryptoKit.framework; path = System/Library/Frameworks/CryptoKit.framework; sourceTree = SDKROOT; };
+		3D4C1A115AEEA1397CFC075A /* PersistenceControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceControllerTests.swift; sourceTree = "<group>"; };
 		4A63FC4B50B3E3CBF7C949F5 /* PDFKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = PDFKit.framework; path = System/Library/Frameworks/PDFKit.framework; sourceTree = SDKROOT; };
 		6CEA2955822A64E3493E7CDF /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
+		6DE1982DD9305D592AC5DD6E /* FileStorageManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileStorageManagerTests.swift; sourceTree = "<group>"; };
 		7453578E3ED202ED024F310C /* SecurityManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecurityManagerTests.swift; sourceTree = "<group>"; };
 		747A982603A4C6C64C6B381D /* CloudKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CloudKit.framework; path = System/Library/Frameworks/CloudKit.framework; sourceTree = SDKROOT; };
 		79A03E3DA6E289DF1B7D2952 /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
@@ -170,6 +176,8 @@
 		AA1D4257685B8F4C5E77D3B2 /* PediLensTests */ = {
 			isa = PBXGroup;
 			children = (
+				6DE1982DD9305D592AC5DD6E /* FileStorageManagerTests.swift */,
+				3D4C1A115AEEA1397CFC075A /* PersistenceControllerTests.swift */,
 				375DAED9F93EDD4F41E688C6 /* SecurityManagerPropertyTests.swift */,
 				7453578E3ED202ED024F310C /* SecurityManagerTests.swift */,
 			);
@@ -181,6 +189,7 @@
 			children = (
 				B328E2110CE00F916EE7E722 /* PediLens.xcdatamodeld */,
 				932C22C1E7D854D20D361C68 /* PersistenceController.swift */,
+				38C24940654E5BBECA53AD4A /* UserRole.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -297,6 +306,7 @@
 				44643D092AC0D28E85C9E3DA /* PediLensApp.swift in Sources */,
 				99999F92009DE86566CFA65B /* PersistenceController.swift in Sources */,
 				251F42890D0C4B0CE19A89E6 /* SecurityManager.swift in Sources */,
+				63662FD7DB7621DA6B1B66DF /* UserRole.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -304,6 +314,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				176F7A1D386307A89D085D68 /* FileStorageManagerTests.swift in Sources */,
+				A91C423C9E248BCAEFFBD49C /* PersistenceControllerTests.swift in Sources */,
 				146F47BFE2FBA850DAD5FDCC /* SecurityManagerPropertyTests.swift in Sources */,
 				F7508465488212A288868121 /* SecurityManagerTests.swift in Sources */,
 			);
@@ -334,6 +346,7 @@
 		0DCE0897018470EEC27A4842 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -342,7 +355,9 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.pedilens.app.tests;
 				SDKROOT = iphoneos;
+				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_EMIT_MODULE_INTERFACE = NO;
+				SWIFT_ENABLE_EMIT_CONST_VALUES = NO;
 				SWIFT_INSTALL_OBJC_HEADER = NO;
 				SWIFT_OBJC_INTERFACE_HEADER_NAME = "";
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -353,6 +368,7 @@
 		6255A739830EA1FFD10E5FFC /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ALLOW_TARGET_PLATFORM_SPECIALIZATION = YES;
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -409,7 +425,10 @@
 				SDKROOT = iphoneos;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_EMIT_MODULE_INTERFACE = NO;
 				SWIFT_ENABLE_EMIT_CONST_VALUES = NO;
+				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_OBJC_INTERFACE_HEADER_NAME = "";
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.9;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -419,6 +438,7 @@
 		B86CE0F4A33B1BE8EDA6D2C6 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -427,7 +447,9 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.pedilens.app.tests;
 				SDKROOT = iphoneos;
+				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_EMIT_MODULE_INTERFACE = NO;
+				SWIFT_ENABLE_EMIT_CONST_VALUES = NO;
 				SWIFT_INSTALL_OBJC_HEADER = NO;
 				SWIFT_OBJC_INTERFACE_HEADER_NAME = "";
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -438,6 +460,7 @@
 		CB5A49AA99E4290470C86F0C /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ALLOW_TARGET_PLATFORM_SPECIALIZATION = YES;
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -501,7 +524,10 @@
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_EMIT_MODULE_INTERFACE = NO;
 				SWIFT_ENABLE_EMIT_CONST_VALUES = NO;
+				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_OBJC_INTERFACE_HEADER_NAME = "";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.9;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -521,6 +547,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.pedilens.app;
 				SDKROOT = iphoneos;
+				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_EMIT_MODULE_INTERFACE = NO;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -539,6 +566,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.pedilens.app;
 				SDKROOT = iphoneos;
+				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_EMIT_MODULE_INTERFACE = NO;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};

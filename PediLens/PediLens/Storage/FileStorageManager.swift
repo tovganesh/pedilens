@@ -7,6 +7,7 @@
 
 import Foundation
 import UIKit
+import CoreData
 
 /// Protocol defining file storage operations
 protocol FileStorageManagerProtocol {
@@ -16,6 +17,8 @@ protocol FileStorageManagerProtocol {
     func loadPhoto(at path: String) async throws -> Data
     func deleteFiles(for sessionID: UUID) async throws
     func getStorageUsage() async -> StorageInfo
+    func isStorageNearCapacity() async -> Bool
+    func cleanupOrphanedFiles() async throws -> Int
 }
 
 /// Information about storage usage
@@ -23,6 +26,14 @@ struct StorageInfo {
     let totalUsedBytes: Int64
     let photoCount: Int
     let availableBytes: Int64
+    
+    /// Returns true if storage usage is at or above 80% capacity
+    var isNearCapacity: Bool {
+        let totalCapacity = totalUsedBytes + availableBytes
+        guard totalCapacity > 0 else { return false }
+        let usagePercentage = Double(totalUsedBytes) / Double(totalCapacity)
+        return usagePercentage >= 0.80
+    }
 }
 
 /// Manages file storage for photos, live photos, and depth data
@@ -56,9 +67,10 @@ class FileStorageManager: FileStorageManagerProtocol {
         for directory in directories {
             if !fileManager.fileExists(atPath: directory.path) {
                 do {
+                    // Use complete file protection for all directories as per requirement 5.1
                     try fileManager.createDirectory(at: directory,
                                                    withIntermediateDirectories: true,
-                                                   attributes: [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication])
+                                                   attributes: [.protectionKey: FileProtectionType.complete])
                 } catch {
                     print("Error creating directory \(directory.path): \(error)")
                 }
@@ -86,13 +98,18 @@ class FileStorageManager: FileStorageManagerProtocol {
         let photoURL = sessionDir.appendingPathComponent("photo.heic")
         try data.write(to: photoURL, options: [.completeFileProtection])
         
-        // Generate and save thumbnail
-        if let image = UIImage(data: data) {
-            let thumbnail = generateThumbnail(from: image, size: CGSize(width: 300, height: 300))
-            if let thumbnailData = thumbnail.jpegData(compressionQuality: 0.8) {
-                let thumbnailURL = sessionDir.appendingPathComponent("thumbnail.jpg")
-                try thumbnailData.write(to: thumbnailURL, options: [.completeFileProtection])
+        // Generate and save thumbnail (non-critical, log errors but don't fail)
+        do {
+            if let image = UIImage(data: data) {
+                let thumbnail = generateThumbnail(from: image, size: CGSize(width: 300, height: 300))
+                if let thumbnailData = thumbnail.jpegData(compressionQuality: 0.8) {
+                    let thumbnailURL = sessionDir.appendingPathComponent("thumbnail.jpg")
+                    try thumbnailData.write(to: thumbnailURL, options: [.completeFileProtection])
+                }
             }
+        } catch {
+            // Thumbnail generation is non-critical, log but continue
+            print("Warning: Failed to generate thumbnail for session \(sessionID): \(error)")
         }
         
         return photoURL
@@ -197,16 +214,107 @@ class FileStorageManager: FileStorageManagerProtocol {
                           availableBytes: availableBytes)
     }
     
-    /// Generate a thumbnail from an image
+    /// Generate a thumbnail from an image with aspect-fit scaling
     private func generateThumbnail(from image: UIImage, size: CGSize) -> UIImage {
-        let renderer = UIGraphicsImageRenderer(size: size)
+        let aspectRatio = image.size.width / image.size.height
+        let targetAspectRatio = size.width / size.height
+        
+        var targetSize = size
+        
+        // Calculate size maintaining aspect ratio (aspect fit)
+        if aspectRatio > targetAspectRatio {
+            // Image is wider than target
+            targetSize.height = size.width / aspectRatio
+        } else {
+            // Image is taller than target
+            targetSize.width = size.height * aspectRatio
+        }
+        
+        let renderer = UIGraphicsImageRenderer(size: targetSize)
         return renderer.image { _ in
-            image.draw(in: CGRect(origin: .zero, size: size))
+            image.draw(in: CGRect(origin: .zero, size: targetSize))
         }
     }
     
     /// Get the exports directory URL
     func getExportsDirectory() -> URL {
         return exportsDirectory
+    }
+    
+    /// Check if storage is at or above 80% capacity
+    /// Returns true if storage usage is at or above 80% of total capacity
+    func isStorageNearCapacity() async -> Bool {
+        let storageInfo = await getStorageUsage()
+        return storageInfo.isNearCapacity
+    }
+    
+    /// Clean up orphaned files (session directories without Core Data references)
+    /// Returns the number of orphaned sessions cleaned up
+    func cleanupOrphanedFiles() async throws -> Int {
+        var cleanedCount = 0
+        
+        // Get all session directories from file system
+        guard let sessionDirs = try? fileManager.contentsOfDirectory(
+            at: photosDirectory,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles]
+        ) else {
+            return 0
+        }
+        
+        // Filter to only directories
+        let sessionDirectories = sessionDirs.filter { url in
+            guard let resourceValues = try? url.resourceValues(forKeys: [.isDirectoryKey]),
+                  let isDirectory = resourceValues.isDirectory else {
+                return false
+            }
+            return isDirectory
+        }
+        
+        // Get all valid session IDs from Core Data
+        let validSessionIDs = try await fetchAllCaptureSessionIDs()
+        let validSessionIDStrings = Set(validSessionIDs.map { $0.uuidString })
+        
+        // Find and delete orphaned directories
+        for sessionDir in sessionDirectories {
+            let sessionDirName = sessionDir.lastPathComponent
+            
+            // Check if this session directory has a corresponding Core Data entry
+            if !validSessionIDStrings.contains(sessionDirName) {
+                // This is an orphaned directory - delete it
+                do {
+                    try fileManager.removeItem(at: sessionDir)
+                    cleanedCount += 1
+                    print("Cleaned up orphaned session directory: \(sessionDirName)")
+                } catch {
+                    print("Error deleting orphaned directory \(sessionDirName): \(error)")
+                    // Continue with other directories even if one fails
+                }
+            }
+        }
+        
+        return cleanedCount
+    }
+    
+    /// Fetch all capture session IDs from Core Data
+    /// This is used to identify which session directories are still valid
+    private func fetchAllCaptureSessionIDs() async throws -> [UUID] {
+        let context = PersistenceController.shared.container.viewContext
+        
+        return try await context.perform {
+            let fetchRequest = NSFetchRequest<NSManagedObject>(entityName: "CaptureSession")
+            fetchRequest.propertiesToFetch = ["id"]
+            fetchRequest.resultType = .dictionaryResultType
+            
+            let results = try context.fetch(fetchRequest)
+            
+            return results.compactMap { result in
+                guard let dict = result as? [String: Any],
+                      let id = dict["id"] as? UUID else {
+                    return nil
+                }
+                return id
+            }
+        }
     }
 }

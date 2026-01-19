@@ -19,7 +19,7 @@ class PersistenceController {
         // Add sample data for previews
         let user = User(context: viewContext)
         user.id = UUID()
-        user.role = "patient"
+        user.role = UserRole.patient.rawValue
         user.createdAt = Date()
         user.iCloudSyncEnabled = false
         
