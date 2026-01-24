@@ -171,7 +171,7 @@ extension Patient {
     /// Get all wound records as an array, sorted by last updated date
     var woundRecordsArray: [WoundRecord] {
         let set = woundRecords as? Set<WoundRecord> ?? []
-        return Array(set).sorted { $0.lastUpdated > $1.lastUpdated }
+        return Array(set).sorted { ($0.lastUpdated ?? Date.distantPast) > ($1.lastUpdated ?? Date.distantPast) }
     }
     
     /// Get count of active wound records

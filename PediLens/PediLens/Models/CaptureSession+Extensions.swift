@@ -221,7 +221,7 @@ extension CaptureSession {
     /// Get all notes as an array, sorted by creation date
     var notesArray: [Note] {
         let set = notes as? Set<Note> ?? []
-        return Array(set).sorted { $0.createdAt < $1.createdAt }
+        return Array(set).sorted { ($0.createdAt ?? Date.distantPast) < ($1.createdAt ?? Date.distantPast) }
     }
     
     /// Check if the session has a live photo

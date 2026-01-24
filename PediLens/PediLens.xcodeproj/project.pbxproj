@@ -15,6 +15,7 @@
 		251F42890D0C4B0CE19A89E6 /* SecurityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C105D781E00C00030C27679C /* SecurityManager.swift */; };
 		2788D4291EAF9B8C53AC35B4 /* CryptoKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3CC3B9910FDBBDC923F7C817 /* CryptoKit.framework */; };
 		2EBEE5B1F60CE6C00816FE2D /* CaptureSession+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0756970C673F50C51296B75F /* CaptureSession+Extensions.swift */; };
+		36B0F80E220A34318F01E352 /* CameraManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70E18317740869D70B34DE7F /* CameraManager.swift */; };
 		3DA5E03E77364ADEFD846080 /* User+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2B93176449139EFA1D1AC3F /* User+Extensions.swift */; };
 		4439430C7131442AA4832243 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AAE51C5953A2EDEB530652A4 /* Assets.xcassets */; };
 		44643D092AC0D28E85C9E3DA /* PediLensApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 956BF8C8109F97228EB87449 /* PediLensApp.swift */; };
@@ -23,6 +24,7 @@
 		63662FD7DB7621DA6B1B66DF /* UserRole.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38C24940654E5BBECA53AD4A /* UserRole.swift */; };
 		6B1B746CE9356E56DC161667 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2C231C6CDF9B5FC03EBCE79 /* ContentView.swift */; };
 		7A05D091EAE6BA37C3F1846A /* CoreDataEntityExtensionsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EA06BB7CAE65A1D040FED5B /* CoreDataEntityExtensionsTests.swift */; };
+		856EE1E745C36CF1F5F67696 /* CameraMultiFormatPropertyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BE33545B99AFE50B6578997 /* CameraMultiFormatPropertyTests.swift */; };
 		857CE8C0EF693D9E15585C60 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 79A03E3DA6E289DF1B7D2952 /* Security.framework */; };
 		899160DDAF9A5AEEF611A471 /* CoreDataOfflinePropertyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BFED549962510BDF31A82BD /* CoreDataOfflinePropertyTests.swift */; };
 		92F8D2C5F8BD90C3174444A2 /* Note+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E1E6554061CF6503D9769A7 /* Note+Extensions.swift */; };
@@ -35,6 +37,7 @@
 		BDAB44D6A4767F0A982C98D5 /* CoreLocation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B14A13950B8F8FBDABA0C091 /* CoreLocation.framework */; };
 		C8BC6C1A2040DD0060611A49 /* CoreML.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8C066B7128D95B36BD8E9F68 /* CoreML.framework */; };
 		CA9DD36CDC5A9E613995C0C5 /* Vision.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 131A8064124285A2A10F3F14 /* Vision.framework */; };
+		D8E2AA7899D7A3A59F357B50 /* CameraManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB0BA0F646223B3589404665 /* CameraManagerTests.swift */; };
 		E41783CEB8BBEE484D4E070D /* PediLens.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = B328E2110CE00F916EE7E722 /* PediLens.xcdatamodeld */; };
 		E4C0E614DA46937CDAFE9510 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 31CC1434BB8F77795CD5CF3F /* Localizable.strings */; };
 		E6226C478F5F3A6D6574DFF7 /* Localization.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF53FAC258AB490DBE2EBAD1 /* Localization.swift */; };
@@ -70,6 +73,7 @@
 		4E856ABF6A849224AD91EFDC /* Measurement+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Measurement+Extensions.swift"; sourceTree = "<group>"; };
 		6CEA2955822A64E3493E7CDF /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		6DE1982DD9305D592AC5DD6E /* FileStorageManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileStorageManagerTests.swift; sourceTree = "<group>"; };
+		70E18317740869D70B34DE7F /* CameraManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraManager.swift; sourceTree = "<group>"; };
 		7453578E3ED202ED024F310C /* SecurityManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecurityManagerTests.swift; sourceTree = "<group>"; };
 		747A982603A4C6C64C6B381D /* CloudKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CloudKit.framework; path = System/Library/Frameworks/CloudKit.framework; sourceTree = SDKROOT; };
 		79A03E3DA6E289DF1B7D2952 /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
@@ -77,6 +81,7 @@
 		8C066B7128D95B36BD8E9F68 /* CoreML.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreML.framework; path = System/Library/Frameworks/CoreML.framework; sourceTree = SDKROOT; };
 		932C22C1E7D854D20D361C68 /* PersistenceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceController.swift; sourceTree = "<group>"; };
 		956BF8C8109F97228EB87449 /* PediLensApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PediLensApp.swift; sourceTree = "<group>"; };
+		9BE33545B99AFE50B6578997 /* CameraMultiFormatPropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraMultiFormatPropertyTests.swift; sourceTree = "<group>"; };
 		9BFED549962510BDF31A82BD /* CoreDataOfflinePropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreDataOfflinePropertyTests.swift; sourceTree = "<group>"; };
 		9D02041AAE18F9C41344CDC3 /* PediLensTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = PediLensTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		9E1E6554061CF6503D9769A7 /* Note+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Note+Extensions.swift"; sourceTree = "<group>"; };
@@ -91,6 +96,7 @@
 		C3EC3B5F378C1F356D449F77 /* PediLens.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PediLens.entitlements; sourceTree = "<group>"; };
 		CF53FAC258AB490DBE2EBAD1 /* Localization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Localization.swift; sourceTree = "<group>"; };
 		E7E2FADA34EE12CBC837578E /* PediLens.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PediLens.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		EB0BA0F646223B3589404665 /* CameraManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraManagerTests.swift; sourceTree = "<group>"; };
 		F60F81F64E4F3E38DCD24C7E /* PediLens.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = PediLens.xcdatamodel; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -168,6 +174,7 @@
 		3913FED8BFB011CC72CCEEE8 /* Managers */ = {
 			isa = PBXGroup;
 			children = (
+				70E18317740869D70B34DE7F /* CameraManager.swift */,
 				1B9E005E1BAC29CF028E4BD8 /* SecurityManager_README.md */,
 				C105D781E00C00030C27679C /* SecurityManager.swift */,
 			);
@@ -194,6 +201,8 @@
 		AA1D4257685B8F4C5E77D3B2 /* PediLensTests */ = {
 			isa = PBXGroup;
 			children = (
+				EB0BA0F646223B3589404665 /* CameraManagerTests.swift */,
+				9BE33545B99AFE50B6578997 /* CameraMultiFormatPropertyTests.swift */,
 				3EA06BB7CAE65A1D040FED5B /* CoreDataEntityExtensionsTests.swift */,
 				9BFED549962510BDF31A82BD /* CoreDataOfflinePropertyTests.swift */,
 				1FB34C86C993C3C499D95D15 /* DataValidationPropertyTests.swift */,
@@ -326,6 +335,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				36B0F80E220A34318F01E352 /* CameraManager.swift in Sources */,
 				2EBEE5B1F60CE6C00816FE2D /* CaptureSession+Extensions.swift in Sources */,
 				6B1B746CE9356E56DC161667 /* ContentView.swift in Sources */,
 				1A80893888B5BE2A541EC533 /* FileStorageManager.swift in Sources */,
@@ -347,6 +357,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D8E2AA7899D7A3A59F357B50 /* CameraManagerTests.swift in Sources */,
+				856EE1E745C36CF1F5F67696 /* CameraMultiFormatPropertyTests.swift in Sources */,
 				7A05D091EAE6BA37C3F1846A /* CoreDataEntityExtensionsTests.swift in Sources */,
 				899160DDAF9A5AEEF611A471 /* CoreDataOfflinePropertyTests.swift in Sources */,
 				B665DC51B30C7F19A4B48DC5 /* DataValidationPropertyTests.swift in Sources */,
@@ -392,11 +404,13 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.pedilens.app.tests;
 				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_EMIT_MODULE_INTERFACE = NO;
 				SWIFT_ENABLE_EMIT_CONST_VALUES = NO;
 				SWIFT_ENABLE_LIBRARY_EVOLUTION = NO;
 				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_MODULE_NAME = PediLensTests;
 				SWIFT_OBJC_INTERFACE_HEADER_NAME = "";
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PediLens.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PediLens";
@@ -445,6 +459,7 @@
 				ENABLE_BITCODE = NO;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -487,11 +502,13 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.pedilens.app.tests;
 				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_EMIT_MODULE_INTERFACE = NO;
 				SWIFT_ENABLE_EMIT_CONST_VALUES = NO;
 				SWIFT_ENABLE_LIBRARY_EVOLUTION = NO;
 				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_MODULE_NAME = PediLensTests;
 				SWIFT_OBJC_INTERFACE_HEADER_NAME = "";
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PediLens.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PediLens";
@@ -540,6 +557,7 @@
 				ENABLE_BITCODE = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;

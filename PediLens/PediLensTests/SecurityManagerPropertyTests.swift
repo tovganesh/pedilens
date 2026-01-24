@@ -352,7 +352,6 @@ final class SecurityManagerPropertyTests: XCTestCase {
         XCTAssertTrue(failedCases.isEmpty,
                      "Key persistence property failed for \(failedCases.count) out of \(iterations) cases")
     }
-}
 
     // MARK: - Property 19: Authentication Requirement
     // **Validates: Requirements 5.4, 9.2**
