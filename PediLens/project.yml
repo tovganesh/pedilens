@@ -24,6 +24,7 @@ settings:
     SWIFT_OBJC_INTERFACE_HEADER_NAME: ""
     SWIFT_EMIT_MODULE_INTERFACE: NO
     ALLOW_TARGET_PLATFORM_SPECIALIZATION: YES
+    SWIFT_ENABLE_LIBRARY_EVOLUTION: NO
 
 targets:
   PediLens:
@@ -45,6 +46,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.pedilens.app
         SWIFT_EMIT_MODULE_INTERFACE: NO
         SWIFT_EMIT_LOC_STRINGS: NO
+        SWIFT_ENABLE_LIBRARY_EVOLUTION: NO
     dependencies:
       - sdk: CoreData.framework
       - sdk: CloudKit.framework
@@ -66,8 +68,8 @@ targets:
       - PediLensTests
     dependencies:
       - target: PediLens
-        embed: false
         link: false
+        embed: false
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.pedilens.app.tests
@@ -79,6 +81,8 @@ targets:
         ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES: YES
         SWIFT_EMIT_LOC_STRINGS: NO
         SWIFT_ENABLE_EMIT_CONST_VALUES: NO
+        SWIFT_ENABLE_LIBRARY_EVOLUTION: NO
+        DEFINES_MODULE: NO
 
 schemes:
   PediLens:

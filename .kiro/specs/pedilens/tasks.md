@@ -62,20 +62,20 @@ This implementation plan breaks down the PediLens native iOS app into discrete, 
     - Set up merge policies
     - _Requirements: 5.1, 6.1_
   
-  - [ ] 4.2 Create Core Data entity extensions with convenience methods
+  - [x] 4.2 Create Core Data entity extensions with convenience methods
     - Add CRUD methods for User, Patient, WoundRecord, CaptureSession
     - Implement fetch requests with predicates
     - _Requirements: 5.1, 10.1_
   
-  - [ ] 4.3 Write property test for offline functionality
+  - [x] 4.3 Write property test for offline functionality
     - **Property 17: Offline Functionality Completeness**
     - **Validates: Requirements 5.2, 13.1, 13.5**
   
-  - [ ] 4.4 Write property test for data validation
+  - [x] 4.4 Write property test for data validation
     - **Property 40: Data Validation Before Persistence**
     - **Validates: Requirements 14.1**
 
-- [ ] 5. Checkpoint - Ensure all tests pass
+- [x] 5. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 6. Implement camera capture system
