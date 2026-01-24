@@ -81,13 +81,13 @@ extension User {
     
     /// Get the user's role as a UserRole enum
     var userRole: UserRole {
-        return UserRole(rawValue: role) ?? .patient
+        return UserRole(rawValue: role ?? "patient") ?? .patient
     }
     
     /// Get all patients as an array
     var patientsArray: [Patient] {
         let set = patients as? Set<Patient> ?? []
-        return Array(set).sorted { $0.name < $1.name }
+        return Array(set).sorted { ($0.name ?? "") < ($1.name ?? "") }
     }
     
     // MARK: - Delete Methods

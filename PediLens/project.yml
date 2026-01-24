@@ -25,6 +25,7 @@ settings:
     SWIFT_EMIT_MODULE_INTERFACE: NO
     ALLOW_TARGET_PLATFORM_SPECIALIZATION: YES
     SWIFT_ENABLE_LIBRARY_EVOLUTION: NO
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
 
 targets:
   PediLens:
@@ -68,7 +69,6 @@ targets:
       - PediLensTests
     dependencies:
       - target: PediLens
-        link: false
         embed: false
     settings:
       base:
@@ -83,6 +83,8 @@ targets:
         SWIFT_ENABLE_EMIT_CONST_VALUES: NO
         SWIFT_ENABLE_LIBRARY_EVOLUTION: NO
         DEFINES_MODULE: NO
+        SWIFT_COMPILATION_MODE: wholemodule
+        SWIFT_MODULE_NAME: PediLensTests
 
 schemes:
   PediLens:
