@@ -82,6 +82,8 @@ protocol CameraManagerProtocol {
     func captureDepthData() async throws -> DepthData?
     func setFocusPoint(_ point: CGPoint) async
     func setExposure(_ value: Float) async
+    func setWhiteBalance(temperature: Float, tint: Float) async
+    func resetToAutoWhiteBalance() async
     var isSessionRunning: Bool { get }
     var previewLayer: AVCaptureVideoPreviewLayer? { get }
 }
@@ -414,6 +416,79 @@ class CameraManager: NSObject, CameraManagerProtocol {
                 continuation.resume()
             }
         }
+    }
+    
+    // MARK: - White Balance Control
+    // Requirements: 11.5
+    
+    func setWhiteBalance(temperature: Float, tint: Float) async {
+        guard let device = videoDevice else { return }
+        
+        await withCheckedContinuation { continuation in
+            sessionQueue.async {
+                do {
+                    try device.lockForConfiguration()
+                    
+                    if device.isWhiteBalanceModeSupported(.locked) {
+                        // Convert temperature and tint to white balance gains
+                        // Temperature range: typically 3000K (warm) to 8000K (cool)
+                        // Tint range: typically -150 (green) to 150 (magenta)
+                        
+                        // Clamp temperature to valid range (3000-8000K)
+                        let clampedTemp = max(3000, min(temperature, 8000))
+                        
+                        // Clamp tint to valid range (-150 to 150)
+                        let clampedTint = max(-150, min(tint, 150))
+                        
+                        // Convert temperature to white balance gains
+                        // This is a simplified conversion - actual conversion is more complex
+                        let tempGains = self.temperatureAndTintToGains(temperature: clampedTemp, tint: clampedTint, device: device)
+                        
+                        // Normalize gains to valid range
+                        let normalizedGains = device.deviceWhiteBalanceGains(for: tempGains)
+                        
+                        // Set the white balance gains
+                        device.setWhiteBalanceModeLocked(with: normalizedGains, completionHandler: nil)
+                    }
+                    
+                    device.unlockForConfiguration()
+                } catch {
+                    print("Error setting white balance: \(error)")
+                }
+                
+                continuation.resume()
+            }
+        }
+    }
+    
+    func resetToAutoWhiteBalance() async {
+        guard let device = videoDevice else { return }
+        
+        await withCheckedContinuation { continuation in
+            sessionQueue.async {
+                do {
+                    try device.lockForConfiguration()
+                    
+                    if device.isWhiteBalanceModeSupported(.continuousAutoWhiteBalance) {
+                        device.whiteBalanceMode = .continuousAutoWhiteBalance
+                    }
+                    
+                    device.unlockForConfiguration()
+                } catch {
+                    print("Error resetting white balance: \(error)")
+                }
+                
+                continuation.resume()
+            }
+        }
+    }
+    
+    // Helper method to convert temperature and tint to white balance gains
+    private func temperatureAndTintToGains(temperature: Float, tint: Float, device: AVCaptureDevice) -> AVCaptureDevice.WhiteBalanceTemperatureAndTintValues {
+        return AVCaptureDevice.WhiteBalanceTemperatureAndTintValues(
+            temperature: temperature,
+            tint: tint
+        )
     }
 }
 

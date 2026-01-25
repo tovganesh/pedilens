@@ -6,6 +6,7 @@
 //
 
 import XCTest
+import CoreData
 @testable import PediLens
 
 class FileStorageManagerTests: XCTestCase {
@@ -968,7 +969,7 @@ extension FileStorageManagerTests {
         _ = data.withUnsafeMutableBytes { bytes in
             guard let baseAddress = bytes.baseAddress else { return 0 }
             // Use SecRandomCopyBytes for cryptographically secure random data
-            return SecRandomCopyBytes(kSecRandomDefault, size, baseAddress)
+            return Int(SecRandomCopyBytes(kSecRandomDefault, size, baseAddress))
         }
         return data
     }
