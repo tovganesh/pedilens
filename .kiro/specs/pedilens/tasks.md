@@ -130,18 +130,18 @@ This implementation plan breaks down the PediLens native iOS app into discrete, 
     - Calculate confidence score
     - _Requirements: 2.2_
   
-  - [~] 7.2 Write property test for automatic wound boundary detection
+  - [x] 7.2 Write property test for automatic wound boundary detection
     - **Property 3: Automatic Wound Boundary Detection**
     - **Validates: Requirements 2.2**
   
-  - [~] 7.3 Implement manual boundary refinement
+  - [x] 7.3 Implement manual boundary refinement
     - Add refineDetection method
     - Interpolate user-provided adjustment points
     - Update detection method to `.refined`
     - _Requirements: 2.3_
 
 - [ ] 8. Implement measurement system
-  - [~] 8.1 Create MeasurementManager
+  - [x] 8.1 Create MeasurementManager
     - Implement calculateMeasurements method
     - Use Shoelace formula for area calculation
     - Calculate minimum bounding rectangle for length/width

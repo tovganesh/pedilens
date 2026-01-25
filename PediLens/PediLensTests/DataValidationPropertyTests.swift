@@ -656,16 +656,21 @@ final class DataValidationPropertyTests: XCTestCase {
                 }
                 
                 // Validate wound record dates
-                XCTAssertLessThanOrEqual(woundRecord.initialAssessmentDate, oneSecondFromNow,
+                guard let initialAssessmentDate = woundRecord.initialAssessmentDate,
+                      let lastUpdated = woundRecord.lastUpdated else {
+                    XCTFail("Iteration \(iteration): Wound record dates should not be nil")
+                    return
+                }
+                
+                XCTAssertLessThanOrEqual(initialAssessmentDate, oneSecondFromNow,
                                        "Iteration \(iteration): Initial assessment date should not be in the future")
-                XCTAssertLessThanOrEqual(woundRecord.lastUpdated, oneSecondFromNow,
+                XCTAssertLessThanOrEqual(lastUpdated, oneSecondFromNow,
                                        "Iteration \(iteration): Last updated should not be in the future")
-                XCTAssertGreaterThanOrEqual(woundRecord.lastUpdated, woundRecord.initialAssessmentDate,
+                XCTAssertGreaterThanOrEqual(lastUpdated, initialAssessmentDate,
                                           "Iteration \(iteration): Last updated should be >= initial assessment")
                 
                 // Validate capture session dates
                 guard let captureTimestamp = captureSession.timestamp,
-                      let initialAssessmentDate = woundRecord.initialAssessmentDate,
                       let noteCreatedAt = note.createdAt else {
                     XCTFail("Iteration \(iteration): Required dates should not be nil")
                     failedCases.append(iteration)
