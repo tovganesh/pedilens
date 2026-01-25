@@ -116,7 +116,7 @@ final class CoreDataEntityExtensionsTests: XCTestCase {
         let patient = Patient.create(in: context, name: "Jane", patientID: "P456")
         try context.save()
         
-        let fetchedPatient = Patient.fetchPatient(byID: patient.id, in: context)
+        let fetchedPatient = Patient.fetchPatient(byID: patient.id!, in: context)
         XCTAssertNotNil(fetchedPatient)
         XCTAssertEqual(fetchedPatient?.id, patient.id)
         XCTAssertEqual(fetchedPatient?.name, "Jane")
@@ -633,14 +633,14 @@ final class CoreDataEntityExtensionsTests: XCTestCase {
         session.delete(from: context)
         try context.save()
         
-        let fetchedSession = CaptureSession.fetchCaptureSession(byID: session.id, in: context)
+        let fetchedSession = CaptureSession.fetchCaptureSession(byID: session.id!, in: context)
         XCTAssertNil(fetchedSession)
         
         // Test cascade delete - deleting patient should delete wound records
         patient.delete(from: context)
         try context.save()
         
-        let fetchedRecord = WoundRecord.fetchWoundRecord(byID: record.id, in: context)
+        let fetchedRecord = WoundRecord.fetchWoundRecord(byID: record.id!, in: context)
         XCTAssertNil(fetchedRecord)
     }
 }

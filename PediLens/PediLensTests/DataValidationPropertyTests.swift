@@ -69,14 +69,14 @@ final class DataValidationPropertyTests: XCTestCase {
                               "Iteration \(iteration): User ID should not be nil")
                 XCTAssertNotNil(user.role,
                               "Iteration \(iteration): User role should not be nil")
-                XCTAssertFalse(user.role.isEmpty,
+                XCTAssertFalse(user.role?.isEmpty ?? true,
                              "Iteration \(iteration): User role should not be empty")
                 XCTAssertNotNil(user.createdAt,
                               "Iteration \(iteration): User createdAt should not be nil")
                 
                 // Validate role is valid
                 let validRoles = ["doctor", "patient"]
-                XCTAssertTrue(validRoles.contains(user.role),
+                XCTAssertTrue(validRoles.contains(user.role ?? ""),
                             "Iteration \(iteration): User role should be valid")
                 
                 // Save should succeed with valid data
@@ -125,17 +125,17 @@ final class DataValidationPropertyTests: XCTestCase {
                               "Iteration \(iteration): Patient ID should not be nil")
                 XCTAssertNotNil(patient.name,
                               "Iteration \(iteration): Patient name should not be nil")
-                XCTAssertFalse(patient.name.isEmpty,
+                XCTAssertFalse(patient.name?.isEmpty ?? true,
                              "Iteration \(iteration): Patient name should not be empty")
                 XCTAssertNotNil(patient.patientID,
                               "Iteration \(iteration): Patient patientID should not be nil")
-                XCTAssertFalse(patient.patientID.isEmpty,
+                XCTAssertFalse(patient.patientID?.isEmpty ?? true,
                              "Iteration \(iteration): Patient patientID should not be empty")
                 XCTAssertNotNil(patient.createdAt,
                               "Iteration \(iteration): Patient createdAt should not be nil")
                 
                 // Validate name length is reasonable
-                XCTAssertLessThanOrEqual(patient.name.count, 200,
+                XCTAssertLessThanOrEqual(patient.name?.count ?? 0, 200,
                                        "Iteration \(iteration): Patient name should not exceed reasonable length")
                 
                 // Validate patientID length is reasonable
@@ -197,13 +197,13 @@ final class DataValidationPropertyTests: XCTestCase {
                               "Iteration \(iteration): WoundRecord ID should not be nil")
                 XCTAssertNotNil(woundRecord.location,
                               "Iteration \(iteration): WoundRecord location should not be nil")
-                XCTAssertFalse(woundRecord.location.isEmpty,
+                XCTAssertFalse(woundRecord.location?.isEmpty ?? true,
                              "Iteration \(iteration): WoundRecord location should not be empty")
                 XCTAssertNotNil(woundRecord.initialAssessmentDate,
                               "Iteration \(iteration): WoundRecord initialAssessmentDate should not be nil")
                 XCTAssertNotNil(woundRecord.status,
                               "Iteration \(iteration): WoundRecord status should not be nil")
-                XCTAssertFalse(woundRecord.status.isEmpty,
+                XCTAssertFalse(woundRecord.status?.isEmpty ?? true,
                              "Iteration \(iteration): WoundRecord status should not be empty")
                 XCTAssertNotNil(woundRecord.lastUpdated,
                               "Iteration \(iteration): WoundRecord lastUpdated should not be nil")
@@ -281,11 +281,11 @@ final class DataValidationPropertyTests: XCTestCase {
                               "Iteration \(iteration): CaptureSession timestamp should not be nil")
                 XCTAssertNotNil(captureSession.photoPath,
                               "Iteration \(iteration): CaptureSession photoPath should not be nil")
-                XCTAssertFalse(captureSession.photoPath.isEmpty,
+                XCTAssertFalse(captureSession.photoPath?.isEmpty ?? true,
                              "Iteration \(iteration): CaptureSession photoPath should not be empty")
                 
                 // Validate photoPath format
-                XCTAssertTrue(captureSession.photoPath.contains("."),
+                XCTAssertTrue(captureSession.photoPath?.contains(".") ?? false,
                             "Iteration \(iteration): Photo path should have a file extension")
                 
                 // Validate timestamp is reasonable
@@ -485,17 +485,17 @@ final class DataValidationPropertyTests: XCTestCase {
                               "Iteration \(iteration): Note ID should not be nil")
                 XCTAssertNotNil(note.text,
                               "Iteration \(iteration): Note text should not be nil")
-                XCTAssertFalse(note.text.isEmpty,
+                XCTAssertFalse(note.text?.isEmpty ?? true,
                              "Iteration \(iteration): Note text should not be empty")
                 XCTAssertNotNil(note.category,
                               "Iteration \(iteration): Note category should not be nil")
-                XCTAssertFalse(note.category.isEmpty,
+                XCTAssertFalse(note.category?.isEmpty ?? true,
                              "Iteration \(iteration): Note category should not be empty")
                 XCTAssertNotNil(note.createdAt,
                               "Iteration \(iteration): Note createdAt should not be nil")
                 
                 // Validate category is valid
-                XCTAssertTrue(validCategories.contains(note.category),
+                XCTAssertTrue(validCategories.contains(note.category ?? ""),
                             "Iteration \(iteration): Note category should be valid")
                 
                 // Validate text length is reasonable
@@ -664,15 +664,23 @@ final class DataValidationPropertyTests: XCTestCase {
                                           "Iteration \(iteration): Last updated should be >= initial assessment")
                 
                 // Validate capture session dates
-                XCTAssertLessThanOrEqual(captureSession.timestamp!, oneSecondFromNow,
+                guard let captureTimestamp = captureSession.timestamp,
+                      let initialAssessmentDate = woundRecord.initialAssessmentDate,
+                      let noteCreatedAt = note.createdAt else {
+                    XCTFail("Iteration \(iteration): Required dates should not be nil")
+                    failedCases.append(iteration)
+                    continue
+                }
+                
+                XCTAssertLessThanOrEqual(captureTimestamp, oneSecondFromNow,
                                        "Iteration \(iteration): Capture timestamp should not be in the future")
-                XCTAssertGreaterThanOrEqual(captureSession.timestamp!, woundRecord.initialAssessmentDate,
+                XCTAssertGreaterThanOrEqual(captureTimestamp, initialAssessmentDate,
                                           "Iteration \(iteration): Capture timestamp should be >= wound initial assessment")
                 
                 // Validate note dates
-                XCTAssertLessThanOrEqual(note.createdAt, oneSecondFromNow,
+                XCTAssertLessThanOrEqual(noteCreatedAt, oneSecondFromNow,
                                        "Iteration \(iteration): Note createdAt should not be in the future")
-                XCTAssertGreaterThanOrEqual(note.createdAt, captureSession.timestamp!,
+                XCTAssertGreaterThanOrEqual(noteCreatedAt, captureTimestamp,
                                           "Iteration \(iteration): Note createdAt should be >= capture timestamp")
                 
                 // Clean up
@@ -709,7 +717,9 @@ final class DataValidationPropertyTests: XCTestCase {
                 var woundRecordIDs: Set<UUID> = []
                 
                 let user = User.create(in: context, role: .doctor)
-                userIDs.insert(user.id)
+                if let userId = user.id {
+                    userIDs.insert(userId)
+                }
                 
                 for _ in 0..<entityCount {
                     let patient = Patient.create(
@@ -718,14 +728,18 @@ final class DataValidationPropertyTests: XCTestCase {
                         patientID: generateRandomString(length: 10),
                         user: user
                     )
-                    patientIDs.insert(patient.id)
+                    if let patientId = patient.id {
+                        patientIDs.insert(patientId)
+                    }
                     
                     let woundRecord = WoundRecord.create(
                         in: context,
                         location: generateRandomString(length: 20),
                         patient: patient
                     )
-                    woundRecordIDs.insert(woundRecord.id)
+                    if let woundRecordId = woundRecord.id {
+                        woundRecordIDs.insert(woundRecordId)
+                    }
                 }
                 
                 try saveContext()
@@ -805,7 +819,12 @@ final class DataValidationPropertyTests: XCTestCase {
                              "Iteration \(iteration): Patient name encoding should be preserved")
                 
                 // Fetch and verify again
-                let fetchedPatient = Patient.fetchPatient(byID: patient.id, in: context)
+                guard let patientId = patient.id else {
+                    XCTFail("Iteration \(iteration): Patient ID should not be nil")
+                    failedCases.append(iteration)
+                    continue
+                }
+                let fetchedPatient = Patient.fetchPatient(byID: patientId, in: context)
                 XCTAssertEqual(fetchedPatient?.name, name,
                              "Iteration \(iteration): Fetched patient name encoding should be preserved")
                 

@@ -61,7 +61,8 @@ final class SecurityManagerPropertyTests: XCTestCase {
     /// Generates random unicode string data
     private func generateRandomUnicodeString(length: Int) -> Data {
         let unicodeChars = ["a", "b", "c", "你", "好", "世", "界", "🏥", "🔒", "田", "中", "太", "郎", "α", "β", "γ", "δ"]
-        let randomString = String((0..<length).map { _ in unicodeChars.randomElement()! })
+        let randomChars = (0..<length).map { _ in unicodeChars.randomElement()! }
+        let randomString = randomChars.joined()
         return randomString.data(using: .utf8)!
     }
     

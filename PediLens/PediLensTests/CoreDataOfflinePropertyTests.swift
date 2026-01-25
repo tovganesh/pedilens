@@ -9,6 +9,7 @@
 
 import XCTest
 import CoreData
+import CoreLocation
 @testable import PediLens
 
 /// Property-based tests for offline Core Data operations
@@ -100,7 +101,10 @@ final class CoreDataOfflinePropertyTests: XCTestCase {
                     iCloudSyncEnabled: iCloudSyncEnabled
                 )
                 
-                let userId = user.id
+                guard let userId = user.id else {
+                    failedCases.append((role: role, iteration: iteration))
+                    continue
+                }
                 
                 // Save to persistent store
                 try saveContext()
@@ -179,7 +183,11 @@ final class CoreDataOfflinePropertyTests: XCTestCase {
                     user: user
                 )
                 
-                let patientUUID = patient.id
+                guard let patientUUID = patient.id else {
+                    XCTFail("Iteration \(iteration): Patient ID should not be nil")
+                    failedCases.append((name: name, iteration: iteration))
+                    continue
+                }
                 
                 // Save to persistent store
                 try saveContext()
@@ -266,7 +274,10 @@ final class CoreDataOfflinePropertyTests: XCTestCase {
                     patient: patient
                 )
                 
-                let woundRecordUUID = woundRecord.id
+                guard let woundRecordUUID = woundRecord.id else {
+                    failedCases.append((location: location, iteration: iteration))
+                    continue
+                }
                 
                 // Save to persistent store
                 try saveContext()
@@ -365,7 +376,10 @@ final class CoreDataOfflinePropertyTests: XCTestCase {
                     woundRecord: woundRecord
                 )
                 
-                let sessionUUID = captureSession.id
+                guard let sessionUUID = captureSession.id else {
+                    failedCases.append((photoPath: photoPath, iteration: iteration))
+                    continue
+                }
                 
                 // Save to persistent store
                 try saveContext()
@@ -485,7 +499,10 @@ final class CoreDataOfflinePropertyTests: XCTestCase {
                     captureSession: captureSession
                 )
                 
-                let measurementUUID = measurement.id
+                guard let measurementUUID = measurement.id else {
+                    failedCases.append((area: areaMM2, iteration: iteration))
+                    continue
+                }
                 
                 // Save to persistent store
                 try saveContext()
@@ -507,7 +524,7 @@ final class CoreDataOfflinePropertyTests: XCTestCase {
                              "Iteration \(iteration): Width should match")
                 XCTAssertEqual(fetchedMeasurement.areaMM2, areaMM2, accuracy: 0.001,
                              "Iteration \(iteration): Area should match")
-                XCTAssertEqual(fetchedMeasurement.depthMM, depthMM, accuracy: 0.001,
+                XCTAssertEqual(fetchedMeasurement.depthMM, depthMM ?? 0.0, accuracy: 0.001,
                              "Iteration \(iteration): Depth should match")
                 
                 // UPDATE: Update measurement values
@@ -587,7 +604,10 @@ final class CoreDataOfflinePropertyTests: XCTestCase {
                     captureSession: captureSession
                 )
                 
-                let noteUUID = note.id
+                guard let noteUUID = note.id else {
+                    failedCases.append((text: text, iteration: iteration))
+                    continue
+                }
                 
                 // Save to persistent store
                 try saveContext()

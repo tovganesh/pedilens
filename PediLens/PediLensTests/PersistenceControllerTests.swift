@@ -111,7 +111,7 @@ class PersistenceControllerTests: XCTestCase {
         
         // Then: Merge policy should be NSMergeByPropertyObjectTrumpMergePolicy
         let mergePolicy = controller.container.viewContext.mergePolicy as? NSMergePolicy
-        XCTAssertEqual(mergePolicy, NSMergeByPropertyObjectTrumpMergePolicy)
+        XCTAssertEqual(mergePolicy?.mergeType, NSMergeByPropertyObjectTrumpMergePolicy.mergeType)
     }
     
     // MARK: - In-Memory Store Tests
