@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		0238DAAB3C0EFBA6A120277E /* WoundRecord+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E007CE4B8A46FEABCF85AE0 /* WoundRecord+Extensions.swift */; };
 		0E0B4A325DD22D2A0681CD1F /* WoundBoundary.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FB5BF9E4627CB7BE8CDED55 /* WoundBoundary.swift */; };
+		11EE8CF6C366BB0D3A96FF0E /* WoundDetectionPropertyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A65C9D40AFA26DD36B9C3E95 /* WoundDetectionPropertyTests.swift */; };
 		12EDF0E39D2B89EF77A5A778 /* LocalAuthentication.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC82D786B78DDD34057299C8 /* LocalAuthentication.framework */; };
 		146F47BFE2FBA850DAD5FDCC /* SecurityManagerPropertyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 375DAED9F93EDD4F41E688C6 /* SecurityManagerPropertyTests.swift */; };
 		176F7A1D386307A89D085D68 /* FileStorageManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DE1982DD9305D592AC5DD6E /* FileStorageManagerTests.swift */; };
@@ -98,6 +99,7 @@
 		9E1E6554061CF6503D9769A7 /* Note+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Note+Extensions.swift"; sourceTree = "<group>"; };
 		A2B93176449139EFA1D1AC3F /* User+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "User+Extensions.swift"; sourceTree = "<group>"; };
 		A3B54A53E3BA41099F1A938F /* CameraManualControlsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraManualControlsTests.swift; sourceTree = "<group>"; };
+		A65C9D40AFA26DD36B9C3E95 /* WoundDetectionPropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WoundDetectionPropertyTests.swift; sourceTree = "<group>"; };
 		AAE51C5953A2EDEB530652A4 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AC82D786B78DDD34057299C8 /* LocalAuthentication.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = LocalAuthentication.framework; path = System/Library/Frameworks/LocalAuthentication.framework; sourceTree = SDKROOT; };
 		B11F2912A861AC5236226736 /* CameraMaxResolutionPropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraMaxResolutionPropertyTests.swift; sourceTree = "<group>"; };
@@ -236,6 +238,7 @@
 				3D4C1A115AEEA1397CFC075A /* PersistenceControllerTests.swift */,
 				375DAED9F93EDD4F41E688C6 /* SecurityManagerPropertyTests.swift */,
 				7453578E3ED202ED024F310C /* SecurityManagerTests.swift */,
+				A65C9D40AFA26DD36B9C3E95 /* WoundDetectionPropertyTests.swift */,
 				514629B1180CBD97F5C46B15 /* WoundDetectionServiceTests.swift */,
 			);
 			path = PediLensTests;
@@ -401,6 +404,7 @@
 				A91C423C9E248BCAEFFBD49C /* PersistenceControllerTests.swift in Sources */,
 				146F47BFE2FBA850DAD5FDCC /* SecurityManagerPropertyTests.swift in Sources */,
 				F7508465488212A288868121 /* SecurityManagerTests.swift in Sources */,
+				11EE8CF6C366BB0D3A96FF0E /* WoundDetectionPropertyTests.swift in Sources */,
 				502791E87FFCD163F91E80B9 /* WoundDetectionServiceTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
