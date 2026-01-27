@@ -102,7 +102,7 @@ final class CoreDataOfflinePropertyTests: XCTestCase {
                 )
                 
                 guard let userId = user.id else {
-                    failedCases.append((role: role, iteration: iteration))
+                    failedCases.append((role: role.rawValue, iteration: iteration))
                     continue
                 }
                 
@@ -524,7 +524,7 @@ final class CoreDataOfflinePropertyTests: XCTestCase {
                              "Iteration \(iteration): Width should match")
                 XCTAssertEqual(fetchedMeasurement.areaMM2, areaMM2, accuracy: 0.001,
                              "Iteration \(iteration): Area should match")
-                XCTAssertEqual(fetchedMeasurement.depthMM, depthMM ?? 0.0, accuracy: 0.001,
+                XCTAssertEqual(fetchedMeasurement.depthMM, depthMM, accuracy: 0.001,
                              "Iteration \(iteration): Depth should match")
                 
                 // UPDATE: Update measurement values
@@ -534,7 +534,7 @@ final class CoreDataOfflinePropertyTests: XCTestCase {
                 
                 // Verify update
                 let updatedMeasurement = Measurement.fetchMeasurement(byID: measurementUUID, in: context)
-                XCTAssertEqual(updatedMeasurement?.areaMM2, newArea, accuracy: 0.001,
+                XCTAssertEqual(updatedMeasurement!.areaMM2, newArea, accuracy: 0.001,
                              "Iteration \(iteration): Updated area should persist")
                 
                 // DELETE: Delete measurement
@@ -887,7 +887,11 @@ final class CoreDataOfflinePropertyTests: XCTestCase {
                             user: bgUser
                         )
                         
-                        let patientID = patient.id
+                        guard let patientID = patient.id else {
+                            XCTFail("Patient ID should not be nil")
+                            expectation.fulfill()
+                            return
+                        }
                         
                         // Save
                         try backgroundContext.save()

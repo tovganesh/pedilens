@@ -422,7 +422,16 @@ class WoundDetectionService: WoundDetectionServiceProtocol {
             maxY = max(maxY, point.y)
         }
         
-        return CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)
+        // Add a small epsilon to ensure boundary points are included
+        // CGRect.contains() uses strict inequality, so points exactly on maxX/maxY would fail
+        let epsilon: CGFloat = 0.001
+        
+        return CGRect(
+            x: minX,
+            y: minY,
+            width: (maxX - minX) + epsilon,
+            height: (maxY - minY) + epsilon
+        )
     }
     
     /// Finds the closest edge in a polygon to insert a new point
