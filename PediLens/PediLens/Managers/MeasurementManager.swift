@@ -238,11 +238,11 @@ class MeasurementManager: MeasurementManagerProtocol {
         guard !filteredValues.isEmpty else { return 0.0 }
         
         // Calculate average depth relative to baseline
-        let averageRawDepth = filteredValues.reduce(0.0, +) / Double(filteredValues.count)
-        let relativeDepth = averageRawDepth - baselineDepth
+        let averageRawDepth = Double(filteredValues.reduce(0.0, +)) / Double(filteredValues.count)
+        let relativeDepth = averageRawDepth - Double(baselineDepth)
         
         // Convert to millimeters using calibration
-        let depthMM = Double(relativeDepth * depthCalibration.depthScale + depthCalibration.depthOffset)
+        let depthMM = relativeDepth * Double(depthCalibration.depthScale) + Double(depthCalibration.depthOffset)
         
         return max(0.0, depthMM) // Ensure non-negative depth
     }

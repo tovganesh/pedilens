@@ -211,23 +211,23 @@ This implementation plan breaks down the PediLens native iOS app into discrete, 
 - [x] 9. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 10. Implement user role management
-  - [ ] 10.1 Create UserManager
+- [x] 10. Implement user role management
+  - [x] 10.1 Create UserManager
     - Implement setUserRole and getUserRole methods
     - Add canAccessFeature method for role-based features
     - Store user role in Core Data
     - _Requirements: 8.1, 8.2, 8.3_
   
-  - [ ] 10.2 Implement first-launch role selection
+  - [x] 10.2 Implement first-launch role selection
     - Create onboarding UI for role selection
     - Persist selected role
     - _Requirements: 8.1_
   
-  - [ ] 10.3 Write property test for doctor patient association requirement
+  - [x] 10.3 Write property test for doctor patient association requirement
     - **Property 25: Doctor Role Patient Association Requirement**
     - **Validates: Requirements 8.4**
   
-  - [ ] 10.4 Write property test for patient self-documentation
+  - [x] 10.4 Write property test for patient self-documentation
     - **Property 26: Patient Role Self-Documentation**
     - **Validates: Requirements 8.5**
 

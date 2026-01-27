@@ -272,7 +272,6 @@ final class MeasurementPropertyTests: XCTestCase {
         XCTAssertTrue(failedCases.isEmpty,
                      "Square area formula failed for \(failedCases.count) out of \(iterations) cases")
     }
-}
 
     // MARK: - Property 5: Comprehensive Measurement Calculation
     // **Validates: Requirements 2.5**
@@ -368,7 +367,7 @@ final class MeasurementPropertyTests: XCTestCase {
     /// Property: For any measurement, both metric and imperial units SHALL be available
     func testProperty8_DualUnitDisplay_BothUnitsAvailable() {
         let iterations = 100
-        var failedCases: [(iteration: Int)] = []
+        var failedCases: [Int] = []
         
         for iteration in 0..<iterations {
             let pointCount = Int.random(in: 3...10)
@@ -402,13 +401,13 @@ final class MeasurementPropertyTests: XCTestCase {
                           perimeterInches.value >= 0
             
             if !allValid {
-                failedCases.append((iteration: iteration))
+                failedCases.append(iteration)
             }
             
             // Verify conversion ratio (1 inch = 25.4 mm)
             let expectedLengthInches = measurement.length.value / 25.4
             if abs(lengthInches.value - expectedLengthInches) / expectedLengthInches > 0.001 {
-                failedCases.append((iteration: iteration))
+                failedCases.append(iteration)
             }
         }
         
@@ -419,7 +418,7 @@ final class MeasurementPropertyTests: XCTestCase {
     /// Property: Unit conversion should be reversible
     func testProperty8_UnitConversion_Reversible() {
         let iterations = 100
-        var failedCases: [(iteration: Int)] = []
+        var failedCases: [Int] = []
         
         for iteration in 0..<iterations {
             let points = generateRandomPolygon(pointCount: 5)
@@ -445,7 +444,7 @@ final class MeasurementPropertyTests: XCTestCase {
             
             // Should be equal within floating point tolerance
             if abs(lengthBackToMM.value - measurement.length.value) > 0.001 {
-                failedCases.append((iteration: iteration))
+                failedCases.append(iteration)
             }
         }
         
@@ -459,7 +458,7 @@ final class MeasurementPropertyTests: XCTestCase {
     /// Property: For any identified reference object, a pixel-to-distance calibration ratio SHALL be calculated
     func testProperty34_CalibrationRatio_AlwaysCalculated() {
         let iterations = 100
-        var failedCases: [(iteration: Int)] = []
+        var failedCases: [Int] = []
         
         for iteration in 0..<iterations {
             // Generate random reference object
@@ -480,12 +479,12 @@ final class MeasurementPropertyTests: XCTestCase {
             
             // Verify ratio is calculated and positive
             if calibration.pixelsPerMillimeter <= 0 {
-                failedCases.append((iteration: iteration))
+                failedCases.append(iteration)
             }
             
             // Verify reference object is stored
             if calibration.referenceObject == nil {
-                failedCases.append((iteration: iteration))
+                failedCases.append(iteration)
             }
         }
         
@@ -496,7 +495,7 @@ final class MeasurementPropertyTests: XCTestCase {
     /// Property: Calibration ratio should be consistent with reference object dimensions
     func testProperty34_CalibrationRatio_ConsistentWithReference() {
         let iterations = 100
-        var failedCases: [(iteration: Int)] = []
+        var failedCases: [Int] = []
         
         for iteration in 0..<iterations {
             let knownDimensionMM = Double.random(in: 10...100)
@@ -514,7 +513,7 @@ final class MeasurementPropertyTests: XCTestCase {
             
             // Verify calculated ratio matches expected
             if abs(calibration.pixelsPerMillimeter - expectedRatio) > 0.001 {
-                failedCases.append((iteration: iteration))
+                failedCases.append(iteration)
             }
         }
         
@@ -528,7 +527,7 @@ final class MeasurementPropertyTests: XCTestCase {
     /// Property: For any measurement in a calibrated session, the calibration SHALL be applied
     func testProperty35_CalibrationApplication_AppliedToMeasurements() {
         let iterations = 100
-        var failedCases: [(iteration: Int)] = []
+        var failedCases: [Int] = []
         
         for iteration in 0..<iterations {
             let points = generateRandomPolygon(pointCount: 4)
@@ -571,13 +570,13 @@ final class MeasurementPropertyTests: XCTestCase {
             let actualRatio = measurement2.length.value / measurement1.length.value
             
             if abs(actualRatio - expectedRatio) > 0.01 {
-                failedCases.append((iteration: iteration))
+                failedCases.append(iteration)
             }
             
             // Verify calibration is stored in measurement
             if measurement1.calibrationUsed.pixelsPerMillimeter != 1.0 ||
                measurement2.calibrationUsed.pixelsPerMillimeter != 2.0 {
-                failedCases.append((iteration: iteration))
+                failedCases.append(iteration)
             }
         }
         
@@ -588,7 +587,7 @@ final class MeasurementPropertyTests: XCTestCase {
     /// Property: Calibration should scale measurements linearly for length, quadratically for area
     func testProperty35_CalibrationScaling_CorrectScaling() {
         let iterations = 100
-        var failedCases: [(iteration: Int)] = []
+        var failedCases: [Int] = []
         
         for iteration in 0..<iterations {
             let points = generateRandomPolygon(pointCount: 5)
@@ -631,7 +630,7 @@ final class MeasurementPropertyTests: XCTestCase {
             let expectedLengthRatio = 1.0 / scaleFactor
             
             if abs(lengthRatio - expectedLengthRatio) / expectedLengthRatio > 0.01 {
-                failedCases.append((iteration: iteration))
+                failedCases.append(iteration)
             }
             
             // Area should scale by 1/(scaleFactor²)
@@ -639,14 +638,13 @@ final class MeasurementPropertyTests: XCTestCase {
             let expectedAreaRatio = 1.0 / (scaleFactor * scaleFactor)
             
             if abs(areaRatio - expectedAreaRatio) / expectedAreaRatio > 0.01 {
-                failedCases.append((iteration: iteration))
+                failedCases.append(iteration)
             }
         }
         
         XCTAssertTrue(failedCases.isEmpty,
                      "Calibration scaling property failed for \(failedCases.count) out of \(iterations) cases")
     }
-}
 
     // MARK: - Property 7: Depth Estimation on Capable Devices
     // **Validates: Requirements 2.6**
