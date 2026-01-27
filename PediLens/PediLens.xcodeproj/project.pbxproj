@@ -50,7 +50,9 @@
 		BDAB44D6A4767F0A982C98D5 /* CoreLocation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B14A13950B8F8FBDABA0C091 /* CoreLocation.framework */; };
 		C8BC6C1A2040DD0060611A49 /* CoreML.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8C066B7128D95B36BD8E9F68 /* CoreML.framework */; };
 		CA9DD36CDC5A9E613995C0C5 /* Vision.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 131A8064124285A2A10F3F14 /* Vision.framework */; };
+		CEC6855AB7A01D322EA8E795 /* UserRolePropertyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3643D0A206447D9AA3B9C13 /* UserRolePropertyTests.swift */; };
 		D54F2762F2D0BB094B08840B /* CameraMaxResolutionPropertyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B11F2912A861AC5236226736 /* CameraMaxResolutionPropertyTests.swift */; };
+		D804CA353FBCAC647E263854 /* RoleSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA4875736916D960315B9C96 /* RoleSelectionView.swift */; };
 		D8E2AA7899D7A3A59F357B50 /* CameraManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB0BA0F646223B3589404665 /* CameraManagerTests.swift */; };
 		E41783CEB8BBEE484D4E070D /* PediLens.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = B328E2110CE00F916EE7E722 /* PediLens.xcdatamodeld */; };
 		E4C0E614DA46937CDAFE9510 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 31CC1434BB8F77795CD5CF3F /* Localizable.strings */; };
@@ -115,12 +117,14 @@
 		AC82D786B78DDD34057299C8 /* LocalAuthentication.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = LocalAuthentication.framework; path = System/Library/Frameworks/LocalAuthentication.framework; sourceTree = SDKROOT; };
 		B11F2912A861AC5236226736 /* CameraMaxResolutionPropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraMaxResolutionPropertyTests.swift; sourceTree = "<group>"; };
 		B14A13950B8F8FBDABA0C091 /* CoreLocation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreLocation.framework; path = System/Library/Frameworks/CoreLocation.framework; sourceTree = SDKROOT; };
+		B3643D0A206447D9AA3B9C13 /* UserRolePropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserRolePropertyTests.swift; sourceTree = "<group>"; };
 		B3BBA917493E2173FD2D176E /* CameraHDRPropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraHDRPropertyTests.swift; sourceTree = "<group>"; };
 		B456FBFE09FF1B26571490FD /* CoreData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreData.framework; path = System/Library/Frameworks/CoreData.framework; sourceTree = SDKROOT; };
 		B6E518F7C25DB3110238D316 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
 		C105D781E00C00030C27679C /* SecurityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecurityManager.swift; sourceTree = "<group>"; };
 		C2C231C6CDF9B5FC03EBCE79 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		C3EC3B5F378C1F356D449F77 /* PediLens.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PediLens.entitlements; sourceTree = "<group>"; };
+		CA4875736916D960315B9C96 /* RoleSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoleSelectionView.swift; sourceTree = "<group>"; };
 		CF53FAC258AB490DBE2EBAD1 /* Localization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Localization.swift; sourceTree = "<group>"; };
 		E7E2FADA34EE12CBC837578E /* PediLens.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PediLens.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		EB0BA0F646223B3589404665 /* CameraManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraManagerTests.swift; sourceTree = "<group>"; };
@@ -255,6 +259,7 @@
 				375DAED9F93EDD4F41E688C6 /* SecurityManagerPropertyTests.swift */,
 				7453578E3ED202ED024F310C /* SecurityManagerTests.swift */,
 				39C8A4CE9C35161D58F9135C /* UserManagerTests.swift */,
+				B3643D0A206447D9AA3B9C13 /* UserRolePropertyTests.swift */,
 				A65C9D40AFA26DD36B9C3E95 /* WoundDetectionPropertyTests.swift */,
 				514629B1180CBD97F5C46B15 /* WoundDetectionServiceTests.swift */,
 			);
@@ -294,6 +299,7 @@
 			isa = PBXGroup;
 			children = (
 				C2C231C6CDF9B5FC03EBCE79 /* ContentView.swift */,
+				CA4875736916D960315B9C96 /* RoleSelectionView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -399,6 +405,7 @@
 				E41783CEB8BBEE484D4E070D /* PediLens.xcdatamodeld in Sources */,
 				44643D092AC0D28E85C9E3DA /* PediLensApp.swift in Sources */,
 				99999F92009DE86566CFA65B /* PersistenceController.swift in Sources */,
+				D804CA353FBCAC647E263854 /* RoleSelectionView.swift in Sources */,
 				251F42890D0C4B0CE19A89E6 /* SecurityManager.swift in Sources */,
 				3DA5E03E77364ADEFD846080 /* User+Extensions.swift in Sources */,
 				62E291E71DC08B557D9E6F50 /* UserManager.swift in Sources */,
@@ -428,6 +435,7 @@
 				146F47BFE2FBA850DAD5FDCC /* SecurityManagerPropertyTests.swift in Sources */,
 				F7508465488212A288868121 /* SecurityManagerTests.swift in Sources */,
 				806EED8E63F7E39C4F510E86 /* UserManagerTests.swift in Sources */,
+				CEC6855AB7A01D322EA8E795 /* UserRolePropertyTests.swift in Sources */,
 				11EE8CF6C366BB0D3A96FF0E /* WoundDetectionPropertyTests.swift in Sources */,
 				502791E87FFCD163F91E80B9 /* WoundDetectionServiceTests.swift in Sources */,
 			);
