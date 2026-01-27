@@ -36,28 +36,36 @@ class PersistenceController {
     let container: NSPersistentCloudKitContainer
     
     init(inMemory: Bool = false) {
+        // Detect if running in test environment
+        let isRunningTests = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+        
         container = NSPersistentCloudKitContainer(name: "PediLens")
         
         if inMemory {
             container.persistentStoreDescriptions.first?.url = URL(fileURLWithPath: "/dev/null")
         }
         
-        // Configure CloudKit sync
-        guard let description = container.persistentStoreDescriptions.first else {
-            fatalError("Failed to retrieve persistent store description")
+        // Configure CloudKit sync only if not in test environment and not in-memory
+        if !isRunningTests && !inMemory {
+            guard let description = container.persistentStoreDescriptions.first else {
+                fatalError("Failed to retrieve persistent store description")
+            }
+            
+            // Enable persistent history tracking for sync
+            description.setOption(true as NSNumber,
+                                forKey: NSPersistentHistoryTrackingKey)
+            description.setOption(true as NSNumber,
+                                forKey: NSPersistentStoreRemoteChangeNotificationPostOptionKey)
+            
+            // CloudKit container options
+            let cloudKitOptions = NSPersistentCloudKitContainerOptions(
+                containerIdentifier: "iCloud.com.pedilens.app"
+            )
+            description.cloudKitContainerOptions = cloudKitOptions
+        } else {
+            // Disable CloudKit for tests and in-memory stores
+            container.persistentStoreDescriptions.first?.cloudKitContainerOptions = nil
         }
-        
-        // Enable persistent history tracking for sync
-        description.setOption(true as NSNumber,
-                            forKey: NSPersistentHistoryTrackingKey)
-        description.setOption(true as NSNumber,
-                            forKey: NSPersistentStoreRemoteChangeNotificationPostOptionKey)
-        
-        // CloudKit container options
-        let cloudKitOptions = NSPersistentCloudKitContainerOptions(
-            containerIdentifier: "iCloud.com.pedilens.app"
-        )
-        description.cloudKitContainerOptions = cloudKitOptions
         
         container.loadPersistentStores { description, error in
             if let error = error {

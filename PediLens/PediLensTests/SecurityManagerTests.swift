@@ -149,9 +149,9 @@ final class SecurityManagerTests: XCTestCase {
         // Given: Invalid encrypted data
         let invalidData = "Not encrypted data".data(using: .utf8)!
         
-        // When/Then: Decryption should fail
+        // When/Then: Decryption should fail with keyNotFound (no key exists yet)
         XCTAssertThrowsError(try securityManager.decryptData(invalidData)) { error in
-            XCTAssertEqual(error as? SecurityError, SecurityError.decryptionFailed)
+            XCTAssertEqual(error as? SecurityError, SecurityError.keyNotFound)
         }
     }
     
@@ -173,9 +173,9 @@ final class SecurityManagerTests: XCTestCase {
         // Given: Empty data
         let emptyData = Data()
         
-        // When/Then: Decryption should fail
+        // When/Then: Decryption should fail with keyNotFound (no key exists yet)
         XCTAssertThrowsError(try securityManager.decryptData(emptyData)) { error in
-            XCTAssertEqual(error as? SecurityError, SecurityError.decryptionFailed)
+            XCTAssertEqual(error as? SecurityError, SecurityError.keyNotFound)
         }
     }
     

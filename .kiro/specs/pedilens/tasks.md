@@ -148,67 +148,67 @@ This implementation plan breaks down the PediLens native iOS app into discrete, 
     - Calculate perimeter from boundary points
     - _Requirements: 2.4, 2.5_
   
-  - [~] 8.2 Write property test for area calculation
+  - [x] 8.2 Write property test for area calculation
     - **Property 4: Area Calculation from Boundary**
     - **Validates: Requirements 2.4**
   
-  - [~] 8.3 Write property test for comprehensive measurements
+  - [x] 8.3 Write property test for comprehensive measurements
     - **Property 5: Comprehensive Measurement Calculation**
     - **Validates: Requirements 2.5**
   
-  - [~] 8.4 Implement depth estimation
+  - [x] 8.4 Implement depth estimation
     - Extract depth values from depth map within wound boundary
     - Calculate average depth relative to surrounding tissue
     - Filter outliers using median absolute deviation
     - Convert depth map units to millimeters
     - _Requirements: 2.6_
   
-  - [~] 8.5 Write property test for depth estimation
+  - [x] 8.5 Write property test for depth estimation
     - **Property 7: Depth Estimation on Capable Devices**
     - **Validates: Requirements 2.6**
   
-  - [~] 8.6 Implement volume calculation
+  - [x] 8.6 Implement volume calculation
     - Integrate depth values over wound area
     - Calculate volume from area and depth
     - _Requirements: 2.7_
   
-  - [~] 8.7 Write property test for volume calculation
+  - [x] 8.7 Write property test for volume calculation
     - **Property 6: Depth-Based Volume Calculation**
     - **Validates: Requirements 2.7**
   
-  - [~] 8.8 Implement calibration system
+  - [x] 8.8 Implement calibration system
     - Create createCalibration method
     - Support ruler, coin, and custom reference objects
     - Calculate pixel-to-millimeter ratio
     - _Requirements: 12.1, 12.2_
   
-  - [~] 8.9 Write property test for calibration ratio calculation
+  - [x] 8.9 Write property test for calibration ratio calculation
     - **Property 34: Calibration Ratio Calculation**
     - **Validates: Requirements 12.2**
   
-  - [~] 8.10 Write property test for calibration application
+  - [x] 8.10 Write property test for calibration application
     - **Property 35: Calibration Application to Measurements**
     - **Validates: Requirements 12.3**
   
-  - [~] 8.11 Implement unit conversion
+  - [x] 8.11 Implement unit conversion
     - Convert measurements to both metric and imperial
     - Display both unit systems
     - _Requirements: 2.9_
   
-  - [~] 8.12 Write property test for dual unit display
+  - [x] 8.12 Write property test for dual unit display
     - **Property 8: Dual Unit Display**
     - **Validates: Requirements 2.9**
   
-  - [~] 8.13 Implement measurement history
+  - [x] 8.13 Implement measurement history
     - Store previous measurement versions
     - Track manual adjustments
     - _Requirements: 2.10_
   
-  - [~] 8.14 Write property test for measurement history preservation
+  - [x] 8.14 Write property test for measurement history preservation
     - **Property 9: Measurement History Preservation**
     - **Validates: Requirements 2.10**
 
-- [ ] 9. Checkpoint - Ensure all tests pass
+- [x] 9. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 10. Implement user role management

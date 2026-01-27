@@ -39,40 +39,6 @@ enum CameraError: LocalizedError {
     }
 }
 
-// MARK: - Supporting Types
-
-struct CapturedMedia {
-    let photoData: Data
-    let livePhotoVideoURL: URL?
-    let depthData: DepthData?
-    let metadata: PhotoMetadata
-}
-
-struct DepthData {
-    let depthMap: CVPixelBuffer
-    let calibrationData: AVCameraCalibrationData
-    let accuracy: DepthAccuracy
-}
-
-enum DepthAccuracy {
-    case relative
-    case absolute
-}
-
-struct PhotoMetadata {
-    let timestamp: Date
-    let location: CLLocation?
-    let deviceModel: String
-    let cameraSettings: CameraSettings
-}
-
-struct CameraSettings {
-    let iso: Float
-    let exposureDuration: CMTime
-    let aperture: Float
-    let focalLength: Float
-}
-
 // MARK: - Camera Manager Protocol
 
 protocol CameraManagerProtocol {

@@ -139,7 +139,7 @@ final class DataValidationPropertyTests: XCTestCase {
                                        "Iteration \(iteration): Patient name should not exceed reasonable length")
                 
                 // Validate patientID length is reasonable
-                XCTAssertLessThanOrEqual(patient.patientID.count, 100,
+                XCTAssertLessThanOrEqual(patient.patientID?.count ?? 0, 100,
                                        "Iteration \(iteration): Patient ID should not exceed reasonable length")
                 
                 // Save should succeed with valid data
@@ -209,17 +209,17 @@ final class DataValidationPropertyTests: XCTestCase {
                               "Iteration \(iteration): WoundRecord lastUpdated should not be nil")
                 
                 // Validate status is valid
-                XCTAssertTrue(validStatuses.contains(woundRecord.status),
+                XCTAssertTrue(validStatuses.contains(woundRecord.status ?? ""),
                             "Iteration \(iteration): WoundRecord status should be valid")
                 
                 // Validate location length is reasonable
-                XCTAssertLessThanOrEqual(woundRecord.location.count, 500,
+                XCTAssertLessThanOrEqual(woundRecord.location?.count ?? 0, 500,
                                        "Iteration \(iteration): WoundRecord location should not exceed reasonable length")
                 
                 // Validate dates are reasonable
-                XCTAssertLessThanOrEqual(woundRecord.initialAssessmentDate, Date(),
+                XCTAssertLessThanOrEqual(woundRecord.initialAssessmentDate ?? Date(), Date(),
                                        "Iteration \(iteration): Initial assessment date should not be in the future")
-                XCTAssertLessThanOrEqual(woundRecord.lastUpdated, Date().addingTimeInterval(1),
+                XCTAssertLessThanOrEqual(woundRecord.lastUpdated ?? Date(), Date().addingTimeInterval(1),
                                        "Iteration \(iteration): Last updated should not be in the future")
                 
                 // Save should succeed with valid data
@@ -499,11 +499,11 @@ final class DataValidationPropertyTests: XCTestCase {
                             "Iteration \(iteration): Note category should be valid")
                 
                 // Validate text length is reasonable
-                XCTAssertLessThanOrEqual(note.text.count, 10000,
+                XCTAssertLessThanOrEqual(note.text?.count ?? 0, 10000,
                                        "Iteration \(iteration): Note text should not exceed reasonable length")
                 
                 // Validate createdAt is reasonable
-                XCTAssertLessThanOrEqual(note.createdAt, Date().addingTimeInterval(1),
+                XCTAssertLessThanOrEqual(note.createdAt ?? Date(), Date().addingTimeInterval(1),
                                        "Iteration \(iteration): Created date should not be in the future")
                 
                 // Save should succeed with valid data
@@ -640,13 +640,13 @@ final class DataValidationPropertyTests: XCTestCase {
                 let oneHundredYearsAgo = now.addingTimeInterval(-100 * 365 * 24 * 3600)
                 
                 // Validate user dates
-                XCTAssertLessThanOrEqual(user.createdAt, oneSecondFromNow,
+                XCTAssertLessThanOrEqual(user.createdAt ?? Date(), oneSecondFromNow,
                                        "Iteration \(iteration): User createdAt should not be in the future")
-                XCTAssertGreaterThan(user.createdAt, oneHundredYearsAgo,
+                XCTAssertGreaterThan(user.createdAt ?? Date(), oneHundredYearsAgo,
                                    "Iteration \(iteration): User createdAt should be reasonable")
                 
                 // Validate patient dates
-                XCTAssertLessThanOrEqual(patient.createdAt, oneSecondFromNow,
+                XCTAssertLessThanOrEqual(patient.createdAt ?? Date(), oneSecondFromNow,
                                        "Iteration \(iteration): Patient createdAt should not be in the future")
                 if let dob = patient.dateOfBirth {
                     XCTAssertLessThanOrEqual(dob, now,

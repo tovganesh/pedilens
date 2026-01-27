@@ -87,12 +87,12 @@ class MeasurementManager: MeasurementManagerProtocol {
         
         // Create measurement with Foundation's Measurement types
         return WoundMeasurement(
-            length: Measurement(value: lengthMM, unit: UnitLength.millimeters),
-            width: Measurement(value: widthMM, unit: UnitLength.millimeters),
-            area: Measurement(value: areaMM2, unit: UnitArea.squareMillimeters),
-            depth: depthMM.map { Measurement(value: $0, unit: UnitLength.millimeters) },
-            volume: volumeMM3.map { Measurement(value: $0, unit: UnitVolume.cubicMillimeters) },
-            perimeter: Measurement(value: perimeterMM, unit: UnitLength.millimeters),
+            length: Foundation.Measurement(value: lengthMM, unit: UnitLength.millimeters),
+            width: Foundation.Measurement(value: widthMM, unit: UnitLength.millimeters),
+            area: Foundation.Measurement(value: areaMM2, unit: UnitArea.squareMillimeters),
+            depth: depthMM.map { Foundation.Measurement(value: $0, unit: UnitLength.millimeters) },
+            volume: volumeMM3.map { Foundation.Measurement(value: $0, unit: UnitVolume.cubicMillimeters) },
+            perimeter: Foundation.Measurement(value: perimeterMM, unit: UnitLength.millimeters),
             timestamp: Date(),
             calibrationUsed: calibration
         )
@@ -466,45 +466,26 @@ class MeasurementManager: MeasurementManagerProtocol {
 /// Comprehensive wound measurement data
 struct WoundMeasurement {
     /// Length of the wound (longer dimension)
-    let length: Measurement<UnitLength>
+    let length: Foundation.Measurement<UnitLength>
     
     /// Width of the wound (shorter dimension)
-    let width: Measurement<UnitLength>
+    let width: Foundation.Measurement<UnitLength>
     
     /// Area of the wound
-    let area: Measurement<UnitArea>
+    let area: Foundation.Measurement<UnitArea>
     
     /// Depth of the wound (optional, requires depth data)
-    let depth: Measurement<UnitLength>?
+    let depth: Foundation.Measurement<UnitLength>?
     
     /// Volume of the wound (optional, requires depth data)
-    let volume: Measurement<UnitVolume>?
+    let volume: Foundation.Measurement<UnitVolume>?
     
     /// Perimeter of the wound boundary
-    let perimeter: Measurement<UnitLength>
+    let perimeter: Foundation.Measurement<UnitLength>
     
     /// Timestamp when measurement was calculated
     let timestamp: Date
     
     /// Calibration data used for this measurement
     let calibrationUsed: MeasurementCalibration
-}
-
-/// Depth data captured from device depth camera
-struct DepthData {
-    /// Depth map as a pixel buffer
-    let depthMap: CVPixelBuffer
-    
-    /// Camera calibration data
-    let calibrationData: AVCameraCalibrationData
-    
-    /// Depth accuracy level
-    let accuracy: DepthAccuracy
-}
-
-/// Depth measurement accuracy levels
-enum DepthAccuracy {
-    case high
-    case medium
-    case low
 }
