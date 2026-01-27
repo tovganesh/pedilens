@@ -231,38 +231,38 @@ This implementation plan breaks down the PediLens native iOS app into discrete, 
     - **Property 26: Patient Role Self-Documentation**
     - **Validates: Requirements 8.5**
 
-- [ ] 11. Implement patient management (doctor role)
-  - [ ] 11.1 Create PatientManager
+- [x] 11. Implement patient management (doctor role)
+  - [x] 11.1 Create PatientManager
     - Implement CRUD operations for patients
     - Add search functionality with partial matching
     - Implement patient list management
     - _Requirements: 16.4, 17.3_
   
-  - [ ] 11.2 Create patient-centric views
+  - [x] 11.2 Create patient-centric views
     - Implement patient list view grouped by patient
     - Add patient detail view with wound records
     - Calculate aggregate statistics (total wounds, active wounds, healing trends)
     - _Requirements: 17.1, 17.2, 17.5_
   
-  - [ ] 11.3 Write property test for patient record display with statistics
+  - [x] 11.3 Write property test for patient record display with statistics
     - **Property 45: Patient Record Display with Statistics**
     - **Validates: Requirements 17.2, 17.5**
   
-  - [ ] 11.4 Write property test for patient search partial matching
+  - [x] 11.4 Write property test for patient search partial matching
     - **Property 46: Patient Search Partial Matching**
     - **Validates: Requirements 17.4**
   
-  - [ ] 11.5 Implement patient identification in capture workflow
+  - [x] 11.5 Implement patient identification in capture workflow
     - Prompt for patient ID if not associated
     - Display patient info in camera interface
     - Embed patient metadata in captured images
     - _Requirements: 16.1, 16.2, 16.3_
   
-  - [ ] 11.6 Write property test for doctor patient identification prompt
+  - [x] 11.6 Write property test for doctor patient identification prompt
     - **Property 43: Doctor Patient Identification Prompt**
     - **Validates: Requirements 16.1**
   
-  - [ ] 11.7 Write property test for patient metadata in doctor captures
+  - [x] 11.7 Write property test for patient metadata in doctor captures
     - **Property 44: Patient Metadata in Doctor Captures**
     - **Validates: Requirements 16.2, 16.3, 16.5, 16.6**
 
