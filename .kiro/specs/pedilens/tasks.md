@@ -299,41 +299,41 @@ This implementation plan breaks down the PediLens native iOS app into discrete, 
     - **Property 16: Metadata Persistence**
     - **Validates: Requirements 4.5, 5.1**
 
-- [ ] 13. Implement timeline and history views
-  - [ ] 13.1 Create timeline UI
+- [x] 13. Implement timeline and history views
+  - [x] 13.1 Create timeline UI
     - Display capture sessions in reverse chronological order
     - Show thumbnails, timestamps, and key measurements
     - Implement timeline entry selection for detail view
     - _Requirements: 3.1, 3.2, 3.3_
   
-  - [ ] 13.2 Write property test for timeline chronological ordering
+  - [x] 13.2 Write property test for timeline chronological ordering
     - **Property 10: Timeline Chronological Ordering**
     - **Validates: Requirements 3.1**
   
-  - [ ] 13.3 Write property test for timeline entry completeness
+  - [x] 13.3 Write property test for timeline entry completeness
     - **Property 11: Timeline Entry Completeness**
     - **Validates: Requirements 3.2, 10.3**
   
-  - [ ] 13.4 Implement comparison views
+  - [x] 13.4 Implement comparison views
     - Add visual indicators for wound size changes
     - Calculate and display change percentages
     - _Requirements: 3.4_
   
-  - [ ] 13.5 Write property test for wound size change indicators
+  - [x] 13.5 Write property test for wound size change indicators
     - **Property 12: Wound Size Change Indicators**
     - **Validates: Requirements 3.4**
   
-  - [ ] 13.6 Implement filtering and sorting
+  - [x] 13.6 Implement filtering and sorting
     - Add date range filter
     - Add wound status filter
     - Add wound location filter
     - _Requirements: 3.5, 17.6_
   
-  - [ ] 13.7 Write property test for timeline date range filtering
+  - [x] 13.7 Write property test for timeline date range filtering
     - **Property 13: Timeline Date Range Filtering**
     - **Validates: Requirements 3.5, 17.6**
   
-  - [ ] 13.8 Write property test for multi-criteria record filtering
+  - [x] 13.8 Write property test for multi-criteria record filtering
     - **Property 47: Multi-Criteria Record Filtering**
     - **Validates: Requirements 17.6**
 

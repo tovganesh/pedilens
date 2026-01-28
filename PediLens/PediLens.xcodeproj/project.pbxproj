@@ -15,6 +15,7 @@
 		146F47BFE2FBA850DAD5FDCC /* SecurityManagerPropertyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 375DAED9F93EDD4F41E688C6 /* SecurityManagerPropertyTests.swift */; };
 		176F7A1D386307A89D085D68 /* FileStorageManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DE1982DD9305D592AC5DD6E /* FileStorageManagerTests.swift */; };
 		1A80893888B5BE2A541EC533 /* FileStorageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8ACD409062A80C28C7CCDF60 /* FileStorageManager.swift */; };
+		1BAB97EC2F89B3F51E1F837E /* TimelineChronologicalOrderPropertyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71053B481F683EA334D5F032 /* TimelineChronologicalOrderPropertyTests.swift */; };
 		1E3ACC803CDDACE3194A7C0E /* CameraTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58A39E121149DE58CCABD577 /* CameraTypes.swift */; };
 		1E8C436BA2267A59A885D3B7 /* PatientRecordDisplayPropertyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72B239A9A443C26B784B6D63 /* PatientRecordDisplayPropertyTests.swift */; };
 		1F7911D4C92FE91F50A6D335 /* CameraManualControlsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3B54A53E3BA41099F1A938F /* CameraManualControlsTests.swift */; };
@@ -34,6 +35,7 @@
 		54FC41DB113A9D31DE1DE6B7 /* PDFKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4A63FC4B50B3E3CBF7C949F5 /* PDFKit.framework */; };
 		559E5DBEE5314AFA2F843CA8 /* WoundManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F234891FA87BCF433E791F5B /* WoundManager.swift */; };
 		5942DFEE0A98B587C1DFB4CC /* CloudKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 747A982603A4C6C64C6B381D /* CloudKit.framework */; };
+		60663285C6571C4C772F11A7 /* TimelineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71DA09D5DB08316DA0C02675 /* TimelineView.swift */; };
 		62E291E71DC08B557D9E6F50 /* UserManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAF257B5B484DBCEE4E55427 /* UserManager.swift */; };
 		63662FD7DB7621DA6B1B66DF /* UserRole.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38C24940654E5BBECA53AD4A /* UserRole.swift */; };
 		6B1B746CE9356E56DC161667 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2C231C6CDF9B5FC03EBCE79 /* ContentView.swift */; };
@@ -46,6 +48,7 @@
 		806EED8E63F7E39C4F510E86 /* UserManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39C8A4CE9C35161D58F9135C /* UserManagerTests.swift */; };
 		856EE1E745C36CF1F5F67696 /* CameraMultiFormatPropertyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BE33545B99AFE50B6578997 /* CameraMultiFormatPropertyTests.swift */; };
 		857CE8C0EF693D9E15585C60 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 79A03E3DA6E289DF1B7D2952 /* Security.framework */; };
+		88DD43A2A60E1CAA20A354F1 /* WoundSizeChangePropertyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8185F25801E92CEFD8652499 /* WoundSizeChangePropertyTests.swift */; };
 		899160DDAF9A5AEEF611A471 /* CoreDataOfflinePropertyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BFED549962510BDF31A82BD /* CoreDataOfflinePropertyTests.swift */; };
 		8D3777F018A4875843C77603 /* MeasurementManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF426ED791AF952104B3E7FF /* MeasurementManagerTests.swift */; };
 		909BA843479D0C2DEBEC5C16 /* WoundManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4F5E47555A4ECD04A5AECCE /* WoundManagerTests.swift */; };
@@ -66,10 +69,12 @@
 		D54F2762F2D0BB094B08840B /* CameraMaxResolutionPropertyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B11F2912A861AC5236226736 /* CameraMaxResolutionPropertyTests.swift */; };
 		D804CA353FBCAC647E263854 /* RoleSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA4875736916D960315B9C96 /* RoleSelectionView.swift */; };
 		D8E2AA7899D7A3A59F357B50 /* CameraManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB0BA0F646223B3589404665 /* CameraManagerTests.swift */; };
+		DDDB6A96003F904DB34A51DC /* TimelineEntryCompletenessPropertyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2F3BEC8AFACA28C967E64AE /* TimelineEntryCompletenessPropertyTests.swift */; };
 		E41783CEB8BBEE484D4E070D /* PediLens.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = B328E2110CE00F916EE7E722 /* PediLens.xcdatamodeld */; };
 		E4C0E614DA46937CDAFE9510 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 31CC1434BB8F77795CD5CF3F /* Localizable.strings */; };
 		E6226C478F5F3A6D6574DFF7 /* Localization.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF53FAC258AB490DBE2EBAD1 /* Localization.swift */; };
 		EB88056376213623B776EC37 /* CaptureSessionLocationPropertyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C29F5FC8264E2813A9CF949D /* CaptureSessionLocationPropertyTests.swift */; };
+		EBB86759B277EFA950FA66EE /* TimelineDateRangeFilteringPropertyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88A5E8E9B3C87F900E7324CF /* TimelineDateRangeFilteringPropertyTests.swift */; };
 		F07E6C78DAFC9E09119FDD8B /* WoundRecordDeletionPropertyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AAFBDA137DEA3DD4B572623 /* WoundRecordDeletionPropertyTests.swift */; };
 		F085ADDB917ADDCFB06878DF /* Measurement+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E856ABF6A849224AD91EFDC /* Measurement+Extensions.swift */; };
 		F4DFB2C279F6C41AE3896396 /* SecurityManager_README.md in Resources */ = {isa = PBXBuildFile; fileRef = 1B9E005E1BAC29CF028E4BD8 /* SecurityManager_README.md */; };
@@ -122,11 +127,15 @@
 		6CEA2955822A64E3493E7CDF /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		6DE1982DD9305D592AC5DD6E /* FileStorageManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileStorageManagerTests.swift; sourceTree = "<group>"; };
 		70E18317740869D70B34DE7F /* CameraManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraManager.swift; sourceTree = "<group>"; };
+		71053B481F683EA334D5F032 /* TimelineChronologicalOrderPropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineChronologicalOrderPropertyTests.swift; sourceTree = "<group>"; };
+		71DA09D5DB08316DA0C02675 /* TimelineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineView.swift; sourceTree = "<group>"; };
 		72B239A9A443C26B784B6D63 /* PatientRecordDisplayPropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatientRecordDisplayPropertyTests.swift; sourceTree = "<group>"; };
 		7453578E3ED202ED024F310C /* SecurityManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecurityManagerTests.swift; sourceTree = "<group>"; };
 		747A982603A4C6C64C6B381D /* CloudKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CloudKit.framework; path = System/Library/Frameworks/CloudKit.framework; sourceTree = SDKROOT; };
 		79A03E3DA6E289DF1B7D2952 /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
+		8185F25801E92CEFD8652499 /* WoundSizeChangePropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WoundSizeChangePropertyTests.swift; sourceTree = "<group>"; };
 		887116CAEB2D47FE10D742D2 /* PatientIdentificationPropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatientIdentificationPropertyTests.swift; sourceTree = "<group>"; };
+		88A5E8E9B3C87F900E7324CF /* TimelineDateRangeFilteringPropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineDateRangeFilteringPropertyTests.swift; sourceTree = "<group>"; };
 		8ACD409062A80C28C7CCDF60 /* FileStorageManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileStorageManager.swift; sourceTree = "<group>"; };
 		8C066B7128D95B36BD8E9F68 /* CoreML.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreML.framework; path = System/Library/Frameworks/CoreML.framework; sourceTree = SDKROOT; };
 		932C22C1E7D854D20D361C68 /* PersistenceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceController.swift; sourceTree = "<group>"; };
@@ -160,6 +169,7 @@
 		CA4875736916D960315B9C96 /* RoleSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoleSelectionView.swift; sourceTree = "<group>"; };
 		CF53FAC258AB490DBE2EBAD1 /* Localization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Localization.swift; sourceTree = "<group>"; };
 		D4F5E47555A4ECD04A5AECCE /* WoundManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WoundManagerTests.swift; sourceTree = "<group>"; };
+		E2F3BEC8AFACA28C967E64AE /* TimelineEntryCompletenessPropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineEntryCompletenessPropertyTests.swift; sourceTree = "<group>"; };
 		E659D998C9CC36633EA64393 /* PatientSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatientSelectionView.swift; sourceTree = "<group>"; };
 		E7E2FADA34EE12CBC837578E /* PediLens.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PediLens.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		EB0BA0F646223B3589404665 /* CameraManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraManagerTests.swift; sourceTree = "<group>"; };
@@ -306,6 +316,9 @@
 				3D4C1A115AEEA1397CFC075A /* PersistenceControllerTests.swift */,
 				375DAED9F93EDD4F41E688C6 /* SecurityManagerPropertyTests.swift */,
 				7453578E3ED202ED024F310C /* SecurityManagerTests.swift */,
+				71053B481F683EA334D5F032 /* TimelineChronologicalOrderPropertyTests.swift */,
+				88A5E8E9B3C87F900E7324CF /* TimelineDateRangeFilteringPropertyTests.swift */,
+				E2F3BEC8AFACA28C967E64AE /* TimelineEntryCompletenessPropertyTests.swift */,
 				39C8A4CE9C35161D58F9135C /* UserManagerTests.swift */,
 				B3643D0A206447D9AA3B9C13 /* UserRolePropertyTests.swift */,
 				A65C9D40AFA26DD36B9C3E95 /* WoundDetectionPropertyTests.swift */,
@@ -313,6 +326,7 @@
 				D4F5E47555A4ECD04A5AECCE /* WoundManagerTests.swift */,
 				9A01B118AF7F31F687868D9D /* WoundRecordCreationPropertyTests.swift */,
 				9AAFBDA137DEA3DD4B572623 /* WoundRecordDeletionPropertyTests.swift */,
+				8185F25801E92CEFD8652499 /* WoundSizeChangePropertyTests.swift */,
 			);
 			path = PediLensTests;
 			sourceTree = "<group>";
@@ -354,6 +368,7 @@
 				305ACA9092CB14707B5E89B9 /* PatientListView.swift */,
 				E659D998C9CC36633EA64393 /* PatientSelectionView.swift */,
 				CA4875736916D960315B9C96 /* RoleSelectionView.swift */,
+				71DA09D5DB08316DA0C02675 /* TimelineView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -467,6 +482,7 @@
 				99999F92009DE86566CFA65B /* PersistenceController.swift in Sources */,
 				D804CA353FBCAC647E263854 /* RoleSelectionView.swift in Sources */,
 				251F42890D0C4B0CE19A89E6 /* SecurityManager.swift in Sources */,
+				60663285C6571C4C772F11A7 /* TimelineView.swift in Sources */,
 				3DA5E03E77364ADEFD846080 /* User+Extensions.swift in Sources */,
 				62E291E71DC08B557D9E6F50 /* UserManager.swift in Sources */,
 				63662FD7DB7621DA6B1B66DF /* UserRole.swift in Sources */,
@@ -503,6 +519,9 @@
 				A91C423C9E248BCAEFFBD49C /* PersistenceControllerTests.swift in Sources */,
 				146F47BFE2FBA850DAD5FDCC /* SecurityManagerPropertyTests.swift in Sources */,
 				F7508465488212A288868121 /* SecurityManagerTests.swift in Sources */,
+				1BAB97EC2F89B3F51E1F837E /* TimelineChronologicalOrderPropertyTests.swift in Sources */,
+				EBB86759B277EFA950FA66EE /* TimelineDateRangeFilteringPropertyTests.swift in Sources */,
+				DDDB6A96003F904DB34A51DC /* TimelineEntryCompletenessPropertyTests.swift in Sources */,
 				806EED8E63F7E39C4F510E86 /* UserManagerTests.swift in Sources */,
 				CEC6855AB7A01D322EA8E795 /* UserRolePropertyTests.swift in Sources */,
 				11EE8CF6C366BB0D3A96FF0E /* WoundDetectionPropertyTests.swift in Sources */,
@@ -510,6 +529,7 @@
 				909BA843479D0C2DEBEC5C16 /* WoundManagerTests.swift in Sources */,
 				F784771B4630C1272F930770 /* WoundRecordCreationPropertyTests.swift in Sources */,
 				F07E6C78DAFC9E09119FDD8B /* WoundRecordDeletionPropertyTests.swift in Sources */,
+				88DD43A2A60E1CAA20A354F1 /* WoundSizeChangePropertyTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
