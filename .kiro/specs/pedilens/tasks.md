@@ -266,36 +266,36 @@ This implementation plan breaks down the PediLens native iOS app into discrete, 
     - **Property 44: Patient Metadata in Doctor Captures**
     - **Validates: Requirements 16.2, 16.3, 16.5, 16.6**
 
-- [ ] 12. Implement wound record management
-  - [ ] 12.1 Create WoundManager
+- [x] 12. Implement wound record management
+  - [x] 12.1 Create WoundManager
     - Implement CRUD operations for wound records
     - Add wound record creation with prompts (location, date, patient info)
     - Implement archive and delete functionality
     - _Requirements: 10.1, 10.2, 10.4_
   
-  - [ ] 12.2 Write property test for wound record creation prompts
+  - [x] 12.2 Write property test for wound record creation prompts
     - **Property 30: Wound Record Creation Prompts**
     - **Validates: Requirements 10.2**
   
-  - [ ] 12.3 Write property test for deletion confirmation
+  - [x] 12.3 Write property test for deletion confirmation
     - **Property 31: Deletion Confirmation**
     - **Validates: Requirements 10.5**
   
-  - [ ] 12.4 Implement capture session management
+  - [x] 12.4 Implement capture session management
     - Create capture sessions associated with wound records
     - Store photos, measurements, and metadata
     - Add notes and tags to capture sessions
     - _Requirements: 1.5, 4.1, 4.4_
   
-  - [ ] 12.5 Write property test for automatic timestamp recording
+  - [x] 12.5 Write property test for automatic timestamp recording
     - **Property 14: Automatic Timestamp Recording**
     - **Validates: Requirements 4.2**
   
-  - [ ] 12.6 Write property test for location recording with permission
+  - [x] 12.6 Write property test for location recording with permission
     - **Property 15: Location Recording with Permission**
     - **Validates: Requirements 4.3**
   
-  - [ ] 12.7 Write property test for metadata persistence
+  - [x] 12.7 Write property test for metadata persistence
     - **Property 16: Metadata Persistence**
     - **Validates: Requirements 4.5, 5.1**
 
