@@ -1,0 +1,112 @@
+Running test suites individually...
+======================================
+
+Testing: CameraHDRPropertyTests
+✅ PASSED
+
+Testing: CameraManagerTests
+✅ PASSED
+
+Testing: CameraManualControlsTests
+✅ PASSED
+
+Testing: CameraMaxResolutionPropertyTests
+✅ PASSED
+
+Testing: CameraMultiFormatPropertyTests
+✅ PASSED
+
+Testing: CaptureSessionLocationPropertyTests
+✅ PASSED
+
+Testing: CaptureSessionManagerTests
+✅ PASSED
+
+Testing: CaptureSessionMetadataPropertyTests
+✅ PASSED
+
+Testing: CaptureSessionTimestampPropertyTests
+✅ PASSED
+
+Testing: CoreDataEntityExtensionsTests
+✅ PASSED
+
+Testing: CoreDataOfflinePropertyTests
+✅ PASSED
+
+Testing: DataValidationPropertyTests
+✅ PASSED
+
+Testing: FileStorageManagerTests
+✅ PASSED
+
+Testing: MeasurementManagerTests
+✅ PASSED
+
+Testing: MeasurementPropertyTests
+✅ PASSED
+
+Testing: PatientIdentificationPropertyTests
+✅ PASSED
+
+Testing: PatientManagerTests
+✅ PASSED
+
+Testing: PatientRecordDisplayPropertyTests
+✅ PASSED
+
+Testing: PatientRecordFilteringPropertyTests
+✅ PASSED
+
+Testing: PatientSearchPropertyTests
+✅ PASSED
+
+Testing: PersistenceControllerTests
+✅ PASSED
+
+Testing: SecurityManagerPropertyTests
+✅ PASSED
+
+Testing: SecurityManagerTests
+✅ PASSED
+
+Testing: TimelineChronologicalOrderPropertyTests
+✅ PASSED
+
+Testing: TimelineDateRangeFilteringPropertyTests
+✅ PASSED
+
+Testing: TimelineEntryCompletenessPropertyTests
+✅ PASSED
+
+Testing: UserManagerTests
+✅ PASSED
+
+Testing: UserRolePropertyTests
+✅ PASSED
+
+Testing: WoundDetectionPropertyTests
+✅ PASSED
+
+Testing: WoundDetectionServiceTests
+✅ PASSED
+
+Testing: WoundManagerTests
+✅ PASSED
+
+Testing: WoundRecordCreationPropertyTests
+✅ PASSED
+
+Testing: WoundRecordDeletionPropertyTests
+✅ PASSED
+
+Testing: WoundSizeChangePropertyTests
+✅ PASSED
+
+======================================
+Summary:
+  Passed: 34
+  Failed: 0
+  Crashed/Timeout: 0
+  Total: 34
+======================================

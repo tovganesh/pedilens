@@ -20,11 +20,14 @@ class FileStorageManagerTests: XCTestCase {
     }
     
     override func tearDown() {
-        // Clean up test files
+        // Clean up test files synchronously
         if let testSessionID = testSessionID {
+            let expectation = XCTestExpectation(description: "Cleanup files")
             Task {
                 try? await fileStorageManager.deleteFiles(for: testSessionID)
+                expectation.fulfill()
             }
+            wait(for: [expectation], timeout: 5.0)
         }
         testSessionID = nil
         fileStorageManager = nil
