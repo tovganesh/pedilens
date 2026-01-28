@@ -47,11 +47,11 @@
     </entity>
     <entity name="Measurement" representedClassName="Measurement" syncable="YES" codeGenerationType="class">
         <attribute name="areaMM2" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
-        <attribute name="boundaryPoints" attributeType="Binary"/>
-        <attribute name="calibrationData" attributeType="Binary"/>
+        <attribute name="boundaryPoints" optional="YES" attributeType="Binary"/>
+        <attribute name="calibrationData" optional="YES" attributeType="Binary"/>
         <attribute name="depthMM" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
         <attribute name="detectionConfidence" attributeType="Float" defaultValueString="0.0" usesScalarValueType="YES"/>
-        <attribute name="id" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="isManuallyAdjusted" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
         <attribute name="lengthMM" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
         <attribute name="perimeterMM" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
