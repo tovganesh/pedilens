@@ -456,17 +456,17 @@ This implementation plan breaks down the PediLens native iOS app into discrete, 
     - **Property 41: Data Integrity Checksums**
     - **Validates: Requirements 14.3**
 
-- [ ] 18. Implement privacy and security features
-  - [ ] 18.1 Write property test for no third-party data transmission
+- [x] 18. Implement privacy and security features
+  - [x] 18.1 Write property test for no third-party data transmission
     - **Property 28: No Third-Party Data Transmission**
     - **Validates: Requirements 9.4**
   
-  - [ ] 18.2 Implement session timeout
+  - [x] 18.2 Implement session timeout
     - Add 5-minute inactivity timer
     - Require re-authentication after timeout
     - _Requirements: 9.2_
   
-  - [ ] 18.3 Implement secure deletion
+  - [x] 18.3 Implement secure deletion
     - Overwrite file data before removal
     - Securely delete encryption keys
     - _Requirements: 10.5_
