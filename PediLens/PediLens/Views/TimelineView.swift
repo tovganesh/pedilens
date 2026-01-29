@@ -515,6 +515,11 @@ struct TimelineDetailView: View {
             Text("Measurements")
                 .font(.headline)
             
+            // Show uncalibrated warning if needed
+            if !measurement.hasCalibration {
+                UncalibratedMeasurementWarning()
+            }
+            
             // Metric measurements
             VStack(alignment: .leading, spacing: 8) {
                 Text("Metric")

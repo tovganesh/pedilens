@@ -8,7 +8,7 @@
 import Foundation
 
 /// Calibration data for accurate wound measurements
-struct MeasurementCalibration {
+struct MeasurementCalibration: Codable {
     /// Conversion ratio from pixels to millimeters
     let pixelsPerMillimeter: Double
     
@@ -39,7 +39,7 @@ struct MeasurementCalibration {
 }
 
 /// Reference object used for measurement calibration
-enum ReferenceObject {
+enum ReferenceObject: Codable {
     /// Standard ruler with known length
     case ruler(lengthMM: Double)
     
@@ -51,7 +51,7 @@ enum ReferenceObject {
 }
 
 /// Common coin types with standard dimensions
-enum CoinType {
+enum CoinType: Codable {
     case usQuarter  // 24.26mm diameter
     case usDime     // 17.91mm diameter
     case usPenny    // 19.05mm diameter
@@ -69,7 +69,7 @@ enum CoinType {
 }
 
 /// Depth calibration data for 3D measurements
-struct DepthCalibration {
+struct DepthCalibration: Codable {
     /// Scale factor to convert depth map values to millimeters
     let depthScale: Float
     

@@ -113,18 +113,23 @@ class FileStorageManager: FileStorageManagerProtocol {
         let photoURL = sessionDir.appendingPathComponent("photo.heic")
         try data.write(to: photoURL, options: [.completeFileProtection])
         
-        // Generate and save thumbnail (non-critical, log errors but don't fail)
-        do {
-            if let image = UIImage(data: data) {
-                let thumbnail = generateThumbnail(from: image, size: CGSize(width: 300, height: 300))
-                if let thumbnailData = thumbnail.jpegData(compressionQuality: 0.8) {
-                    let thumbnailURL = sessionDir.appendingPathComponent("thumbnail.jpg")
-                    try thumbnailData.write(to: thumbnailURL, options: [.completeFileProtection])
+        // Generate and save thumbnail asynchronously (non-critical, log errors but don't fail)
+        Task {
+            do {
+                if let image = UIImage(data: data) {
+                    let thumbnail = await PerformanceOptimizer.shared.generateThumbnail(
+                        from: image,
+                        size: CGSize(width: 300, height: 300)
+                    )
+                    if let thumbnailData = thumbnail.jpegData(compressionQuality: 0.8) {
+                        let thumbnailURL = sessionDir.appendingPathComponent("thumbnail.jpg")
+                        try thumbnailData.write(to: thumbnailURL, options: [.completeFileProtection])
+                    }
                 }
+            } catch {
+                // Thumbnail generation is non-critical, log but continue
+                print("Warning: Failed to generate thumbnail for session \(sessionID): \(error)")
             }
-        } catch {
-            // Thumbnail generation is non-critical, log but continue
-            print("Warning: Failed to generate thumbnail for session \(sessionID): \(error)")
         }
         
         return photoURL

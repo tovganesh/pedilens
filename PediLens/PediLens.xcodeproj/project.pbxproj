@@ -21,14 +21,17 @@
 		1F7911D4C92FE91F50A6D335 /* CameraManualControlsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3B54A53E3BA41099F1A938F /* CameraManualControlsTests.swift */; };
 		251F42890D0C4B0CE19A89E6 /* SecurityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C105D781E00C00030C27679C /* SecurityManager.swift */; };
 		257E24020AB1DA2373BB8885 /* PatientDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC8F4375E7BB2B11E983FA70 /* PatientDetailView.swift */; };
+		275DF00CE170A7B92A8BF79D /* SwiftCheck in Frameworks */ = {isa = PBXBuildFile; productRef = 52DDE502C8909D441B1A9C3E /* SwiftCheck */; };
 		2788D4291EAF9B8C53AC35B4 /* CryptoKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3CC3B9910FDBBDC923F7C817 /* CryptoKit.framework */; };
 		2A2E0B4BC7E958B79F2C779C /* SyncManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3865E33BDBD99B4116760096 /* SyncManager.swift */; };
+		2E9D82BA5DC2C0FC74DD9EA4 /* PerformanceOptimizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D75688989AFF0FA6FCB5487 /* PerformanceOptimizer.swift */; };
 		2EBEE5B1F60CE6C00816FE2D /* CaptureSession+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0756970C673F50C51296B75F /* CaptureSession+Extensions.swift */; };
 		36B0F80E220A34318F01E352 /* CameraManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70E18317740869D70B34DE7F /* CameraManager.swift */; };
 		3D791313C813D29DD3B9E596 /* PatientManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 528A2FA5C4D755BBCB37BBD3 /* PatientManager.swift */; };
 		3DA5E03E77364ADEFD846080 /* User+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2B93176449139EFA1D1AC3F /* User+Extensions.swift */; };
 		4439430C7131442AA4832243 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AAE51C5953A2EDEB530652A4 /* Assets.xcassets */; };
 		44643D092AC0D28E85C9E3DA /* PediLensApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 956BF8C8109F97228EB87449 /* PediLensApp.swift */; };
+		46C4EB13C2AA99A8367E8B84 /* UncalibratedMeasurementWarningPropertyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B155D545FB6B46DAE41EEBC /* UncalibratedMeasurementWarningPropertyTests.swift */; };
 		48B1B3E2D94EE933DE7230D1 /* PatientSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E659D998C9CC36633EA64393 /* PatientSelectionView.swift */; };
 		502791E87FFCD163F91E80B9 /* WoundDetectionServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 514629B1180CBD97F5C46B15 /* WoundDetectionServiceTests.swift */; };
 		51310AED5828AD5774F13546 /* MeasurementManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2285D950A378D75194A55926 /* MeasurementManager.swift */; };
@@ -83,11 +86,13 @@
 		C8BC6C1A2040DD0060611A49 /* CoreML.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8C066B7128D95B36BD8E9F68 /* CoreML.framework */; };
 		CA9DD36CDC5A9E613995C0C5 /* Vision.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 131A8064124285A2A10F3F14 /* Vision.framework */; };
 		CEC6855AB7A01D322EA8E795 /* UserRolePropertyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3643D0A206447D9AA3B9C13 /* UserRolePropertyTests.swift */; };
+		D40D9C942D7C7E9B97BF1D77 /* StorageManagementView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 721B8A2067ABB8CBD19736F2 /* StorageManagementView.swift */; };
 		D54F2762F2D0BB094B08840B /* CameraMaxResolutionPropertyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B11F2912A861AC5236226736 /* CameraMaxResolutionPropertyTests.swift */; };
 		D804CA353FBCAC647E263854 /* RoleSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA4875736916D960315B9C96 /* RoleSelectionView.swift */; };
 		D8E2AA7899D7A3A59F357B50 /* CameraManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB0BA0F646223B3589404665 /* CameraManagerTests.swift */; };
 		DBEEAF9B9D1D5F44750AA8E3 /* SyncStatusUIPropertyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E9077F217A92B523915FB22 /* SyncStatusUIPropertyTests.swift */; };
 		DDDB6A96003F904DB34A51DC /* TimelineEntryCompletenessPropertyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2F3BEC8AFACA28C967E64AE /* TimelineEntryCompletenessPropertyTests.swift */; };
+		E245C2FDD222631B180472E3 /* UncalibratedMeasurementWarning.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA8DB0134FEAEB5F0D6B4BB3 /* UncalibratedMeasurementWarning.swift */; };
 		E41783CEB8BBEE484D4E070D /* PediLens.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = B328E2110CE00F916EE7E722 /* PediLens.xcdatamodeld */; };
 		E4C0E614DA46937CDAFE9510 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 31CC1434BB8F77795CD5CF3F /* Localizable.strings */; };
 		E6226C478F5F3A6D6574DFF7 /* Localization.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF53FAC258AB490DBE2EBAD1 /* Localization.swift */; };
@@ -120,6 +125,7 @@
 /* Begin PBXFileReference section */
 		06B145390FEF159F05FB3CC1 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		0756970C673F50C51296B75F /* CaptureSession+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CaptureSession+Extensions.swift"; sourceTree = "<group>"; };
+		0B155D545FB6B46DAE41EEBC /* UncalibratedMeasurementWarningPropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UncalibratedMeasurementWarningPropertyTests.swift; sourceTree = "<group>"; };
 		0D5CF92288149BD17D918E6B /* CaptureSessionTimestampPropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureSessionTimestampPropertyTests.swift; sourceTree = "<group>"; };
 		0EE86407FFD8094FFD87D55C /* SyncStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncStatusView.swift; sourceTree = "<group>"; };
 		131A8064124285A2A10F3F14 /* Vision.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Vision.framework; path = System/Library/Frameworks/Vision.framework; sourceTree = SDKROOT; };
@@ -161,11 +167,13 @@
 		70E18317740869D70B34DE7F /* CameraManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraManager.swift; sourceTree = "<group>"; };
 		71053B481F683EA334D5F032 /* TimelineChronologicalOrderPropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineChronologicalOrderPropertyTests.swift; sourceTree = "<group>"; };
 		71DA09D5DB08316DA0C02675 /* TimelineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineView.swift; sourceTree = "<group>"; };
+		721B8A2067ABB8CBD19736F2 /* StorageManagementView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageManagementView.swift; sourceTree = "<group>"; };
 		72B239A9A443C26B784B6D63 /* PatientRecordDisplayPropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatientRecordDisplayPropertyTests.swift; sourceTree = "<group>"; };
 		7453578E3ED202ED024F310C /* SecurityManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecurityManagerTests.swift; sourceTree = "<group>"; };
 		747A982603A4C6C64C6B381D /* CloudKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CloudKit.framework; path = System/Library/Frameworks/CloudKit.framework; sourceTree = SDKROOT; };
 		76DD846061A580DD69DB4E00 /* ErrorHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorHandler.swift; sourceTree = "<group>"; };
 		79A03E3DA6E289DF1B7D2952 /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
+		7D75688989AFF0FA6FCB5487 /* PerformanceOptimizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceOptimizer.swift; sourceTree = "<group>"; };
 		8185F25801E92CEFD8652499 /* WoundSizeChangePropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WoundSizeChangePropertyTests.swift; sourceTree = "<group>"; };
 		846315941C10729F8DBB1BE3 /* DataAnonymizationPropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataAnonymizationPropertyTests.swift; sourceTree = "<group>"; };
 		873AA6A5797EF83E8EA33B17 /* OfflineSyncQueuePropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineSyncQueuePropertyTests.swift; sourceTree = "<group>"; };
@@ -201,6 +209,7 @@
 		B4D7F6C191BDA8A68917FD09 /* PatientCaptureManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatientCaptureManager.swift; sourceTree = "<group>"; };
 		B6E518F7C25DB3110238D316 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
 		BA88FDB4C8744BF23C63EA8B /* ExportManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportManager.swift; sourceTree = "<group>"; };
+		BA8DB0134FEAEB5F0D6B4BB3 /* UncalibratedMeasurementWarning.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UncalibratedMeasurementWarning.swift; sourceTree = "<group>"; };
 		C105D781E00C00030C27679C /* SecurityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecurityManager.swift; sourceTree = "<group>"; };
 		C29F5FC8264E2813A9CF949D /* CaptureSessionLocationPropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureSessionLocationPropertyTests.swift; sourceTree = "<group>"; };
 		C2C231C6CDF9B5FC03EBCE79 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -223,6 +232,14 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		71CB65C143111154CBE57D44 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				275DF00CE170A7B92A8BF79D /* SwiftCheck in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		FE38F2CC80A4784C0CD1C08C /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -346,6 +363,7 @@
 				76DD846061A580DD69DB4E00 /* ErrorHandler.swift */,
 				E16A0373D9ADEEB1607F614E /* ErrorLogger.swift */,
 				CF53FAC258AB490DBE2EBAD1 /* Localization.swift */,
+				7D75688989AFF0FA6FCB5487 /* PerformanceOptimizer.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -391,6 +409,7 @@
 				71053B481F683EA334D5F032 /* TimelineChronologicalOrderPropertyTests.swift */,
 				88A5E8E9B3C87F900E7324CF /* TimelineDateRangeFilteringPropertyTests.swift */,
 				E2F3BEC8AFACA28C967E64AE /* TimelineEntryCompletenessPropertyTests.swift */,
+				0B155D545FB6B46DAE41EEBC /* UncalibratedMeasurementWarningPropertyTests.swift */,
 				39C8A4CE9C35161D58F9135C /* UserManagerTests.swift */,
 				B3643D0A206447D9AA3B9C13 /* UserRolePropertyTests.swift */,
 				A65C9D40AFA26DD36B9C3E95 /* WoundDetectionPropertyTests.swift */,
@@ -440,9 +459,11 @@
 				305ACA9092CB14707B5E89B9 /* PatientListView.swift */,
 				E659D998C9CC36633EA64393 /* PatientSelectionView.swift */,
 				CA4875736916D960315B9C96 /* RoleSelectionView.swift */,
+				721B8A2067ABB8CBD19736F2 /* StorageManagementView.swift */,
 				A838F24249AAEAC5CBE5E4E7 /* SyncConflictView.swift */,
 				0EE86407FFD8094FFD87D55C /* SyncStatusView.swift */,
 				71DA09D5DB08316DA0C02675 /* TimelineView.swift */,
+				BA8DB0134FEAEB5F0D6B4BB3 /* UncalibratedMeasurementWarning.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -455,6 +476,7 @@
 			buildConfigurationList = FCBE55BC4B53A82A92B1032C /* Build configuration list for PBXNativeTarget "PediLensTests" */;
 			buildPhases = (
 				F92923C1D6DFA41F10642167 /* Sources */,
+				71CB65C143111154CBE57D44 /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -463,6 +485,7 @@
 			);
 			name = PediLensTests;
 			packageProductDependencies = (
+				52DDE502C8909D441B1A9C3E /* SwiftCheck */,
 			);
 			productName = PediLensTests;
 			productReference = 9D02041AAE18F9C41344CDC3 /* PediLensTests.xctest */;
@@ -506,6 +529,9 @@
 			);
 			mainGroup = F692D67CCEC785A7F7103616;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				373811BD5FFB871471CE20D0 /* XCRemoteSwiftPackageReference "SwiftCheck" */,
+			);
 			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
@@ -558,14 +584,17 @@
 				48B1B3E2D94EE933DE7230D1 /* PatientSelectionView.swift in Sources */,
 				E41783CEB8BBEE484D4E070D /* PediLens.xcdatamodeld in Sources */,
 				44643D092AC0D28E85C9E3DA /* PediLensApp.swift in Sources */,
+				2E9D82BA5DC2C0FC74DD9EA4 /* PerformanceOptimizer.swift in Sources */,
 				99999F92009DE86566CFA65B /* PersistenceController.swift in Sources */,
 				D804CA353FBCAC647E263854 /* RoleSelectionView.swift in Sources */,
 				251F42890D0C4B0CE19A89E6 /* SecurityManager.swift in Sources */,
+				D40D9C942D7C7E9B97BF1D77 /* StorageManagementView.swift in Sources */,
 				7A91F5E530DF2F6BCFE48977 /* SyncConflictView.swift in Sources */,
 				5EF147DCF08D3FDF8A0C564C /* SyncConflictViewModel.swift in Sources */,
 				2A2E0B4BC7E958B79F2C779C /* SyncManager.swift in Sources */,
 				B2066A0C3E1950DED110FCC6 /* SyncStatusView.swift in Sources */,
 				60663285C6571C4C772F11A7 /* TimelineView.swift in Sources */,
+				E245C2FDD222631B180472E3 /* UncalibratedMeasurementWarning.swift in Sources */,
 				3DA5E03E77364ADEFD846080 /* User+Extensions.swift in Sources */,
 				62E291E71DC08B557D9E6F50 /* UserManager.swift in Sources */,
 				63662FD7DB7621DA6B1B66DF /* UserRole.swift in Sources */,
@@ -618,6 +647,7 @@
 				1BAB97EC2F89B3F51E1F837E /* TimelineChronologicalOrderPropertyTests.swift in Sources */,
 				EBB86759B277EFA950FA66EE /* TimelineDateRangeFilteringPropertyTests.swift in Sources */,
 				DDDB6A96003F904DB34A51DC /* TimelineEntryCompletenessPropertyTests.swift in Sources */,
+				46C4EB13C2AA99A8367E8B84 /* UncalibratedMeasurementWarningPropertyTests.swift in Sources */,
 				806EED8E63F7E39C4F510E86 /* UserManagerTests.swift in Sources */,
 				CEC6855AB7A01D322EA8E795 /* UserRolePropertyTests.swift in Sources */,
 				11EE8CF6C366BB0D3A96FF0E /* WoundDetectionPropertyTests.swift in Sources */,
@@ -925,6 +955,25 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		373811BD5FFB871471CE20D0 /* XCRemoteSwiftPackageReference "SwiftCheck" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/typelift/SwiftCheck.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.12.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		52DDE502C8909D441B1A9C3E /* SwiftCheck */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 373811BD5FFB871471CE20D0 /* XCRemoteSwiftPackageReference "SwiftCheck" */;
+			productName = SwiftCheck;
+		};
+/* End XCSwiftPackageProductDependency section */
 
 /* Begin XCVersionGroup section */
 		B328E2110CE00F916EE7E722 /* PediLens.xcdatamodeld */ = {

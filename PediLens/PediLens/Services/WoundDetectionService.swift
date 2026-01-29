@@ -88,13 +88,25 @@ class WoundDetectionService: WoundDetectionServiceProtocol {
     
     func detectWoundBoundary(in image: UIImage, 
                             calibration: MeasurementCalibration?) async throws -> WoundBoundary {
+        // Check cache first
+        let imageIdentifier = generateImageIdentifier(image)
+        if let cachedResult = PerformanceOptimizer.shared.getCachedDetection(for: imageIdentifier) {
+            return cachedResult
+        }
+        
         // Validate input image
         guard let cgImage = image.cgImage else {
             throw WoundDetectionError.invalidImage
         }
         
-        // Create Vision request handler
-        let requestHandler = VNImageRequestHandler(cgImage: cgImage, options: [:])
+        // Resize image for ML inference (max 1024x1024)
+        let resizedImage = await PerformanceOptimizer.shared.resizeImageForMLInference(image)
+        guard let resizedCGImage = resizedImage.cgImage else {
+            throw WoundDetectionError.invalidImage
+        }
+        
+        // Create Vision request handler with resized image
+        let requestHandler = VNImageRequestHandler(cgImage: resizedCGImage, options: [:])
         
         // For now, we'll use a placeholder segmentation approach since we don't have a trained model
         // In production, this would load a CoreML model trained for wound segmentation
@@ -103,7 +115,7 @@ class WoundDetectionService: WoundDetectionServiceProtocol {
         
         // Perform detection with timeout
         let detectionTask = Task {
-            return try await performDetection(requestHandler: requestHandler, imageSize: image.size)
+            return try await performDetection(requestHandler: requestHandler, imageSize: resizedImage.size, originalSize: image.size)
         }
         
         // Wait for detection with timeout
@@ -111,7 +123,17 @@ class WoundDetectionService: WoundDetectionServiceProtocol {
             try await detectionTask.value
         }
         
+        // Cache the result
+        PerformanceOptimizer.shared.cacheDetection(result, for: imageIdentifier)
+        
         return result
+    }
+    
+    /// Generates a unique identifier for an image based on its content
+    private func generateImageIdentifier(_ image: UIImage) -> String {
+        // Use image size and scale as a simple identifier
+        // In production, you might want to use a hash of the image data
+        return "\(image.size.width)x\(image.size.height)@\(image.scale)x"
     }
     
     func refineDetection(_ boundary: WoundBoundary, 
@@ -146,7 +168,8 @@ class WoundDetectionService: WoundDetectionServiceProtocol {
     
     /// Performs the actual wound detection
     private func performDetection(requestHandler: VNImageRequestHandler, 
-                                 imageSize: CGSize) async throws -> WoundBoundary {
+                                 imageSize: CGSize,
+                                 originalSize: CGSize) async throws -> WoundBoundary {
         // NOTE: In a production app, this would use a trained CoreML model for semantic segmentation
         // For now, we'll create a placeholder implementation that demonstrates the structure
         
@@ -174,8 +197,20 @@ class WoundDetectionService: WoundDetectionServiceProtocol {
         // Simplify contour using Douglas-Peucker algorithm
         let simplifiedContour = douglasPeucker(points: largestContour, tolerance: simplificationTolerance)
         
+        // Scale points back to original image size if needed
+        let scaledContour: [CGPoint]
+        if imageSize != originalSize {
+            let scaleX = originalSize.width / imageSize.width
+            let scaleY = originalSize.height / imageSize.height
+            scaledContour = simplifiedContour.map { point in
+                CGPoint(x: point.x * scaleX, y: point.y * scaleY)
+            }
+        } else {
+            scaledContour = simplifiedContour
+        }
+        
         // Calculate confidence score based on contour quality
-        let confidence = calculateConfidence(for: simplifiedContour, imageSize: imageSize)
+        let confidence = calculateConfidence(for: scaledContour, imageSize: originalSize)
         
         // Check if confidence meets minimum threshold
         guard confidence >= minimumConfidence else {
@@ -183,10 +218,10 @@ class WoundDetectionService: WoundDetectionServiceProtocol {
         }
         
         // Calculate bounding box
-        let boundingBox = calculateBoundingBox(for: simplifiedContour)
+        let boundingBox = calculateBoundingBox(for: scaledContour)
         
         return WoundBoundary(
-            points: simplifiedContour,
+            points: scaledContour,
             confidence: confidence,
             boundingBox: boundingBox,
             detectionMethod: .automatic(modelVersion: modelVersion)
