@@ -74,7 +74,7 @@ final class PatientRecordFilteringPropertyTests: XCTestCase {
         
         for iteration in 0..<iterations {
             // Create a doctor user
-            let user = try await userManager.createUser(role: .doctor)
+            let user = User.create(in: context, role: .doctor, iCloudSyncEnabled: false)
             
             // Create a patient
             let patient = try await patientManager.createPatient(
@@ -179,7 +179,7 @@ final class PatientRecordFilteringPropertyTests: XCTestCase {
         
         for iteration in 0..<iterations {
             // Create a doctor user
-            let user = try await userManager.createUser(role: .doctor)
+            let user = User.create(in: context, role: .doctor, iCloudSyncEnabled: false)
             
             // Create a patient
             let patient = try await patientManager.createPatient(
@@ -246,7 +246,7 @@ final class PatientRecordFilteringPropertyTests: XCTestCase {
         
         for iteration in 0..<iterations {
             // Create a doctor user
-            let user = try await userManager.createUser(role: .doctor)
+            let user = User.create(in: context, role: .doctor, iCloudSyncEnabled: false)
             
             // Create a patient
             let patient = try await patientManager.createPatient(
@@ -348,7 +348,7 @@ final class PatientRecordFilteringPropertyTests: XCTestCase {
         
         for iteration in 0..<iterations {
             // Create a doctor user
-            let user = try await userManager.createUser(role: .doctor)
+            let user = User.create(in: context, role: .doctor, iCloudSyncEnabled: false)
             
             // Create a patient
             let patient = try await patientManager.createPatient(
@@ -405,7 +405,7 @@ final class PatientRecordFilteringPropertyTests: XCTestCase {
         
         for iteration in 0..<iterations {
             // Create a doctor user
-            let user = try await userManager.createUser(role: .doctor)
+            let user = User.create(in: context, role: .doctor, iCloudSyncEnabled: false)
             
             // Create a patient
             let patient = try await patientManager.createPatient(

@@ -388,22 +388,22 @@ This implementation plan breaks down the PediLens native iOS app into discrete, 
     - **Property 39: Sync Status UI Indication**
     - **Validates: Requirements 13.4**
 
-- [ ] 16. Implement export system
-  - [ ] 16.1 Create ExportManager
+- [x] 16. Implement export system
+  - [x] 16.1 Create ExportManager
     - Implement createExport method for multiple formats
     - Support PDF, images, and native format
     - Add export options (include photos, measurements, notes, anonymize, date range)
     - _Requirements: 7.1, 7.2, 7.4_
   
-  - [ ] 16.2 Write property test for export package creation
+  - [x] 16.2 Write property test for export package creation
     - **Property 23: Export Package Creation**
     - **Validates: Requirements 7.1, 7.5**
   
-  - [ ] 16.3 Write property test for multi-format export support
+  - [x] 16.3 Write property test for multi-format export support
     - **Property 24: Multi-Format Export Support**
     - **Validates: Requirements 7.2**
   
-  - [ ] 16.4 Implement PDF report generation
+  - [x] 16.4 Implement PDF report generation
     - Use PDFKit to create reports
     - Include wound progression charts
     - Add measurement tables with trend analysis
@@ -411,20 +411,20 @@ This implementation plan breaks down the PediLens native iOS app into discrete, 
     - Add HIPAA compliance disclaimer
     - _Requirements: 7.2, 9.5_
   
-  - [ ] 16.5 Write property test for HIPAA export warning
+  - [x] 16.5 Write property test for HIPAA export warning
     - **Property 29: HIPAA Export Warning**
     - **Validates: Requirements 9.5**
   
-  - [ ] 16.6 Implement data anonymization
+  - [x] 16.6 Implement data anonymization
     - Remove patient identifiers from exports
     - Provide anonymization option in export UI
     - _Requirements: 9.3_
   
-  - [ ] 16.7 Write property test for data anonymization option
+  - [x] 16.7 Write property test for data anonymization option
     - **Property 27: Data Anonymization Option**
     - **Validates: Requirements 9.3**
   
-  - [ ] 16.8 Implement share functionality
+  - [x] 16.8 Implement share functionality
     - Use iOS native share sheet
     - Handle share completion and errors
     - _Requirements: 7.3_
