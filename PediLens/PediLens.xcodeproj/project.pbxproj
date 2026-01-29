@@ -63,6 +63,7 @@
 		978FC7C77FA272DAFAE5F0AE /* Patient+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 232ABE2DEF00DCA183A4C339 /* Patient+Extensions.swift */; };
 		97967C9C720E9E68FCE5D4CE /* ExportManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA88FDB4C8744BF23C63EA8B /* ExportManager.swift */; };
 		99999F92009DE86566CFA65B /* PersistenceController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 932C22C1E7D854D20D361C68 /* PersistenceController.swift */; };
+		9D04385851451FB0415E00D4 /* NoThirdPartyTransmissionPropertyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D05157E4540FD9082569FB4 /* NoThirdPartyTransmissionPropertyTests.swift */; };
 		9D9DAFC5F2674C7EA00E009E /* LocalErrorLoggingPropertyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 992F1DF6A2D750E711BC6399 /* LocalErrorLoggingPropertyTests.swift */; };
 		A1A88D33E92E5AD54E75A93F /* MeasurementCalibration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98CBF46A05AC7AFDAF31959B /* MeasurementCalibration.swift */; };
 		A236F89CA74D23994982CE15 /* LocalOnlySyncPropertyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA893F2D78936D1AC9FE801F /* LocalOnlySyncPropertyTests.swift */; };
@@ -124,6 +125,7 @@
 		16B5905EC9F7E8C8FDE17083 /* CaptureSessionMetadataPropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureSessionMetadataPropertyTests.swift; sourceTree = "<group>"; };
 		16BB9D3A3FAC6E1BAF9D95DA /* SyncConflictViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncConflictViewModel.swift; sourceTree = "<group>"; };
 		1B9E005E1BAC29CF028E4BD8 /* SecurityManager_README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = SecurityManager_README.md; sourceTree = "<group>"; };
+		1D05157E4540FD9082569FB4 /* NoThirdPartyTransmissionPropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoThirdPartyTransmissionPropertyTests.swift; sourceTree = "<group>"; };
 		1F99A6FCFB192E6FD2774723 /* WoundDetectionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WoundDetectionService.swift; sourceTree = "<group>"; };
 		1FB34C86C993C3C499D95D15 /* DataValidationPropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataValidationPropertyTests.swift; sourceTree = "<group>"; };
 		2285D950A378D75194A55926 /* MeasurementManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeasurementManager.swift; sourceTree = "<group>"; };
@@ -371,6 +373,7 @@
 				FF426ED791AF952104B3E7FF /* MeasurementManagerTests.swift */,
 				691BF9979212AA4069FA060B /* MeasurementPropertyTests.swift */,
 				4104548B513344D3752706AC /* MultiFormatExportPropertyTests.swift */,
+				1D05157E4540FD9082569FB4 /* NoThirdPartyTransmissionPropertyTests.swift */,
 				873AA6A5797EF83E8EA33B17 /* OfflineSyncQueuePropertyTests.swift */,
 				887116CAEB2D47FE10D742D2 /* PatientIdentificationPropertyTests.swift */,
 				5E15647FDA1FF5FECB185DF7 /* PatientManagerTests.swift */,
@@ -596,6 +599,7 @@
 				8D3777F018A4875843C77603 /* MeasurementManagerTests.swift in Sources */,
 				6ED65E81BFB16EDE42DCC3FA /* MeasurementPropertyTests.swift in Sources */,
 				6042CDB7F83E2F8983099124 /* MultiFormatExportPropertyTests.swift in Sources */,
+				9D04385851451FB0415E00D4 /* NoThirdPartyTransmissionPropertyTests.swift in Sources */,
 				BE13163BF75EFF6D7D35A536 /* OfflineSyncQueuePropertyTests.swift in Sources */,
 				F7AAFC7CC1747F0D17BEEFF0 /* PatientIdentificationPropertyTests.swift in Sources */,
 				7E3934903DA0A36D9C2BAEE9 /* PatientManagerTests.swift in Sources */,

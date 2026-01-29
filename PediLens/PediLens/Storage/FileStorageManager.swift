@@ -36,6 +36,21 @@ struct StorageInfo {
     }
 }
 
+/// Errors that can occur during file storage operations
+enum FileStorageError: LocalizedError {
+    case deletionFailed(String)
+    case overwriteFailed(String)
+    
+    var errorDescription: String? {
+        switch self {
+        case .deletionFailed(let message):
+            return "File deletion failed: \(message)"
+        case .overwriteFailed(let message):
+            return "File overwrite failed: \(message)"
+        }
+    }
+}
+
 /// Manages file storage for photos, live photos, and depth data
 class FileStorageManager: FileStorageManagerProtocol {
     static let shared = FileStorageManager()
@@ -163,13 +178,74 @@ class FileStorageManager: FileStorageManagerProtocol {
         return try Data(contentsOf: url)
     }
     
-    /// Delete all files for a session
+    /// Delete all files for a session with secure overwrite
     func deleteFiles(for sessionID: UUID) async throws {
         let sessionDir = sessionDirectory(for: sessionID)
         
         if fileManager.fileExists(atPath: sessionDir.path) {
-            try fileManager.removeItem(at: sessionDir)
+            // Securely delete all files in the session directory
+            try await securelyDeleteDirectory(at: sessionDir)
         }
+    }
+    
+    /// Securely delete a directory and all its contents by overwriting data before removal
+    private func securelyDeleteDirectory(at url: URL) async throws {
+        // Get all files in the directory
+        guard let enumerator = fileManager.enumerator(
+            at: url,
+            includingPropertiesForKeys: [.isDirectoryKey, .fileSizeKey],
+            options: [.skipsHiddenFiles]
+        ) else {
+            throw FileStorageError.deletionFailed("Unable to enumerate directory contents")
+        }
+        
+        // Collect all file URLs (not directories)
+        var fileURLs: [URL] = []
+        for case let fileURL as URL in enumerator {
+            let resourceValues = try fileURL.resourceValues(forKeys: [.isDirectoryKey])
+            if let isDirectory = resourceValues.isDirectory, !isDirectory {
+                fileURLs.append(fileURL)
+            }
+        }
+        
+        // Securely overwrite each file before deletion
+        for fileURL in fileURLs {
+            try await securelyDeleteFile(at: fileURL)
+        }
+        
+        // Now remove the directory
+        try fileManager.removeItem(at: url)
+    }
+    
+    /// Securely delete a single file by overwriting its contents before removal
+    private func securelyDeleteFile(at url: URL) async throws {
+        // Get file size
+        let resourceValues = try url.resourceValues(forKeys: [.fileSizeKey])
+        guard let fileSize = resourceValues.fileSize else {
+            // If we can't get the size, just delete it
+            try fileManager.removeItem(at: url)
+            return
+        }
+        
+        // Don't overwrite very large files (> 100MB) to avoid performance issues
+        // Just delete them directly
+        if fileSize > 100 * 1024 * 1024 {
+            try fileManager.removeItem(at: url)
+            return
+        }
+        
+        // Overwrite the file with random data (3 passes for secure deletion)
+        for _ in 0..<3 {
+            var randomData = Data(count: fileSize)
+            _ = randomData.withUnsafeMutableBytes { bytes in
+                SecRandomCopyBytes(kSecRandomDefault, fileSize, bytes.baseAddress!)
+            }
+            
+            try randomData.write(to: url, options: [.atomic])
+        }
+        
+        // Finally, remove the file
+        try fileManager.removeItem(at: url)
     }
     
     /// Get storage usage information

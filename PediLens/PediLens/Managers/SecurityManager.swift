@@ -83,12 +83,21 @@ class SecurityManager: SecurityManagerProtocol {
     /// Last authentication timestamp
     private var lastAuthenticationTime: Date?
     
+    /// Last activity timestamp (for inactivity tracking)
+    private var lastActivityTime: Date?
+    
     /// Lock for thread-safe access to lastAuthenticationTime
     private let authenticationLock = NSLock()
     
+    /// Timer for checking session timeout
+    private var sessionTimeoutTimer: Timer?
+    
     // MARK: - Initialization
     
-    private init() {}
+    private init() {
+        // Start monitoring for session timeout
+        startSessionTimeoutMonitoring()
+    }
     
     // MARK: - Public Methods
     
@@ -256,8 +265,21 @@ class SecurityManager: SecurityManagerProtocol {
             return false
         }
         
-        let elapsed = Date().timeIntervalSince(lastAuth)
+        // Check against last activity time for inactivity timeout
+        let referenceTime = lastActivityTime ?? lastAuth
+        let elapsed = Date().timeIntervalSince(referenceTime)
         return elapsed < sessionTimeout
+    }
+    
+    /// Records user activity to reset the inactivity timer
+    func recordActivity() {
+        authenticationLock.lock()
+        defer { authenticationLock.unlock() }
+        
+        // Only record activity if there's an active session
+        if lastAuthenticationTime != nil {
+            lastActivityTime = Date()
+        }
     }
     
     /// Invalidates the current session, requiring re-authentication
@@ -266,6 +288,7 @@ class SecurityManager: SecurityManagerProtocol {
         defer { authenticationLock.unlock() }
         
         lastAuthenticationTime = nil
+        lastActivityTime = nil
     }
     
     /// Returns the time remaining in the current session
@@ -278,10 +301,43 @@ class SecurityManager: SecurityManagerProtocol {
             return nil
         }
         
-        let elapsed = Date().timeIntervalSince(lastAuth)
+        // Calculate based on last activity time
+        let referenceTime = lastActivityTime ?? lastAuth
+        let elapsed = Date().timeIntervalSince(referenceTime)
         let remaining = sessionTimeout - elapsed
         
         return remaining > 0 ? remaining : nil
+    }
+    
+    /// Securely deletes the encryption key from Keychain
+    /// This should only be called when completely removing user data
+    /// - Throws: SecurityError if deletion fails
+    func securelyDeleteEncryptionKey() throws {
+        // First, try to retrieve and overwrite the key in memory
+        if let keyData = try? retrieveEncryptionKey() {
+            // Overwrite the key data in memory with zeros
+            var mutableKeyData = keyData
+            mutableKeyData.withUnsafeMutableBytes { bytes in
+                memset(bytes.baseAddress!, 0, keyData.count)
+            }
+        }
+        
+        // Delete from Keychain
+        let deleteQuery: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: keychainService,
+            kSecAttrAccount as String: keychainAccount
+        ]
+        
+        let status = SecItemDelete(deleteQuery as CFDictionary)
+        
+        // Success if deleted or if item didn't exist
+        guard status == errSecSuccess || status == errSecItemNotFound else {
+            throw SecurityError.keyStorageFailed
+        }
+        
+        // Invalidate any active session
+        invalidateSession()
     }
     
     // MARK: - Private Methods
@@ -292,6 +348,26 @@ class SecurityManager: SecurityManagerProtocol {
         defer { authenticationLock.unlock() }
         
         lastAuthenticationTime = Date()
+        lastActivityTime = Date()
+    }
+    
+    /// Starts monitoring for session timeout
+    private func startSessionTimeoutMonitoring() {
+        // Check session validity every 30 seconds
+        sessionTimeoutTimer = Timer.scheduledTimer(withTimeInterval: 30.0, repeats: true) { [weak self] _ in
+            self?.checkSessionTimeout()
+        }
+    }
+    
+    /// Checks if the session has timed out and posts notification if needed
+    private func checkSessionTimeout() {
+        if !isSessionValid() && lastAuthenticationTime != nil {
+            // Session has expired
+            invalidateSession()
+            
+            // Post notification that session expired
+            NotificationCenter.default.post(name: .sessionExpired, object: nil)
+        }
     }
     
     /// Determines the biometric type available on the device
@@ -360,4 +436,11 @@ class SecurityManager: SecurityManagerProtocol {
             throw SecurityError.keyStorageFailed
         }
     }
+}
+
+// MARK: - Notification Names
+
+extension Notification.Name {
+    /// Posted when the user session expires due to inactivity
+    static let sessionExpired = Notification.Name("com.pedilens.sessionExpired")
 }
