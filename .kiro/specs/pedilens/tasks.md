@@ -493,25 +493,25 @@ This implementation plan breaks down the PediLens native iOS app into discrete, 
     - Add alternative measurement tools
     - _Requirements: 15.5_
 
-- [ ] 20. Polish and optimization
-  - [ ] 20.1 Implement performance optimizations
+- [x] 20. Polish and optimization
+  - [x] 20.1 Implement performance optimizations
     - Resize images for ML inference
     - Use background queues for processing
     - Implement lazy loading and pagination
     - Cache detection results
     - _Requirements: Performance considerations_
   
-  - [ ] 20.2 Add storage management UI
+  - [x] 20.2 Add storage management UI
     - Display storage usage
     - Provide cleanup tools
     - Warn at 80% capacity
     - _Requirements: 5.5_
   
-  - [ ] 20.3 Implement uncalibrated measurement warning
+  - [x] 20.3 Implement uncalibrated measurement warning
     - Display warning when no calibration available
     - _Requirements: 12.5_
   
-  - [ ] 20.4 Write property test for uncalibrated measurement warning
+  - [x] 20.4 Write property test for uncalibrated measurement warning
     - **Property 36: Uncalibrated Measurement Warning**
     - **Validates: Requirements 12.5**
 

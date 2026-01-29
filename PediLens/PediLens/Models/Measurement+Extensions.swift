@@ -240,6 +240,20 @@ extension Measurement {
         return volumeMM3 / 16387.064
     }
     
+    /// Check if the measurement has calibration data
+    var hasCalibration: Bool {
+        guard let calibrationData = calibrationData else { return false }
+        
+        // Try to decode the calibration data to check if it has a reference object
+        do {
+            let decoder = JSONDecoder()
+            let calibration = try decoder.decode(MeasurementCalibration.self, from: calibrationData)
+            return calibration.referenceObject != nil
+        } catch {
+            return false
+        }
+    }
+    
     // MARK: - Delete Methods
     
     /// Delete the measurement
