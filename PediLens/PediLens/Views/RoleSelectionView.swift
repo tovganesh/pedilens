@@ -12,6 +12,7 @@ struct RoleSelectionView: View {
     @State private var selectedRole: UserRole?
     @State private var isLoading = false
     @State private var errorMessage: String?
+    @ScaledMetric private var iconSize: CGFloat = 80
     
     let onRoleSelected: (UserRole) -> Void
     
@@ -21,18 +22,22 @@ struct RoleSelectionView: View {
                 // Header
                 VStack(spacing: 12) {
                     Image(systemName: "person.circle.fill")
-                        .font(.system(size: 80))
+                        .font(.system(size: iconSize))
                         .foregroundColor(.accentColor)
+                        .accessibilityHidden(true) // Decorative
                     
                     Text("Welcome to PediLens")
                         .font(.largeTitle)
                         .fontWeight(.bold)
+                        .accessibilityAddTraits(.isHeader)
+                        .fixedSize(horizontal: false, vertical: true)
                     
                     Text("Please select your role to get started")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(.top, 40)
                 
@@ -59,6 +64,7 @@ struct RoleSelectionView: View {
                     }
                 }
                 .padding(.horizontal)
+                .accessibilityElement(children: .contain)
                 
                 Spacer()
                 
@@ -69,6 +75,7 @@ struct RoleSelectionView: View {
                         .foregroundColor(.red)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal)
+                        .accessibilityLabel("Error: \(errorMessage)")
                 }
                 
                 // Continue Button
@@ -77,6 +84,7 @@ struct RoleSelectionView: View {
                         if isLoading {
                             ProgressView()
                                 .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .accessibilityLabel("Saving role selection")
                         } else {
                             Text("Continue")
                                 .fontWeight(.semibold)
@@ -91,6 +99,9 @@ struct RoleSelectionView: View {
                 .disabled(selectedRole == nil || isLoading)
                 .padding(.horizontal)
                 .padding(.bottom, 30)
+                .accessibilityLabel("Continue with selected role")
+                .accessibilityHint(selectedRole == nil ? "Select a role first" : "Confirms your role selection and continues")
+                .accessibilityInputLabels(["Continue", "Next", "Confirm"])
             }
             .navigationBarHidden(true)
         }
@@ -126,24 +137,28 @@ struct RoleCard: View {
     let description: String
     let isSelected: Bool
     let onTap: () -> Void
+    @ScaledMetric private var iconSize: CGFloat = 40
     
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: 16) {
                 Image(systemName: icon)
-                    .font(.system(size: 40))
+                    .font(.system(size: iconSize))
                     .foregroundColor(isSelected ? .white : .accentColor)
                     .frame(width: 60)
+                    .accessibilityHidden(true) // Decorative
                 
                 VStack(alignment: .leading, spacing: 6) {
                     Text(title)
                         .font(.headline)
                         .foregroundColor(isSelected ? .white : .primary)
+                        .fixedSize(horizontal: false, vertical: true)
                     
                     Text(description)
                         .font(.caption)
                         .foregroundColor(isSelected ? .white.opacity(0.9) : .secondary)
                         .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 
                 Spacer()
@@ -152,6 +167,7 @@ struct RoleCard: View {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 24))
                         .foregroundColor(.white)
+                        .accessibilityLabel("Selected")
                 }
             }
             .padding()
@@ -165,6 +181,11 @@ struct RoleCard: View {
             )
         }
         .buttonStyle(PlainButtonStyle())
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(title). \(description)")
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+        .accessibilityHint("Double tap to select this role")
+        .accessibilityInputLabels([title, role == .doctor ? "Doctor" : "Patient", "Select \(title)"])
     }
 }
 

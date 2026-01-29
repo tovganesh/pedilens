@@ -42,6 +42,9 @@ struct TimelineView: View {
                 Button(action: { viewModel.showFilters.toggle() }) {
                     Image(systemName: viewModel.showFilters ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
                 }
+                .accessibilityLabel(viewModel.showFilters ? "Hide filters" : "Show filters")
+                .accessibilityHint("Toggles filter controls for timeline")
+                .accessibilityInputLabels(["Filters", "Toggle filters", viewModel.showFilters ? "Hide filters" : "Show filters"])
             }
         }
         .sheet(item: $viewModel.selectedSession) { session in
@@ -72,6 +75,8 @@ struct TimelineView: View {
                     }
                 }
                 .pickerStyle(.menu)
+                .accessibilityLabel("Sort order")
+                .accessibilityValue(viewModel.sortOrder.rawValue)
             }
             
             Divider()
@@ -89,18 +94,24 @@ struct TimelineView: View {
                         .font(.caption)
                 }
                 .disabled(!viewModel.hasDateFilter)
+                .accessibilityLabel("Clear date filter")
+                .accessibilityHint("Removes date range filter")
+                .accessibilityInputLabels(["Clear", "Clear filter", "Remove filter"])
             }
             
             HStack {
                 DatePicker("From", selection: $viewModel.filterStartDate, displayedComponents: .date)
                     .labelsHidden()
+                    .accessibilityLabel("Filter start date")
                 
                 Text("to")
                     .font(.caption)
                     .foregroundColor(.secondary)
+                    .accessibilityHidden(true)
                 
                 DatePicker("To", selection: $viewModel.filterEndDate, displayedComponents: .date)
                     .labelsHidden()
+                    .accessibilityLabel("Filter end date")
             }
             
             // Apply filter button
@@ -112,7 +123,11 @@ struct TimelineView: View {
                     .padding(.vertical, 8)
             }
             .buttonStyle(.borderedProminent)
+            .accessibilityLabel("Apply date range filter")
+            .accessibilityHint("Filters timeline to show only sessions within selected date range")
+            .accessibilityInputLabels(["Apply", "Apply filters", "Filter"])
         }
+        .accessibilityElement(children: .contain)
     }
     
     private var timelineList: some View {
@@ -219,11 +234,46 @@ struct TimelineEntryView: View {
             Image(systemName: "chevron.right")
                 .font(.caption)
                 .foregroundColor(.secondary)
+                .accessibilityHidden(true)
         }
         .padding()
         .background(Color(.systemBackground))
         .cornerRadius(12)
         .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(accessibilityDescription)
+        .accessibilityHint("Double tap to view session details")
+        .accessibilityAction(named: "View Full Details") {
+            // This will be triggered by the tap gesture
+        }
+        .accessibilityAction(named: "View Photo") {
+            // Custom action for viewing photo
+        }
+    }
+    
+    private var accessibilityDescription: String {
+        var description = "Capture session from \(session.timestamp?.formatted(date: .long, time: .shortened) ?? "unknown date")"
+        
+        if let measurement = session.measurement {
+            description += ", area \(String(format: "%.1f", measurement.areaMM2 / 100)) square centimeters"
+            
+            if let prevSession = previousSession, let prevMeasurement = prevSession.measurement {
+                let areaChange = ((measurement.areaMM2 - prevMeasurement.areaMM2) / prevMeasurement.areaMM2) * 100
+                if abs(areaChange) >= 1.0 {
+                    description += areaChange > 0 ? ", increased by \(String(format: "%.1f", areaChange)) percent" : ", decreased by \(String(format: "%.1f", abs(areaChange))) percent"
+                }
+            }
+        }
+        
+        if session.locationAvailable {
+            description += ", location recorded"
+        }
+        
+        if !session.notesArray.isEmpty {
+            description += ", \(session.notesArray.count) note\(session.notesArray.count == 1 ? "" : "s")"
+        }
+        
+        return description
     }
     
     private var thumbnailView: some View {

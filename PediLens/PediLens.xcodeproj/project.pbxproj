@@ -94,6 +94,7 @@
 		E6C048D4F5AAA4C1CF8A3565 /* DataIntegrityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 899C047C1BC4C4EE8F9AB50F /* DataIntegrityManager.swift */; };
 		EB88056376213623B776EC37 /* CaptureSessionLocationPropertyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C29F5FC8264E2813A9CF949D /* CaptureSessionLocationPropertyTests.swift */; };
 		EBB86759B277EFA950FA66EE /* TimelineDateRangeFilteringPropertyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88A5E8E9B3C87F900E7324CF /* TimelineDateRangeFilteringPropertyTests.swift */; };
+		ED9B8011AB81D533FAC8BF95 /* AccessibilityHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E290A23F064A18717FDEB8 /* AccessibilityHelpers.swift */; };
 		F07971FF72AA52FA37B37921 /* HIPAAExportWarningPropertyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3635BF6C709038F9448E2BD6 /* HIPAAExportWarningPropertyTests.swift */; };
 		F07E6C78DAFC9E09119FDD8B /* WoundRecordDeletionPropertyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AAFBDA137DEA3DD4B572623 /* WoundRecordDeletionPropertyTests.swift */; };
 		F085ADDB917ADDCFB06878DF /* Measurement+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E856ABF6A849224AD91EFDC /* Measurement+Extensions.swift */; };
@@ -207,6 +208,7 @@
 		C9EC5E3850FFF6D076E7735B /* CaptureSessionManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureSessionManagerTests.swift; sourceTree = "<group>"; };
 		CA4875736916D960315B9C96 /* RoleSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoleSelectionView.swift; sourceTree = "<group>"; };
 		CF53FAC258AB490DBE2EBAD1 /* Localization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Localization.swift; sourceTree = "<group>"; };
+		D0E290A23F064A18717FDEB8 /* AccessibilityHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityHelpers.swift; sourceTree = "<group>"; };
 		D4F5E47555A4ECD04A5AECCE /* WoundManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WoundManagerTests.swift; sourceTree = "<group>"; };
 		DA893F2D78936D1AC9FE801F /* LocalOnlySyncPropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalOnlySyncPropertyTests.swift; sourceTree = "<group>"; };
 		DC7B2C142F95913AF8F38ADA /* ExportPackageCreationPropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportPackageCreationPropertyTests.swift; sourceTree = "<group>"; };
@@ -339,6 +341,7 @@
 		A05C4D7E854B4E10B7E129DA /* Utilities */ = {
 			isa = PBXGroup;
 			children = (
+				D0E290A23F064A18717FDEB8 /* AccessibilityHelpers.swift */,
 				899C047C1BC4C4EE8F9AB50F /* DataIntegrityManager.swift */,
 				76DD846061A580DD69DB4E00 /* ErrorHandler.swift */,
 				E16A0373D9ADEEB1607F614E /* ErrorLogger.swift */,
@@ -531,6 +534,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				ED9B8011AB81D533FAC8BF95 /* AccessibilityHelpers.swift in Sources */,
 				36B0F80E220A34318F01E352 /* CameraManager.swift in Sources */,
 				1E3ACC803CDDACE3194A7C0E /* CameraTypes.swift in Sources */,
 				2EBEE5B1F60CE6C00816FE2D /* CaptureSession+Extensions.swift in Sources */,
