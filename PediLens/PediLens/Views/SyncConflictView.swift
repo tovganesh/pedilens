@@ -16,11 +16,19 @@ struct SyncConflictView: View {
         NavigationView {
             List {
                 if viewModel.conflicts.isEmpty {
-                    ContentUnavailableView(
-                        "No Conflicts",
-                        systemImage: "checkmark.circle",
-                        description: Text("All data is synchronized")
-                    )
+                    VStack(spacing: 16) {
+                        Image(systemName: "checkmark.circle")
+                            .font(.system(size: 60))
+                            .foregroundColor(.green)
+                        Text("No Conflicts")
+                            .font(.title2)
+                            .fontWeight(.semibold)
+                        Text("All data is synchronized")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .listRowBackground(Color.clear)
                 } else {
                     ForEach(viewModel.conflicts, id: \.localVersion.objectID) { conflict in
                         ConflictRow(conflict: conflict, viewModel: viewModel)

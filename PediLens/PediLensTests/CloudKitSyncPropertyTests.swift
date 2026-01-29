@@ -278,6 +278,7 @@ final class CloudKitSyncPropertyTests: XCTestCase {
                     perimeterMM: perimeterMM,
                     boundaryPoints: boundaryPoints,
                     calibrationData: calibrationData,
+                    detectionConfidence: 0.8,
                     captureSession: captureSession
                 )
                 
