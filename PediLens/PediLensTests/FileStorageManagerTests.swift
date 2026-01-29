@@ -101,6 +101,9 @@ class FileStorageManagerTests: XCTestCase {
     }
     
     func testSavePhoto_UsesCompleteFileProtection() async throws {
+        #if targetEnvironment(simulator)
+        throw XCTSkip("File protection attributes cannot be reliably verified on iOS Simulator. This test must be run on a physical device.")
+        #else
         // Given: Valid image data
         let testImage = createTestImage(size: CGSize(width: 1000, height: 1000))
         guard let imageData = testImage.jpegData(compressionQuality: 1.0) else {
@@ -116,6 +119,7 @@ class FileStorageManagerTests: XCTestCase {
         let protection = attributes[.protectionKey] as? FileProtectionType
         XCTAssertEqual(protection, .complete,
                       "Photo should use complete file protection")
+        #endif
     }
     
     // MARK: - Live Photo Video Tests
@@ -140,6 +144,9 @@ class FileStorageManagerTests: XCTestCase {
     }
     
     func testSaveLivePhotoVideo_UsesCompleteFileProtection() async throws {
+        #if targetEnvironment(simulator)
+        throw XCTSkip("File protection attributes cannot be reliably verified on iOS Simulator. This test must be run on a physical device.")
+        #else
         // Given: A temporary video file
         let tempVideoURL = createTempVideoFile()
         
@@ -154,6 +161,7 @@ class FileStorageManagerTests: XCTestCase {
         
         // Cleanup
         try? FileManager.default.removeItem(at: tempVideoURL)
+        #endif
     }
     
     // MARK: - Depth Data Tests
@@ -175,6 +183,9 @@ class FileStorageManagerTests: XCTestCase {
     }
     
     func testSaveDepthData_UsesCompleteFileProtection() async throws {
+        #if targetEnvironment(simulator)
+        throw XCTSkip("File protection attributes cannot be reliably verified on iOS Simulator. This test must be run on a physical device.")
+        #else
         // Given: Valid depth data
         let depthData = Data(repeating: 0xFF, count: 1024)
         
@@ -186,6 +197,7 @@ class FileStorageManagerTests: XCTestCase {
         let protection = attributes[.protectionKey] as? FileProtectionType
         XCTAssertEqual(protection, .complete,
                       "Depth data should use complete file protection")
+        #endif
     }
     
     // MARK: - Load Photo Tests
@@ -771,6 +783,9 @@ extension FileStorageManagerTests {
     /// Property: For any photo saved, file protection should be set to complete
     /// This validates security requirement for data at rest
     func testProperty1_PhotoPersistence_FileProtection() async throws {
+        #if targetEnvironment(simulator)
+        throw XCTSkip("File protection attributes cannot be reliably verified on iOS Simulator. This test must be run on a physical device.")
+        #else
         let iterations = 100
         var failedCases: [(sessionID: UUID, iteration: Int)] = []
         var testSessionIDs: [UUID] = []
@@ -805,6 +820,7 @@ extension FileStorageManagerTests {
         
         XCTAssertTrue(failedCases.isEmpty,
                      "File protection property failed for \(failedCases.count) out of \(iterations) cases")
+        #endif
     }
     
     /// Property: For any concurrent photo saves to different sessions, all should succeed
