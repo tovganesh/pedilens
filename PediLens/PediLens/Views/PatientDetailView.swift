@@ -11,6 +11,7 @@ import CoreData
 struct PatientDetailView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @StateObject private var viewModel: PatientDetailViewModel
+    @ScaledMetric private var iconSize: CGFloat = 50
     
     init(patient: Patient) {
         _viewModel = StateObject(wrappedValue: PatientDetailViewModel(patient: patient))
@@ -37,6 +38,9 @@ struct PatientDetailView: View {
                 Button(action: { viewModel.showingEditPatient = true }) {
                     Text("Edit")
                 }
+                .accessibilityLabel("Edit patient information")
+                .accessibilityHint("Opens form to edit patient details")
+                .accessibilityInputLabels(["Edit", "Edit patient", "Modify"])
             }
         }
         .sheet(isPresented: $viewModel.showingEditPatient) {
@@ -52,13 +56,14 @@ struct PatientDetailView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Image(systemName: "person.circle.fill")
-                    .font(.system(size: 50))
+                    .font(.system(size: iconSize))
                     .foregroundColor(.blue)
                 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(viewModel.patient.name ?? "Unknown")
                         .font(.title2)
                         .fontWeight(.bold)
+                        .fixedSize(horizontal: false, vertical: true)
                     
                     Label(viewModel.patient.patientID ?? "No ID", systemImage: "number")
                         .font(.subheadline)
@@ -91,6 +96,7 @@ struct PatientDetailView: View {
                     
                     Text(notes)
                         .font(.body)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
         }
@@ -177,6 +183,8 @@ struct PatientDetailView: View {
                     Label("Add", systemImage: "plus.circle.fill")
                         .font(.subheadline)
                 }
+                .accessibilityLabel("Add wound record")
+                .accessibilityInputLabels(["Add wound", "New wound", "Add record"])
             }
             
             if viewModel.patient.woundRecordsArray.isEmpty {
@@ -208,6 +216,7 @@ struct PatientDetailView: View {
                     .font(.subheadline)
             }
             .buttonStyle(.bordered)
+            .accessibilityInputLabels(["Add wound", "Add first wound", "New wound"])
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 20)
@@ -225,6 +234,7 @@ struct StatisticView: View {
             Image(systemName: icon)
                 .font(.title2)
                 .foregroundColor(color)
+                .accessibilityHidden(true) // Decorative
             
             Text(value)
                 .font(.title)
@@ -239,6 +249,9 @@ struct StatisticView: View {
         .padding()
         .background(Color(.systemGray6))
         .cornerRadius(10)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(title): \(value)")
+        .accessibilityAddTraits(.isStaticText)
     }
 }
 
@@ -279,6 +292,12 @@ struct WoundRecordRowView: View {
                 .cornerRadius(8)
         }
         .padding(.vertical, 8)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Wound at \(woundRecord.location ?? "Unknown Location"), status: \(woundRecord.status ?? "unknown"), \(woundRecord.sessionCount) session\(woundRecord.sessionCount == 1 ? "" : "s"), started \(woundRecord.initialAssessmentDate ?? Date(), style: .date)")
+        .accessibilityHint("Double tap to view wound details")
+        .accessibilityAction(named: "View Timeline") {
+            // This will be triggered by navigation
+        }
     }
     
     private func statusColor(for status: String) -> Color {
