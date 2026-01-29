@@ -70,11 +70,9 @@ class DataIntegrityManager {
             createdAt: Date()
         )
         
-        // Store in cache and persist
-        queue.async {
-            self.checksumCache[fileURL.path] = entry
-            self.saveChecksums()
-        }
+        // Store in cache and persist synchronously to ensure it's available immediately
+        checksumCache[fileURL.path] = entry
+        saveChecksums()
         
         return checksum
     }
@@ -90,8 +88,10 @@ class DataIntegrityManager {
             throw DataIntegrityError.checksumNotFound(path: fileURL.path)
         }
         
-        // Calculate current checksum
-        let currentChecksum = try generateChecksum(for: fileURL)
+        // Calculate current checksum (without storing it)
+        let fileData = try Data(contentsOf: fileURL)
+        let hash = SHA256.hash(data: fileData)
+        let currentChecksum = hash.compactMap { String(format: "%02x", $0) }.joined()
         
         // Compare checksums
         let isValid = currentChecksum == storedEntry.checksum
@@ -107,21 +107,19 @@ class DataIntegrityManager {
             )
         }
         
-        // Update last verified date
+        // Update last verified date if valid
         if isValid {
-            queue.async {
-                var updatedEntry = storedEntry
-                updatedEntry = FileChecksumEntry(
-                    filePath: storedEntry.filePath,
-                    checksum: storedEntry.checksum,
-                    algorithm: storedEntry.algorithm,
-                    fileSize: storedEntry.fileSize,
-                    lastVerified: Date(),
-                    createdAt: storedEntry.createdAt
-                )
-                self.checksumCache[fileURL.path] = updatedEntry
-                self.saveChecksums()
-            }
+            var updatedEntry = storedEntry
+            updatedEntry = FileChecksumEntry(
+                filePath: storedEntry.filePath,
+                checksum: storedEntry.checksum,
+                algorithm: storedEntry.algorithm,
+                fileSize: storedEntry.fileSize,
+                lastVerified: Date(),
+                createdAt: storedEntry.createdAt
+            )
+            checksumCache[fileURL.path] = updatedEntry
+            saveChecksums()
         }
         
         return isValid

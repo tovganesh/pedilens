@@ -41,16 +41,20 @@ class PersistenceController {
         
         container = NSPersistentCloudKitContainer(name: "PediLens")
         
-        if inMemory {
-            container.persistentStoreDescriptions.first?.url = URL(fileURLWithPath: "/dev/null")
+        // Configure persistent store description
+        guard let description = container.persistentStoreDescriptions.first else {
+            fatalError("Failed to retrieve persistent store description")
         }
         
-        // Configure CloudKit sync only if not in test environment and not in-memory
-        if !isRunningTests && !inMemory {
-            guard let description = container.persistentStoreDescriptions.first else {
-                fatalError("Failed to retrieve persistent store description")
-            }
-            
+        if inMemory {
+            description.url = URL(fileURLWithPath: "/dev/null")
+            description.type = NSInMemoryStoreType
+        }
+        
+        // Disable CloudKit for tests and in-memory stores
+        if isRunningTests || inMemory {
+            description.cloudKitContainerOptions = nil
+        } else {
             // Enable persistent history tracking for sync
             description.setOption(true as NSNumber,
                                 forKey: NSPersistentHistoryTrackingKey)
@@ -62,9 +66,11 @@ class PersistenceController {
                 containerIdentifier: "iCloud.com.pedilens.app"
             )
             description.cloudKitContainerOptions = cloudKitOptions
-        } else {
-            // Disable CloudKit for tests and in-memory stores
-            container.persistentStoreDescriptions.first?.cloudKitContainerOptions = nil
+        }
+        
+        // Load stores synchronously for tests to avoid race conditions
+        if isRunningTests || inMemory {
+            description.shouldAddStoreAsynchronously = false
         }
         
         container.loadPersistentStores { description, error in

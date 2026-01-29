@@ -629,18 +629,29 @@ final class CoreDataEntityExtensionsTests: XCTestCase {
         let session = CaptureSession.create(in: context, photoPath: "path", woundRecord: record)
         try context.save()
         
+        // Safely unwrap IDs before using them
+        guard let sessionID = session.id else {
+            XCTFail("Session ID should not be nil after creation")
+            return
+        }
+        
+        guard let recordID = record.id else {
+            XCTFail("Record ID should not be nil after creation")
+            return
+        }
+        
         // Test deleting session
         session.delete(from: context)
         try context.save()
         
-        let fetchedSession = CaptureSession.fetchCaptureSession(byID: session.id!, in: context)
+        let fetchedSession = CaptureSession.fetchCaptureSession(byID: sessionID, in: context)
         XCTAssertNil(fetchedSession)
         
         // Test cascade delete - deleting patient should delete wound records
         patient.delete(from: context)
         try context.save()
         
-        let fetchedRecord = WoundRecord.fetchWoundRecord(byID: record.id!, in: context)
+        let fetchedRecord = WoundRecord.fetchWoundRecord(byID: recordID, in: context)
         XCTAssertNil(fetchedRecord)
     }
 }
