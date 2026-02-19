@@ -191,7 +191,10 @@ struct PatientDetailView: View {
                 emptyWoundRecordsView
             } else {
                 ForEach(viewModel.patient.woundRecordsArray, id: \.id) { woundRecord in
-                    WoundRecordRowView(woundRecord: woundRecord)
+                    NavigationLink(destination: TimelineView(woundRecord: woundRecord)) {
+                        WoundRecordRowView(woundRecord: woundRecord)
+                    }
+                    .buttonStyle(PlainButtonStyle())
                 }
             }
         }
@@ -290,11 +293,17 @@ struct WoundRecordRowView: View {
                 .padding(.vertical, 4)
                 .background(statusColor(for: woundRecord.status ?? "unknown"))
                 .cornerRadius(8)
+            
+            // Chevron indicator
+            Image(systemName: "chevron.right")
+                .font(.caption)
+                .foregroundColor(.secondary)
         }
         .padding(.vertical, 8)
+        .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Wound at \(woundRecord.location ?? "Unknown Location"), status: \(woundRecord.status ?? "unknown"), \(woundRecord.sessionCount) session\(woundRecord.sessionCount == 1 ? "" : "s"), started \(woundRecord.initialAssessmentDate ?? Date(), style: .date)")
-        .accessibilityHint("Double tap to view wound details")
+        .accessibilityHint("Double tap to view wound timeline")
         .accessibilityAction(named: "View Timeline") {
             // This will be triggered by navigation
         }
