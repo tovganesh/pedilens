@@ -1174,6 +1174,8 @@ struct ManualBoundaryTraceView: View {
     @State private var currentDragLocation: CGPoint?
     @State private var selectedPointIndex: Int?
     @State private var tracingMode: TracingMode = .continuous
+    @State private var isDraggingPoint = false
+    @State private var pointDragLocation: CGPoint?
     
     enum TracingMode {
         case continuous  // Drag to trace
@@ -1305,13 +1307,24 @@ struct ManualBoundaryTraceView: View {
                             },
                             onSelect: {
                                 selectedPointIndex = index
+                            },
+                            onDragStart: { location in
+                                isDraggingPoint = true
+                                pointDragLocation = location
+                            },
+                            onDragChange: { location in
+                                pointDragLocation = location
+                            },
+                            onDragEnd: {
+                                isDraggingPoint = false
+                                pointDragLocation = nil
                             }
                         )
                     }
                 }
                 
-                // Zoomed preview loupe (only in continuous mode) - rendered OUTSIDE the Canvas
-                if tracingMode == .continuous, let dragLocation = currentDragLocation {
+                // Zoomed preview loupe - show in continuous mode OR when dragging a point in point-by-point mode
+                if let dragLocation = (tracingMode == .continuous ? currentDragLocation : (isDraggingPoint ? pointDragLocation : nil)) {
                     ZoomedPreviewLoupe(
                         image: image,
                         touchLocation: dragLocation,
@@ -1471,6 +1484,9 @@ struct DraggablePoint: View {
     let isSelected: Bool
     let onDrag: (CGPoint) -> Void
     let onSelect: () -> Void
+    let onDragStart: (CGPoint) -> Void
+    let onDragChange: (CGPoint) -> Void
+    let onDragEnd: () -> Void
     
     var body: some View {
         let scaleX = viewSize.width / imageSize.width
@@ -1482,23 +1498,30 @@ struct DraggablePoint: View {
         )
         
         Circle()
-            .fill(Color.clear)
+            .fill(Color.blue.opacity(0.01)) // Nearly transparent but still interactive
             .frame(width: 44, height: 44)
             .position(displayPoint)
-            .gesture(
-                DragGesture()
+            .highPriorityGesture(
+                DragGesture(minimumDistance: 0)
                     .onChanged { value in
+                        if value.translation == .zero {
+                            // Just started dragging
+                            onDragStart(value.location)
+                        } else {
+                            onDragChange(value.location)
+                        }
                         onSelect()
+                        // value.location is in the coordinate space of the parent
                         let newImagePoint = CGPoint(
                             x: value.location.x / scaleX,
                             y: value.location.y / scaleY
                         )
                         onDrag(newImagePoint)
                     }
+                    .onEnded { _ in
+                        onDragEnd()
+                    }
             )
-            .onTapGesture {
-                onSelect()
-            }
     }
 }
 
