@@ -22,6 +22,7 @@
         <attribute name="initialAssessmentDate" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="lastUpdated" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="location" attributeType="String"/>
+        <attribute name="notes" optional="YES" attributeType="String"/>
         <attribute name="status" attributeType="String" defaultValueString="active"/>
         <relationship name="captureSessions" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="CaptureSession" inverseName="woundRecord" inverseEntity="CaptureSession"/>
         <relationship name="patient" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Patient" inverseName="woundRecords" inverseEntity="Patient"/>
