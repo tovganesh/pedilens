@@ -386,6 +386,9 @@ struct CameraView: View {
     @Environment(\.dismiss) private var dismiss
     
     @StateObject private var cameraManager = CameraManager()
+    @State private var captureSessionManager: CaptureSessionManager?
+    @State private var patientCaptureManager = PatientCaptureManager.shared
+    
     @State private var showingError = false
     @State private var errorMessage = ""
     @State private var isCapturing = false
@@ -407,6 +410,24 @@ struct CameraView: View {
                     .padding()
                     
                     Spacer()
+                    
+                    // Show patient info if available
+                    if let patient = woundRecord.patient {
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text(patient.name ?? "Unknown")
+                                .font(.caption)
+                                .foregroundColor(.white)
+                            if let patientID = patient.patientID {
+                                Text("ID: \(patientID)")
+                                    .font(.caption2)
+                                    .foregroundColor(.white.opacity(0.8))
+                            }
+                        }
+                        .padding()
+                        .background(Color.black.opacity(0.5))
+                        .cornerRadius(8)
+                        .padding(.trailing)
+                    }
                 }
                 
                 Spacer()
@@ -436,6 +457,9 @@ struct CameraView: View {
             }
         }
         .onAppear {
+            // Initialize capture session manager
+            captureSessionManager = CaptureSessionManager(persistenceController: .shared)
+            
             Task {
                 do {
                     try await cameraManager.startSession()
@@ -464,33 +488,68 @@ struct CameraView: View {
         
         Task {
             do {
+                // Capture photo using CameraManager
                 let capturedMedia = try await cameraManager.capturePhoto(livePhotoEnabled: false)
                 
-                // Create capture session
-                let session = CaptureSession(context: viewContext)
-                session.id = UUID()
-                session.timestamp = Date()
-                session.photoPath = "" // Will be set after saving photo
-                session.woundRecord = woundRecord
+                // Create capture session first to get the session ID
+                guard let sessionManager = captureSessionManager else {
+                    throw NSError(domain: "CameraView", code: -1, userInfo: [NSLocalizedDescriptionKey: "Capture session manager not initialized"])
+                }
+                
+                // Create session with temporary path, we'll update it after saving files
+                let session = try await sessionManager.createCaptureSession(
+                    photoPath: "photo.heic",  // Temporary, will be the actual filename
+                    livePhotoVideoPath: nil,
+                    depthDataPath: nil,
+                    location: capturedMedia.metadata.location,
+                    woundRecord: woundRecord
+                )
+                
+                // Now use the session's ID to save files
+                guard let sessionID = session.id else {
+                    throw NSError(domain: "CameraView", code: -2, userInfo: [NSLocalizedDescriptionKey: "Session ID not available"])
+                }
                 
                 // Save photo to file storage
                 let fileManager = FileStorageManager.shared
-                let photoURL = try await fileManager.savePhoto(capturedMedia.photoData, for: session.id!)
-                session.photoPath = photoURL.lastPathComponent
+                let photoURL = try await fileManager.savePhoto(capturedMedia.photoData, for: sessionID)
                 
                 // Save depth data if available
+                var depthDataPath: String?
                 if let depthData = capturedMedia.depthData {
-                    // Convert depth map to Data
                     if let depthDataEncoded = try? encodeDepthData(depthData) {
-                        let depthURL = try await fileManager.saveDepthData(depthDataEncoded, for: session.id!)
-                        session.depthDataPath = depthURL.lastPathComponent
+                        let depthURL = try await fileManager.saveDepthData(depthDataEncoded, for: sessionID)
+                        depthDataPath = depthURL.lastPathComponent
                     }
+                }
+                
+                // Save live photo video if available
+                var livePhotoVideoPath: String?
+                if let livePhotoURL = capturedMedia.livePhotoVideoURL {
+                    // Copy live photo video to permanent storage
+                    let videoURL = try await fileManager.saveLivePhotoVideo(livePhotoURL, for: sessionID)
+                    livePhotoVideoPath = videoURL.lastPathComponent
+                }
+                
+                // Update session paths
+                try await sessionManager.updatePaths(
+                    for: session,
+                    photoPath: photoURL.lastPathComponent,
+                    livePhotoVideoPath: livePhotoVideoPath,
+                    depthDataPath: depthDataPath
+                )
+                
+                // Associate patient metadata if available
+                if let patient = woundRecord.patient {
+                    patientCaptureManager.associatePatientMetadata(
+                        with: sessionID,
+                        patient: patient,
+                        context: viewContext
+                    )
                 }
                 
                 // Update wound record
                 woundRecord.lastUpdated = Date()
-                
-                // Save to Core Data
                 try viewContext.save()
                 
                 // Call onDismiss callback before dismissing

@@ -209,6 +209,12 @@ class CameraManager: NSObject, CameraManagerProtocol, ObservableObject {
             device.automaticallyEnablesLowLightBoostWhenAvailable = true
         }
         
+        // Configure autofocus for continuous operation
+        // This ensures the camera continuously adjusts focus as the scene changes
+        if device.isFocusModeSupported(.continuousAutoFocus) {
+            device.focusMode = .continuousAutoFocus
+        }
+        
         // Set exposure mode to continuous auto exposure for better low light handling
         if device.isExposureModeSupported(.continuousAutoExposure) {
             device.exposureMode = .continuousAutoExposure
@@ -221,6 +227,13 @@ class CameraManager: NSObject, CameraManagerProtocol, ObservableObject {
         
         // Enable subject area change monitoring for better focus in low light
         device.isSubjectAreaChangeMonitoringEnabled = true
+        
+        // Enable smooth autofocus if available (iOS 15+)
+        if #available(iOS 15.0, *) {
+            if device.isSmoothAutoFocusSupported {
+                device.isSmoothAutoFocusEnabled = true
+            }
+        }
     }
     
     private func getBestCameraDevice() -> AVCaptureDevice? {
