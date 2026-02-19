@@ -2,18 +2,26 @@
 
 ## Features Implemented
 
-### 1. Manual Boundary Tracing
+### 1. Manual Boundary Tracing with Zoomed Preview
 **Purpose**: Allow users to manually trace wound boundaries when automatic detection is not satisfactory.
 
 **Implementation**:
 - Added "Manual Trace" button in Session Details view
 - Available both before and after automatic analysis
-- Opens full-screen tracing interface
+- Opens full-screen tracing interface with zoomed preview loupe
 
 **User Interface**:
 - Full-screen image display with touch/drag gesture support
 - Real-time visual feedback as user traces
 - Orange line and points show the traced boundary
+- **Zoomed Preview Loupe**:
+  - Circular magnified view (120pt diameter)
+  - 2.5x zoom factor for precise tracing
+  - Positioned above finger (140pt offset) to avoid obstruction
+  - Crosshair at center shows exact trace point
+  - Orange border matches trace color
+  - Automatically adjusts position to stay on screen
+  - Only visible while actively tracing
 - Bottom toolbar with:
   - Clear button (trash icon) - removes all points
   - Point counter - shows number of traced points
@@ -21,6 +29,16 @@
 - Navigation bar with:
   - Cancel button - discards changes
   - Done button - saves boundary (requires minimum 3 points)
+
+**Zoomed Preview Features**:
+- Shows magnified area directly under user's finger
+- 2.5x magnification for detailed tracing
+- Crops and displays relevant portion of image
+- Crosshair indicates exact tracing point
+- Stays within screen bounds (smart positioning)
+- Disappears when finger lifts
+- Non-interactive overlay (doesn't block gestures)
+- Smooth real-time updates during drag
 
 **Features**:
 - Loads existing boundary if available (allows refinement)
@@ -34,11 +52,13 @@
 1. User taps "Manual Trace" button
 2. Tracing interface opens with image
 3. User drags finger to trace wound boundary
-4. Points are added along the trace path
-5. User can undo mistakes or clear and restart
-6. Tap "Done" when satisfied (minimum 3 points required)
-7. Measurements automatically calculated from traced boundary
-8. Results saved to database, replacing any existing measurement
+4. Zoomed preview loupe appears above finger showing magnified view
+5. Points are added along the trace path
+6. User can see exact detail under their finger in the loupe
+7. User can undo mistakes or clear and restart
+8. Tap "Done" when satisfied (minimum 3 points required)
+9. Measurements automatically calculated from traced boundary
+10. Results saved to database, replacing any existing measurement
 
 ### 2. Re-analysis with Confirmation
 **Purpose**: Allow users to re-run automatic wound detection on existing images.
@@ -92,6 +112,22 @@
 ```
 
 ## Technical Details
+
+### Zoomed Preview Loupe
+```swift
+ZoomedPreviewLoupe
+- loupeSize: 120pt diameter circular view
+- zoomFactor: 2.5x magnification
+- offsetAboveFinger: 140pt above touch point
+- Features:
+  - Crops image region around touch point
+  - Scales cropped region by zoom factor
+  - Displays in circular frame with orange border
+  - Shows crosshair at center
+  - Adjusts X position to stay on screen
+  - Handles image bounds checking
+  - Non-interactive overlay
+```
 
 ### Manual Boundary Processing
 ```swift
@@ -156,12 +192,18 @@ reanalyzeWound()
 
 1. **PediLens/PediLens/Views/ContentView.swift**
    - Added state variables for manual tracing
+   - Added `currentDragLocation` state for loupe positioning
    - Added "Manual Trace" and "Re-analyze" buttons
    - Added confirmation dialog for re-analysis
    - Added sheet presentation for manual tracing
    - Implemented `processManualBoundary()` function
    - Implemented `reanalyzeWound()` function
    - Created `ManualBoundaryTraceView` component
+   - Created `ZoomedPreviewLoupe` component with:
+     - Image cropping logic
+     - Coordinate conversion
+     - Smart positioning
+     - Crosshair overlay
 
 ## Testing Recommendations
 
@@ -173,6 +215,14 @@ reanalyzeWound()
 5. Test with existing boundaries (refinement)
 6. Verify measurements calculated correctly
 7. Check database persistence
+8. **Test zoomed preview loupe**:
+   - Verify loupe appears during drag
+   - Check magnification is clear and accurate
+   - Verify loupe stays on screen at edges
+   - Test crosshair alignment
+   - Verify loupe disappears when finger lifts
+   - Test on different image resolutions
+   - Verify performance with large images
 
 ### Re-analysis
 1. Test confirmation dialog appears
@@ -194,16 +244,18 @@ reanalyzeWound()
 ## Known Limitations
 
 1. No multi-touch support (single finger only)
-2. No zoom capability during tracing
+2. ~~No zoom capability during tracing~~ ✅ Fixed with zoomed preview loupe
 3. Cannot edit individual points after tracing
 4. No smoothing applied to traced path
 5. Re-analysis cannot be undone
 6. No history of previous boundaries
+7. Loupe zoom factor is fixed (2.5x)
+8. Loupe size is fixed (120pt)
 
 ## Future Enhancements
 
 ### Potential Improvements
-1. Add zoom/pan during tracing
+1. ~~Add zoom/pan during tracing~~ ✅ Implemented with loupe
 2. Allow editing individual points
 3. Add path smoothing options
 4. Save boundary history
@@ -213,6 +265,10 @@ reanalyzeWound()
 8. Import boundary from file
 9. Add guided tracing (snap to edges)
 10. Add confidence adjustment for manual traces
+11. Adjustable loupe zoom factor
+12. Adjustable loupe size
+13. Toggle loupe on/off
+14. Different loupe shapes (square, rounded rectangle)
 
 ### Advanced Features
 1. Hybrid mode (auto + manual refinement)
@@ -228,6 +284,7 @@ reanalyzeWound()
 ✅ All features implemented and functional
 ✅ UI responsive and intuitive
 ✅ Database operations working correctly
+✅ Zoomed preview loupe working smoothly
 
 ## Usage Instructions
 
@@ -235,10 +292,13 @@ reanalyzeWound()
 1. Open a capture session
 2. Tap "Manual Trace" button
 3. Drag finger around wound boundary
-4. Use "Undo" to remove last point if needed
-5. Use "Clear" to start over
-6. Tap "Done" when complete (need 3+ points)
-7. Measurements automatically calculated
+4. **Watch the zoomed preview loupe above your finger** for precise tracing
+5. The loupe shows a magnified view (2.5x) of the area under your finger
+6. Use the crosshair in the loupe to align exactly with wound edges
+7. Use "Undo" to remove last point if needed
+8. Use "Clear" to start over
+9. Tap "Done" when complete (need 3+ points)
+10. Measurements automatically calculated
 
 ### For Re-analysis
 1. Open a capture session with existing measurements
