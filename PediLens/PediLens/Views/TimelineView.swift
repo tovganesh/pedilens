@@ -17,22 +17,44 @@ struct TimelineView: View {
     }
     
     var body: some View {
-        VStack(spacing: 0) {
-            // Filter controls
-            if viewModel.showFilters {
-                filterControls
-                    .padding()
-                    .background(Color(.systemGray6))
+        ZStack {
+            VStack(spacing: 0) {
+                // Filter controls
+                if viewModel.showFilters {
+                    filterControls
+                        .padding()
+                        .background(Color(.systemGray6))
+                }
+                
+                // Timeline content
+                if viewModel.isLoading {
+                    ProgressView("Loading timeline...")
+                        .padding()
+                } else if viewModel.filteredSessions.isEmpty {
+                    emptyStateView
+                } else {
+                    timelineList
+                }
             }
             
-            // Timeline content
-            if viewModel.isLoading {
-                ProgressView("Loading timeline...")
+            // Floating action button for camera
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    Button(action: { viewModel.showingCamera = true }) {
+                        Image(systemName: "camera.fill")
+                            .font(.title2)
+                            .foregroundColor(.white)
+                            .frame(width: 60, height: 60)
+                            .background(Color.accentColor)
+                            .clipShape(Circle())
+                            .shadow(color: Color.black.opacity(0.3), radius: 5, x: 0, y: 3)
+                    }
                     .padding()
-            } else if viewModel.filteredSessions.isEmpty {
-                emptyStateView
-            } else {
-                timelineList
+                    .accessibilityLabel("Capture wound photo")
+                    .accessibilityHint("Opens camera to capture a new wound photo")
+                }
             }
         }
         .navigationTitle("Timeline")
@@ -48,8 +70,15 @@ struct TimelineView: View {
             }
         }
         .sheet(item: $viewModel.selectedSession) { session in
-            TimelineDetailView(session: session)
+            CaptureSessionDetailView(session: session)
                 .environment(\.managedObjectContext, viewContext)
+        }
+        .fullScreenCover(isPresented: $viewModel.showingCamera) {
+            CameraView(woundRecord: viewModel.woundRecord) {
+                // Refresh timeline when camera dismisses
+                viewModel.loadSessions()
+            }
+            .environment(\.managedObjectContext, viewContext)
         }
         .onAppear {
             viewModel.loadSessions()
@@ -170,6 +199,15 @@ struct TimelineView: View {
                 }
                 .buttonStyle(.bordered)
                 .padding(.top)
+            } else {
+                Button(action: { viewModel.showingCamera = true }) {
+                    Label("Capture Photo", systemImage: "camera.fill")
+                        .font(.headline)
+                }
+                .buttonStyle(.borderedProminent)
+                .padding(.top)
+                .accessibilityLabel("Capture first wound photo")
+                .accessibilityHint("Opens camera to capture your first wound photo")
             }
         }
         .padding()
@@ -277,14 +315,37 @@ struct TimelineEntryView: View {
     }
     
     private var thumbnailView: some View {
+        ThumbnailImageView(session: session)
+    }
+}
+
+// MARK: - Thumbnail Image View
+
+struct ThumbnailImageView: View {
+    let session: CaptureSession
+    @State private var thumbnailImage: UIImage?
+    @State private var isLoading = true
+    
+    var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 8)
                 .fill(Color(.systemGray5))
                 .frame(width: 80, height: 80)
             
-            Image(systemName: "photo")
-                .font(.title)
-                .foregroundColor(.secondary)
+            if let image = thumbnailImage {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 80, height: 80)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+            } else if isLoading {
+                ProgressView()
+                    .progressViewStyle(CircularProgressViewStyle(tint: .secondary))
+            } else {
+                Image(systemName: "photo")
+                    .font(.title)
+                    .foregroundColor(.secondary)
+            }
             
             // Depth data indicator
             if session.hasDepthData {
@@ -320,8 +381,93 @@ struct TimelineEntryView: View {
                 .frame(width: 80, height: 80)
             }
         }
+        .onAppear {
+            loadThumbnail()
+        }
     }
     
+    private func loadThumbnail() {
+        guard let sessionID = session.id else {
+            isLoading = false
+            return
+        }
+        
+        Task {
+            do {
+                // Try to load thumbnail first (faster)
+                let fileManager = FileStorageManager.shared
+                let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+                let thumbnailPath = documentsURL
+                    .appendingPathComponent("PediLens")
+                    .appendingPathComponent("Photos")
+                    .appendingPathComponent(sessionID.uuidString)
+                    .appendingPathComponent("thumbnail.jpg")
+                    .path
+                
+                if FileManager.default.fileExists(atPath: thumbnailPath) {
+                    let thumbnailData = try await fileManager.loadPhoto(at: thumbnailPath)
+                    if let image = UIImage(data: thumbnailData) {
+                        await MainActor.run {
+                            self.thumbnailImage = image
+                            self.isLoading = false
+                        }
+                        return
+                    }
+                }
+                
+                // If thumbnail doesn't exist, load and resize the full photo
+                if let photoPath = session.photoPath {
+                    let fullPhotoPath = documentsURL
+                        .appendingPathComponent("PediLens")
+                        .appendingPathComponent("Photos")
+                        .appendingPathComponent(sessionID.uuidString)
+                        .appendingPathComponent(photoPath)
+                        .path
+                    
+                    let photoData = try await fileManager.loadPhoto(at: fullPhotoPath)
+                    if let fullImage = UIImage(data: photoData) {
+                        // Resize to thumbnail size for better performance
+                        let thumbnail = await resizeImage(fullImage, targetSize: CGSize(width: 160, height: 160))
+                        await MainActor.run {
+                            self.thumbnailImage = thumbnail
+                            self.isLoading = false
+                        }
+                    } else {
+                        await MainActor.run {
+                            self.isLoading = false
+                        }
+                    }
+                } else {
+                    await MainActor.run {
+                        self.isLoading = false
+                    }
+                }
+            } catch {
+                print("Error loading thumbnail: \(error)")
+                await MainActor.run {
+                    self.isLoading = false
+                }
+            }
+        }
+    }
+    
+    private func resizeImage(_ image: UIImage, targetSize: CGSize) async -> UIImage {
+        let size = image.size
+        let widthRatio  = targetSize.width  / size.width
+        let heightRatio = targetSize.height / size.height
+        let ratio = min(widthRatio, heightRatio)
+        let newSize = CGSize(width: size.width * ratio, height: size.height * ratio)
+        
+        let renderer = UIGraphicsImageRenderer(size: newSize)
+        return renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: newSize))
+        }
+    }
+}
+
+// MARK: - Timeline Entry View Extensions
+
+extension TimelineEntryView {
     private func measurementInfo(_ measurement: Measurement) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 12) {
@@ -650,6 +796,7 @@ class TimelineViewModel: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var showFilters: Bool = false
     @Published var selectedSession: CaptureSession?
+    @Published var showingCamera: Bool = false
     
     // Filter state
     @Published var filterStartDate: Date = Calendar.current.date(byAdding: .month, value: -1, to: Date()) ?? Date()
