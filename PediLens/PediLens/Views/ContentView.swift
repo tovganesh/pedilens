@@ -161,25 +161,90 @@ struct NewWoundView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.dismiss) private var dismiss
     
-    @State private var location = ""
-    @State private var notes = ""
+    @State private var footSide: FootSide = .left
+    @State private var footLocation: FootLocation = .dorsal
+    @State private var remarks = ""
     @State private var showingError = false
     @State private var errorMessage = ""
     
-    private var isLocationValid: Bool {
-        !location.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    enum FootSide: String, CaseIterable {
+        case left = "Left"
+        case right = "Right"
+    }
+    
+    enum FootLocation: String, CaseIterable {
+        case dorsal = "Dorsal"
+        case plantar = "Plantar"
+    }
+    
+    private var formattedLocation: String {
+        "\(footSide.rawValue) foot, \(footLocation.rawValue.lowercased()) surface"
     }
     
     var body: some View {
         NavigationView {
             Form {
-                Section(header: Text("Wound Information")) {
-                    TextField("Location (e.g., Left foot, plantar surface)", text: $location)
-                        .accessibilityLabel("Wound location")
+                Section(header: Text("Wound Location")) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Foot:")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        
+                        HStack(spacing: 12) {
+                            ForEach(FootSide.allCases, id: \.self) { side in
+                                Button(action: {
+                                    footSide = side
+                                }) {
+                                    Text(side.rawValue)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 12)
+                                        .background(footSide == side ? Color.accentColor : Color.gray.opacity(0.2))
+                                        .foregroundColor(footSide == side ? .white : .primary)
+                                        .cornerRadius(8)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                    .padding(.vertical, 4)
                     
-                    TextEditor(text: $notes)
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Location:")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        
+                        HStack(spacing: 12) {
+                            ForEach(FootLocation.allCases, id: \.self) { location in
+                                Button(action: {
+                                    footLocation = location
+                                }) {
+                                    Text(location.rawValue)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 12)
+                                        .background(footLocation == location ? Color.accentColor : Color.gray.opacity(0.2))
+                                        .foregroundColor(footLocation == location ? .white : .primary)
+                                        .cornerRadius(8)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                    .padding(.vertical, 4)
+                    
+                    // Preview of selected location
+                    HStack {
+                        Image(systemName: "mappin.circle.fill")
+                            .foregroundColor(.accentColor)
+                        Text(formattedLocation)
+                            .font(.subheadline)
+                    }
+                    .padding(.vertical, 4)
+                }
+                
+                Section(header: Text("Remarks")) {
+                    TextEditor(text: $remarks)
                         .frame(height: 100)
-                        .accessibilityLabel("Additional notes")
+                        .accessibilityLabel("Wound remarks")
                 }
                 
                 Section {
@@ -213,10 +278,15 @@ struct NewWoundView: View {
     private func createWound() {
         let wound = WoundRecord(context: viewContext)
         wound.id = UUID()
-        wound.location = location.trimmingCharacters(in: .whitespacesAndNewlines)
+        wound.location = formattedLocation
         wound.initialAssessmentDate = Date()
         wound.lastUpdated = Date()
         wound.status = "active"
+        
+        // Store remarks in notes if not empty
+        if !remarks.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            wound.notes = remarks.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
         
         do {
             try viewContext.save()
@@ -247,6 +317,18 @@ struct WoundDetailView: View {
                 LabeledContent("Location", value: woundRecord.location ?? "Unknown")
                 LabeledContent("Initial Assessment", value: woundRecord.initialAssessmentDate ?? Date(), format: .dateTime)
                 LabeledContent("Status", value: woundRecord.status ?? "active")
+                
+                // Show remarks if available
+                if let notes = woundRecord.notes, !notes.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Remarks")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Text(notes)
+                            .font(.body)
+                    }
+                    .padding(.vertical, 4)
+                }
             }
             
             Section(header: Text("Capture Sessions")) {
