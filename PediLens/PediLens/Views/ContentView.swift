@@ -161,11 +161,17 @@ struct NewWoundView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.dismiss) private var dismiss
     
+    let patient: Patient?
+    
     @State private var footSide: FootSide = .left
     @State private var footLocation: FootLocation = .dorsal
     @State private var remarks = ""
     @State private var showingError = false
     @State private var errorMessage = ""
+    
+    init(patient: Patient? = nil) {
+        self.patient = patient
+    }
     
     enum FootSide: String, CaseIterable {
         case left = "Left"
@@ -282,6 +288,11 @@ struct NewWoundView: View {
         wound.initialAssessmentDate = Date()
         wound.lastUpdated = Date()
         wound.status = "active"
+        
+        // Associate with patient if provided (doctor mode)
+        if let patient = patient {
+            wound.patient = patient
+        }
         
         // Store remarks in notes if not empty
         if !remarks.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {

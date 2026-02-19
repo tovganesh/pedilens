@@ -47,6 +47,10 @@ struct PatientDetailView: View {
             EditPatientView(patient: viewModel.patient)
                 .environment(\.managedObjectContext, viewContext)
         }
+        .sheet(isPresented: $viewModel.showingAddWound) {
+            NewWoundView(patient: viewModel.patient)
+                .environment(\.managedObjectContext, viewContext)
+        }
         .onAppear {
             viewModel.loadStatistics()
         }

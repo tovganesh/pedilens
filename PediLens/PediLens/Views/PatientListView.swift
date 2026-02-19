@@ -10,26 +10,46 @@ import CoreData
 
 struct PatientListView: View {
     @Environment(\.managedObjectContext) private var viewContext
-    @StateObject private var viewModel: PatientListViewModel
+    
+    let user: User
+    
+    @FetchRequest private var patients: FetchedResults<Patient>
+    @State private var searchText: String = ""
+    @State private var showingAddPatient: Bool = false
     
     init(user: User) {
-        _viewModel = StateObject(wrappedValue: PatientListViewModel(user: user))
+        self.user = user
+        // Create fetch request filtered by user
+        _patients = FetchRequest<Patient>(
+            sortDescriptors: [NSSortDescriptor(keyPath: \Patient.name, ascending: true)],
+            predicate: NSPredicate(format: "user == %@", user),
+            animation: .default
+        )
+    }
+    
+    var filteredPatients: [Patient] {
+        if searchText.isEmpty {
+            return Array(patients)
+        } else {
+            return patients.filter { patient in
+                let name = patient.name ?? ""
+                let id = patient.patientID ?? ""
+                return name.localizedCaseInsensitiveContains(searchText) ||
+                       id.localizedCaseInsensitiveContains(searchText)
+            }
+        }
     }
     
     var body: some View {
         NavigationView {
             VStack {
                 // Search bar
-                SearchBar(text: $viewModel.searchText)
+                SearchBar(text: $searchText)
                     .padding(.horizontal)
                     .accessibilityLabel("Search patients")
                     .accessibilityHint("Enter patient name or ID to search")
                 
-                if viewModel.isLoading {
-                    ProgressView("Loading patients...")
-                        .padding()
-                        .accessibilityLabel("Loading patients")
-                } else if viewModel.filteredPatients.isEmpty {
+                if filteredPatients.isEmpty {
                     emptyStateView
                 } else {
                     patientList
@@ -38,7 +58,7 @@ struct PatientListView: View {
             .navigationTitle("Patients")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { viewModel.showingAddPatient = true }) {
+                    Button(action: { showingAddPatient = true }) {
                         Image(systemName: "plus")
                     }
                     .accessibilityLabel("Add new patient")
@@ -46,24 +66,21 @@ struct PatientListView: View {
                     .accessibilityInputLabels(["Add patient", "New patient", "Add"])
                 }
             }
-            .sheet(isPresented: $viewModel.showingAddPatient) {
-                AddPatientView(user: viewModel.user)
+            .sheet(isPresented: $showingAddPatient) {
+                AddPatientView(user: user)
                     .environment(\.managedObjectContext, viewContext)
-            }
-            .onAppear {
-                viewModel.loadPatients()
             }
         }
     }
     
     private var patientList: some View {
         List {
-            ForEach(viewModel.filteredPatients, id: \.id) { patient in
+            ForEach(filteredPatients, id: \.id) { patient in
                 NavigationLink(destination: PatientDetailView(patient: patient)) {
                     PatientRowView(patient: patient)
                 }
             }
-            .onDelete(perform: viewModel.deletePatients)
+            .onDelete(perform: deletePatients)
         }
         .listStyle(InsetGroupedListStyle())
     }
@@ -75,12 +92,12 @@ struct PatientListView: View {
                 .foregroundColor(.secondary)
                 .accessibilityHidden(true) // Decorative
             
-            Text(viewModel.searchText.isEmpty ? "No Patients" : "No Results")
+            Text(searchText.isEmpty ? "No Patients" : "No Results")
                 .font(.title2)
                 .fontWeight(.semibold)
                 .accessibilityAddTraits(.isHeader)
             
-            Text(viewModel.searchText.isEmpty ?
+            Text(searchText.isEmpty ?
                  "Add your first patient to get started" :
                  "No patients match your search")
                 .font(.body)
@@ -89,8 +106,8 @@ struct PatientListView: View {
                 .padding(.horizontal)
                 .fixedSize(horizontal: false, vertical: true)
             
-            if viewModel.searchText.isEmpty {
-                Button(action: { viewModel.showingAddPatient = true }) {
+            if searchText.isEmpty {
+                Button(action: { showingAddPatient = true }) {
                     Label("Add Patient", systemImage: "plus.circle.fill")
                         .font(.headline)
                 }
@@ -103,6 +120,19 @@ struct PatientListView: View {
         }
         .padding()
         .accessibilityElement(children: .contain)
+    }
+    
+    private func deletePatients(at offsets: IndexSet) {
+        Task {
+            for index in offsets {
+                let patient = filteredPatients[index]
+                do {
+                    try await PatientManager.shared.deletePatient(patient)
+                } catch {
+                    print("Error deleting patient: \(error)")
+                }
+            }
+        }
     }
 }
 
@@ -186,63 +216,7 @@ struct SearchBar: View {
     }
 }
 
-// MARK: - ViewModel
-
-@MainActor
-class PatientListViewModel: ObservableObject {
-    @Published var patients: [Patient] = []
-    @Published var searchText: String = ""
-    @Published var isLoading: Bool = false
-    @Published var showingAddPatient: Bool = false
-    
-    let user: User
-    private let patientManager: PatientManager
-    
-    init(user: User, patientManager: PatientManager = .shared) {
-        self.user = user
-        self.patientManager = patientManager
-    }
-    
-    var filteredPatients: [Patient] {
-        if searchText.isEmpty {
-            return patients
-        } else {
-            return patients.filter { patient in
-                let name = patient.name ?? ""
-                let id = patient.patientID ?? ""
-                return name.localizedCaseInsensitiveContains(searchText) ||
-                       id.localizedCaseInsensitiveContains(searchText)
-            }
-        }
-    }
-    
-    func loadPatients() {
-        isLoading = true
-        Task {
-            do {
-                patients = try await patientManager.fetchPatients(for: user)
-                isLoading = false
-            } catch {
-                print("Error loading patients: \(error)")
-                isLoading = false
-            }
-        }
-    }
-    
-    func deletePatients(at offsets: IndexSet) {
-        Task {
-            for index in offsets {
-                let patient = filteredPatients[index]
-                do {
-                    try await patientManager.deletePatient(patient)
-                    loadPatients()
-                } catch {
-                    print("Error deleting patient: \(error)")
-                }
-            }
-        }
-    }
-}
+// MARK: - Preview
 
 struct PatientListView_Previews: PreviewProvider {
     static var previews: some View {
