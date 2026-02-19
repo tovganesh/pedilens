@@ -51,21 +51,25 @@ class PersistenceController {
             description.type = NSInMemoryStoreType
         }
         
-        // Disable CloudKit for tests and in-memory stores
-        if isRunningTests || inMemory {
-            description.cloudKitContainerOptions = nil
-        } else {
-            // Enable persistent history tracking for sync
+        // Disable CloudKit for tests, in-memory stores, and personal development team
+        // TODO: Re-enable CloudKit when using paid Apple Developer account
+        description.cloudKitContainerOptions = nil
+        
+        if !isRunningTests && !inMemory {
+            // Enable persistent history tracking for local sync
             description.setOption(true as NSNumber,
                                 forKey: NSPersistentHistoryTrackingKey)
             description.setOption(true as NSNumber,
                                 forKey: NSPersistentStoreRemoteChangeNotificationPostOptionKey)
             
-            // CloudKit container options
+            // CloudKit temporarily disabled for personal development team
+            // Uncomment when using paid Apple Developer account:
+            /*
             let cloudKitOptions = NSPersistentCloudKitContainerOptions(
                 containerIdentifier: "iCloud.com.pedilens.app"
             )
             description.cloudKitContainerOptions = cloudKitOptions
+            */
         }
         
         // Load stores synchronously for tests to avoid race conditions

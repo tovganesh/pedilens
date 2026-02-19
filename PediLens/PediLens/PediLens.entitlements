@@ -2,6 +2,9 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!-- Temporarily disabled for personal development team -->
+	<!-- Uncomment when using paid Apple Developer account -->
+	<!--
 	<key>aps-environment</key>
 	<string>development</string>
 	<key>com.apple.developer.icloud-container-identifiers</key>
@@ -16,6 +19,7 @@
 	<array>
 		<string>iCloud.com.pedilens.app</string>
 	</array>
+	-->
 	<key>com.apple.security.application-groups</key>
 	<array>
 		<string>group.com.pedilens.app</string>

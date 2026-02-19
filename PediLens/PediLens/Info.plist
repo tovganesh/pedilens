@@ -39,10 +39,14 @@
 	</dict>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<!-- UIBackgroundModes temporarily disabled for personal development team -->
+	<!-- Uncomment when using paid Apple Developer account -->
+	<!--
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
 	</array>
+	-->
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UIRequiredDeviceCapabilities</key>
