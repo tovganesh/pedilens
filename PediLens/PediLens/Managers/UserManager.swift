@@ -8,6 +8,7 @@
 
 import Foundation
 import CoreData
+import Combine
 
 /// Protocol defining user management operations
 protocol UserManagerProtocol {
@@ -51,7 +52,7 @@ enum UserManagerError: LocalizedError {
 
 /// Manages user roles and feature access control for PediLens
 /// Stores user role in Core Data and provides role-based feature access
-class UserManager: UserManagerProtocol {
+class UserManager: ObservableObject, UserManagerProtocol {
     
     // MARK: - Properties
     
@@ -63,6 +64,9 @@ class UserManager: UserManagerProtocol {
     
     /// Cached user role for performance
     private var cachedRole: UserRole?
+    
+    /// Published current user role for SwiftUI binding
+    @Published var currentUserRole: UserRole?
     
     /// Lock for thread-safe access to cached role
     private let cacheLock = NSLock()
@@ -76,9 +80,18 @@ class UserManager: UserManagerProtocol {
         
         // Load cached role on initialization
         self.cachedRole = loadRoleFromStorage()
+        self.currentUserRole = cachedRole
     }
     
     // MARK: - Public Methods
+    
+    /// Loads the current user role and updates the published property
+    func loadCurrentUser() {
+        let role = getUserRole()
+        DispatchQueue.main.async {
+            self.currentUserRole = role
+        }
+    }
     
     /// Sets the user role and persists it to Core Data
     /// - Parameter role: The role to set for the user
@@ -97,8 +110,11 @@ class UserManager: UserManagerProtocol {
             do {
                 try context.save()
                 
-                // Update cache
+                // Update cache and published property
                 self.updateCachedRole(role)
+                DispatchQueue.main.async {
+                    self.currentUserRole = role
+                }
             } catch {
                 throw UserManagerError.persistenceError(error)
             }

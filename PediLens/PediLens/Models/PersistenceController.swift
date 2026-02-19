@@ -82,7 +82,7 @@ class PersistenceController {
                 // In production, handle this error appropriately
                 fatalError("Core Data store failed to load: \(error.localizedDescription)")
             }
-        }
+        }	
         
         // Automatically merge changes from parent context
         container.viewContext.automaticallyMergesChangesFromParent = true

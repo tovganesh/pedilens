@@ -235,18 +235,25 @@ class WoundDetectionService: WoundDetectionServiceProtocol {
         let height = Int(imageSize.height)
         
         // Create a mock elliptical wound in the center of the image
+        // In production, this would be replaced with actual ML model output
         var mask = Array(repeating: Array(repeating: false, count: width), count: height)
         
-        let centerX = width / 2
-        let centerY = height / 2
-        let radiusX = width / 4
-        let radiusY = height / 6
+        // Use image center with some randomization to make it appear different
+        let centerX = width / 2 + Int.random(in: -width/8...width/8)
+        let centerY = height / 2 + Int.random(in: -height/8...height/8)
+        
+        // Vary the size based on image dimensions
+        let radiusX = Int.random(in: width/6...width/4)
+        let radiusY = Int.random(in: height/8...height/6)
         
         for y in 0..<height {
             for x in 0..<width {
                 let dx = Double(x - centerX) / Double(radiusX)
                 let dy = Double(y - centerY) / Double(radiusY)
-                if (dx * dx + dy * dy) <= 1.0 {
+                
+                // Create irregular boundary by adding some noise
+                let noise = Double.random(in: -0.15...0.15)
+                if (dx * dx + dy * dy) <= (1.0 + noise) {
                     mask[y][x] = true
                 }
             }
