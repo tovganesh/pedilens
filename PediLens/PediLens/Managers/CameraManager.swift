@@ -57,7 +57,7 @@ protocol CameraManagerProtocol {
 // MARK: - Camera Manager Implementation
 
 @MainActor
-class CameraManager: NSObject, CameraManagerProtocol {
+class CameraManager: NSObject, CameraManagerProtocol, ObservableObject {
     
     // MARK: - Properties
     
@@ -68,14 +68,18 @@ class CameraManager: NSObject, CameraManagerProtocol {
     private var photoCaptureDelegate: PhotoCaptureDelegate?
     private let sessionQueue = DispatchQueue(label: "com.pedilens.camera.session")
     
+    private lazy var _previewLayer: AVCaptureVideoPreviewLayer = {
+        let layer = AVCaptureVideoPreviewLayer(session: captureSession)
+        layer.videoGravity = .resizeAspectFill
+        return layer
+    }()
+    
     var isSessionRunning: Bool {
         return captureSession.isRunning
     }
     
     var previewLayer: AVCaptureVideoPreviewLayer? {
-        let layer = AVCaptureVideoPreviewLayer(session: captureSession)
-        layer.videoGravity = .resizeAspectFill
-        return layer
+        return _previewLayer
     }
     
     // MARK: - Initialization
