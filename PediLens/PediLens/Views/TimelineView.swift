@@ -7,6 +7,7 @@
 
 import SwiftUI
 import CoreData
+import PhotosUI
 
 struct TimelineView: View {
     @Environment(\.managedObjectContext) private var viewContext
@@ -37,13 +38,21 @@ struct TimelineView: View {
                 }
             }
             
-            // Floating action button for camera
+            // Floating action button for camera/gallery
             VStack {
                 Spacer()
                 HStack {
                     Spacer()
-                    Button(action: { viewModel.showingCamera = true }) {
-                        Image(systemName: "camera.fill")
+                    Menu {
+                        Button(action: { viewModel.showingCamera = true }) {
+                            Label("Take Photo", systemImage: "camera.fill")
+                        }
+                        
+                        Button(action: { viewModel.showingPhotoPicker = true }) {
+                            Label("Choose from Library", systemImage: "photo.on.rectangle")
+                        }
+                    } label: {
+                        Image(systemName: "plus")
                             .font(.title2)
                             .foregroundColor(.white)
                             .frame(width: 60, height: 60)
@@ -52,8 +61,8 @@ struct TimelineView: View {
                             .shadow(color: Color.black.opacity(0.3), radius: 5, x: 0, y: 3)
                     }
                     .padding()
-                    .accessibilityLabel("Capture wound photo")
-                    .accessibilityHint("Opens camera to capture a new wound photo")
+                    .accessibilityLabel("Add wound photo")
+                    .accessibilityHint("Choose to take a photo or select from library")
                 }
             }
         }
@@ -79,6 +88,12 @@ struct TimelineView: View {
                 viewModel.loadSessions()
             }
             .environment(\.managedObjectContext, viewContext)
+        }
+        .photosPicker(isPresented: $viewModel.showingPhotoPicker, selection: $viewModel.selectedPhoto, matching: .images)
+        .onChange(of: viewModel.selectedPhoto) { newValue in
+            if newValue != nil {
+                viewModel.importPhoto()
+            }
         }
         .onAppear {
             viewModel.loadSessions()
@@ -200,14 +215,22 @@ struct TimelineView: View {
                 .buttonStyle(.bordered)
                 .padding(.top)
             } else {
-                Button(action: { viewModel.showingCamera = true }) {
-                    Label("Capture Photo", systemImage: "camera.fill")
+                Menu {
+                    Button(action: { viewModel.showingCamera = true }) {
+                        Label("Take Photo", systemImage: "camera.fill")
+                    }
+                    
+                    Button(action: { viewModel.showingPhotoPicker = true }) {
+                        Label("Choose from Library", systemImage: "photo.on.rectangle")
+                    }
+                } label: {
+                    Label("Add Photo", systemImage: "plus.circle.fill")
                         .font(.headline)
                 }
                 .buttonStyle(.borderedProminent)
                 .padding(.top)
-                .accessibilityLabel("Capture first wound photo")
-                .accessibilityHint("Opens camera to capture your first wound photo")
+                .accessibilityLabel("Add first wound photo")
+                .accessibilityHint("Choose to take a photo or select from library")
             }
         }
         .padding()
@@ -797,6 +820,8 @@ class TimelineViewModel: ObservableObject {
     @Published var showFilters: Bool = false
     @Published var selectedSession: CaptureSession?
     @Published var showingCamera: Bool = false
+    @Published var showingPhotoPicker: Bool = false
+    @Published var selectedPhoto: PhotosPickerItem?
     
     // Filter state
     @Published var filterStartDate: Date = Calendar.current.date(byAdding: .month, value: -1, to: Date()) ?? Date()
@@ -807,9 +832,11 @@ class TimelineViewModel: ObservableObject {
     @Published var sortOrder: SortOrder = .dateDescending
     
     let woundRecord: WoundRecord
+    private let persistenceController: PersistenceController
     
-    init(woundRecord: WoundRecord) {
+    init(woundRecord: WoundRecord, persistenceController: PersistenceController = .shared) {
         self.woundRecord = woundRecord
+        self.persistenceController = persistenceController
     }
     
     var hasActiveFilters: Bool {
@@ -869,6 +896,78 @@ class TimelineViewModel: ObservableObject {
     
     func clearAllFilters() {
         clearDateFilter()
+    }
+    
+    func importPhoto() {
+        guard let selectedPhoto = selectedPhoto else { return }
+        
+        Task {
+            do {
+                // Load the image data from PhotosPicker
+                guard let imageData = try await selectedPhoto.loadTransferable(type: Data.self),
+                      let image = UIImage(data: imageData) else {
+                    print("Failed to load image from photo picker")
+                    return
+                }
+                
+                // Convert UIImage to JPEG data
+                guard let jpegData = image.jpegData(compressionQuality: 0.9) else {
+                    print("Failed to convert image to JPEG")
+                    return
+                }
+                
+                // Create capture session first to get the session ID
+                let sessionManager = CaptureSessionManager(persistenceController: persistenceController)
+                let session = try await sessionManager.createCaptureSession(
+                    photoPath: "photo.heic",  // Temporary, will be updated
+                    livePhotoVideoPath: nil,
+                    depthDataPath: nil,
+                    location: nil,
+                    woundRecord: woundRecord
+                )
+                
+                guard let sessionID = session.id else {
+                    print("Session ID not available")
+                    return
+                }
+                
+                // Save photo to file storage
+                let fileManager = FileStorageManager.shared
+                let photoURL = try await fileManager.savePhoto(jpegData, for: sessionID)
+                
+                // Update session with actual photo path
+                try await sessionManager.updatePaths(
+                    for: session,
+                    photoPath: photoURL.lastPathComponent,
+                    livePhotoVideoPath: nil,
+                    depthDataPath: nil
+                )
+                
+                // Associate patient metadata if available
+                if let patient = woundRecord.patient {
+                    PatientCaptureManager.shared.associatePatientMetadata(
+                        with: sessionID,
+                        patient: patient,
+                        context: persistenceController.container.viewContext
+                    )
+                }
+                
+                // Update wound record
+                woundRecord.lastUpdated = Date()
+                try persistenceController.container.viewContext.save()
+                
+                // Reload sessions
+                await MainActor.run {
+                    self.selectedPhoto = nil
+                    self.loadSessions()
+                }
+            } catch {
+                print("Error importing photo: \(error)")
+                await MainActor.run {
+                    self.selectedPhoto = nil
+                }
+            }
+        }
     }
 }
 
