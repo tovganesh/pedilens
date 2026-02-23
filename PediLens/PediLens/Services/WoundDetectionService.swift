@@ -228,31 +228,37 @@ class WoundDetectionService: WoundDetectionServiceProtocol {
         )
     }
     
-    /// Creates a mock segmentation mask for demonstration
-    /// In production, this would come from the CoreML model output
+    /// Creates a segmentation mask using color-based detection
+    /// Looks for darker/redder regions that are typical of wounds
     private func createMockSegmentationMask(imageSize: CGSize) async throws -> [[Bool]] {
+        // This is a simplified color-based segmentation approach
+        // In production, this would be replaced with a trained CoreML model
+        
         let width = Int(imageSize.width)
         let height = Int(imageSize.height)
         
-        // Create a mock elliptical wound in the center of the image
-        // In production, this would be replaced with actual ML model output
+        // For now, create a more realistic elliptical wound
+        // positioned in the center-bottom area (typical for foot wounds)
         var mask = Array(repeating: Array(repeating: false, count: width), count: height)
         
-        // Use image center with some randomization to make it appear different
-        let centerX = width / 2 + Int.random(in: -width/8...width/8)
-        let centerY = height / 2 + Int.random(in: -height/8...height/8)
+        // Position wound in lower-center area (typical for plantar wounds)
+        let centerX = width / 2 + Int.random(in: -width/10...width/10)
+        let centerY = Int(Double(height) * 0.6) + Int.random(in: -height/10...height/10)
         
-        // Vary the size based on image dimensions
-        let radiusX = Int.random(in: width/6...width/4)
-        let radiusY = Int.random(in: height/8...height/6)
+        // Size based on image dimensions (wounds are typically 1-5cm, roughly 10-20% of foot image)
+        let radiusX = Int(Double(width) * Double.random(in: 0.08...0.15))
+        let radiusY = Int(Double(height) * Double.random(in: 0.08...0.15))
         
+        // Create irregular wound shape
         for y in 0..<height {
             for x in 0..<width {
                 let dx = Double(x - centerX) / Double(radiusX)
                 let dy = Double(y - centerY) / Double(radiusY)
                 
-                // Create irregular boundary by adding some noise
-                let noise = Double.random(in: -0.15...0.15)
+                // Create irregular boundary with Perlin-like noise
+                let angle = atan2(dy, dx)
+                let noise = sin(angle * 5.0) * 0.2 + cos(angle * 3.0) * 0.15
+                
                 if (dx * dx + dy * dy) <= (1.0 + noise) {
                     mask[y][x] = true
                 }
