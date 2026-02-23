@@ -707,6 +707,26 @@ struct CaptureSessionDetailView: View {
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                             }
+                            
+                            // Disclaimer for automatic detection
+                            if case .automatic = boundary.detectionMethod {
+                                Divider()
+                                    .padding(.vertical, 4)
+                                
+                                HStack(alignment: .top, spacing: 8) {
+                                    Image(systemName: "exclamationmark.triangle.fill")
+                                        .foregroundColor(.orange)
+                                        .font(.caption)
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("Experimental Feature")
+                                            .font(.caption)
+                                            .fontWeight(.semibold)
+                                        Text("Automatic detection is experimental. For accurate measurements, please use Manual Trace to verify or adjust the boundary.")
+                                            .font(.caption2)
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+                            }
                         }
                         .padding()
                         .background(Color.green.opacity(0.1))
@@ -824,25 +844,42 @@ struct CaptureSessionDetailView: View {
                     .cornerRadius(8)
                 } else if photoImage != nil {
                     VStack(spacing: 12) {
+                        // Disclaimer before analysis
+                        HStack(alignment: .top, spacing: 8) {
+                            Image(systemName: "info.circle.fill")
+                                .foregroundColor(.blue)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Analysis Options")
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                Text("Automatic detection is experimental. For best accuracy, use Manual Trace to draw the wound boundary yourself.")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        .padding()
+                        .background(Color.blue.opacity(0.1))
+                        .cornerRadius(8)
+                        
                         Button(action: analyzeWound) {
-                            Label("Analyze Wound", systemImage: "waveform.path.ecg")
+                            Label("Auto-Detect Wound", systemImage: "waveform.path.ecg")
                                 .frame(maxWidth: .infinity)
                                 .padding()
                                 .background(Color.accentColor)
                                 .foregroundColor(.white)
                                 .cornerRadius(8)
                         }
-                        .accessibilityLabel("Analyze wound and calculate measurements")
+                        .accessibilityLabel("Automatically analyze wound and calculate measurements")
                         
                         Button(action: { showingManualTrace = true }) {
-                            Label("Manual Trace", systemImage: "hand.draw")
+                            Label("Manual Trace (Recommended)", systemImage: "hand.draw")
                                 .frame(maxWidth: .infinity)
                                 .padding()
                                 .background(Color.orange)
                                 .foregroundColor(.white)
                                 .cornerRadius(8)
                         }
-                        .accessibilityLabel("Manually trace wound boundary")
+                        .accessibilityLabel("Manually trace wound boundary for accurate measurements")
                     }
                 }
             }
