@@ -1,0 +1,36 @@
+# Python dependencies for wound detection model training
+
+# Core ML frameworks
+# For Apple Silicon (M1/M2/M3), use tensorflow-macos
+# For Intel Mac or Linux, use regular tensorflow
+tensorflow-macos>=2.13.0; platform_machine == 'arm64' and sys_platform == 'darwin'
+tensorflow-metal>=1.0.0; platform_machine == 'arm64' and sys_platform == 'darwin'
+tensorflow>=2.13.0; platform_machine != 'arm64' or sys_platform != 'darwin'
+
+coremltools>=7.0
+
+# Image processing
+Pillow>=10.0.0
+opencv-python>=4.8.0
+
+# Data handling
+numpy>=1.24.0
+pandas>=2.0.0
+
+# Visualization
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# Dataset download
+kaggle>=1.5.16
+
+# Optional: PyTorch alternative (works better on some systems)
+# torch>=2.0.0
+# torchvision>=0.15.0
+
+# Optional: MONAI for medical imaging
+# monai>=1.2.0
+
+# Model conversion
+# onnx>=1.14.0
+# onnxruntime>=1.15.0
