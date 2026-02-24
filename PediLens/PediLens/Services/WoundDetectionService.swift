@@ -269,7 +269,7 @@ class WoundDetectionService: WoundDetectionServiceProtocol {
     }
     
     /// Extracts contours from a binary segmentation mask
-    private func extractContours(from mask: [[Bool]]) -> [[CGPoint]] {
+    func extractContours(from mask: [[Bool]]) -> [[CGPoint]] {
         guard !mask.isEmpty, !mask[0].isEmpty else { return [] }
         
         let height = mask.count

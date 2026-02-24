@@ -1050,8 +1050,8 @@ struct CaptureSessionDetailView: View {
                     depthData = try? await loadDepthData(sessionID: sessionID, depthPath: depthPath)
                 }
                 
-                // Run wound detection
-                let detectionService = WoundDetectionService()
+                // Run wound detection using CoreML model
+                let detectionService = CoreMLWoundDetectionService()
                 let boundary = try await detectionService.detectWoundBoundary(in: image, calibration: nil)
                 
                 // Calculate measurements
@@ -1310,25 +1310,18 @@ struct WoundBoundaryOverlay: View {
     
     var body: some View {
         Canvas { context, size in
-            // Calculate scale factors
-            let scaleX = size.width / imageSize.width
-            let scaleY = size.height / imageSize.height
+            // Use correct aspect-fit transformation
+            let geometry = AspectFitGeometry(imageSize: imageSize, containerSize: size)
             
             // Create path from boundary points
             var path = Path()
             
             if let firstPoint = boundary.points.first {
-                let scaledFirst = CGPoint(
-                    x: firstPoint.x * scaleX,
-                    y: firstPoint.y * scaleY
-                )
+                let scaledFirst = geometry.imageToView(firstPoint)
                 path.move(to: scaledFirst)
                 
                 for point in boundary.points.dropFirst() {
-                    let scaledPoint = CGPoint(
-                        x: point.x * scaleX,
-                        y: point.y * scaleY
-                    )
+                    let scaledPoint = geometry.imageToView(point)
                     path.addLine(to: scaledPoint)
                 }
                 
@@ -1392,22 +1385,15 @@ struct ManualBoundaryTraceView: View {
                     Canvas { context, size in
                         guard !tracePoints.isEmpty else { return }
                         
-                        // Calculate scale from image to display
-                        let scaleX = size.width / image.size.width
-                        let scaleY = size.height / image.size.height
+                        // Use correct aspect-fit transformation
+                        let geometry = AspectFitGeometry(imageSize: image.size, containerSize: size)
                         
                         var path = Path()
-                        let firstScaled = CGPoint(
-                            x: tracePoints[0].x * scaleX,
-                            y: tracePoints[0].y * scaleY
-                        )
+                        let firstScaled = geometry.imageToView(tracePoints[0])
                         path.move(to: firstScaled)
                         
                         for point in tracePoints.dropFirst() {
-                            let scaledPoint = CGPoint(
-                                x: point.x * scaleX,
-                                y: point.y * scaleY
-                            )
+                            let scaledPoint = geometry.imageToView(point)
                             path.addLine(to: scaledPoint)
                         }
                         
@@ -1425,10 +1411,7 @@ struct ManualBoundaryTraceView: View {
                         
                         // Draw points with different styles for selected/unselected
                         for (index, point) in tracePoints.enumerated() {
-                            let scaledPoint = CGPoint(
-                                x: point.x * scaleX,
-                                y: point.y * scaleY
-                            )
+                            let scaledPoint = geometry.imageToView(point)
                             
                             let isSelected = selectedPointIndex == index
                             let pointSize: CGFloat = isSelected ? 16 : 10
@@ -1594,16 +1577,11 @@ struct ManualBoundaryTraceView: View {
     }
     
     private func handleTap(at location: CGPoint, in viewSize: CGSize) {
-        // Check if tapping near an existing point to select it
-        let scaleX = image.size.width / viewSize.width
-        let scaleY = image.size.height / viewSize.height
+        // Convert from view coordinates to image coordinates using aspect-fit transformation
+        let geometry = AspectFitGeometry(imageSize: image.size, containerSize: viewSize)
+        let imagePoint = geometry.viewToImage(location)
         
-        let imagePoint = CGPoint(
-            x: location.x * scaleX,
-            y: location.y * scaleY
-        )
-        
-        // Check if tapping near an existing point (within 20 pixels)
+        // Check if tapping near an existing point (within 20 pixels in image space)
         for (index, point) in tracePoints.enumerated() {
             let distance = sqrt(pow(imagePoint.x - point.x, 2) + pow(imagePoint.y - point.y, 2))
             if distance < 20 {
@@ -1618,14 +1596,9 @@ struct ManualBoundaryTraceView: View {
     }
     
     private func addTracePoint(at location: CGPoint, in viewSize: CGSize) {
-        // Convert from view coordinates to image coordinates
-        let scaleX = image.size.width / viewSize.width
-        let scaleY = image.size.height / viewSize.height
-        
-        let imagePoint = CGPoint(
-            x: location.x * scaleX,
-            y: location.y * scaleY
-        )
+        // Convert from view coordinates to image coordinates using aspect-fit transformation
+        let geometry = AspectFitGeometry(imageSize: image.size, containerSize: viewSize)
+        let imagePoint = geometry.viewToImage(location)
         
         // Only add if it's not too close to the last point
         if let lastPoint = tracePoints.last {
@@ -1678,13 +1651,9 @@ struct DraggablePoint: View {
     let onDragEnd: () -> Void
     
     var body: some View {
-        let scaleX = viewSize.width / imageSize.width
-        let scaleY = viewSize.height / imageSize.height
-        
-        let displayPoint = CGPoint(
-            x: point.x * scaleX,
-            y: point.y * scaleY
-        )
+        // Use correct aspect-fit transformation
+        let geometry = AspectFitGeometry(imageSize: imageSize, containerSize: viewSize)
+        let displayPoint = geometry.imageToView(point)
         
         Circle()
             .fill(Color.blue.opacity(0.01)) // Nearly transparent but still interactive
@@ -1700,11 +1669,8 @@ struct DraggablePoint: View {
                             onDragChange(value.location)
                         }
                         onSelect()
-                        // value.location is in the coordinate space of the parent
-                        let newImagePoint = CGPoint(
-                            x: value.location.x / scaleX,
-                            y: value.location.y / scaleY
-                        )
+                        // Convert view location to image coordinates
+                        let newImagePoint = geometry.viewToImage(value.location)
                         onDrag(newImagePoint)
                     }
                     .onEnded { _ in
