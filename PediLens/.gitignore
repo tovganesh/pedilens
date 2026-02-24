@@ -154,3 +154,11 @@ docs/build/
 TASK_*_COMPLETION.md
 verify_setup.sh
 test_*.swift
+
+# python
+venv
+.venv
+__pycache__
+
+# zip files
+.zip
