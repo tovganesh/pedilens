@@ -26,6 +26,7 @@
 		2A2E0B4BC7E958B79F2C779C /* SyncManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3865E33BDBD99B4116760096 /* SyncManager.swift */; };
 		2E9D82BA5DC2C0FC74DD9EA4 /* PerformanceOptimizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D75688989AFF0FA6FCB5487 /* PerformanceOptimizer.swift */; };
 		2EBEE5B1F60CE6C00816FE2D /* CaptureSession+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0756970C673F50C51296B75F /* CaptureSession+Extensions.swift */; };
+		302D70268C033EA5876DDC37 /* CoordinateTransform.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09C0159215B7F171704C403 /* CoordinateTransform.swift */; };
 		36B0F80E220A34318F01E352 /* CameraManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70E18317740869D70B34DE7F /* CameraManager.swift */; };
 		3D791313C813D29DD3B9E596 /* PatientManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 528A2FA5C4D755BBCB37BBD3 /* PatientManager.swift */; };
 		3DA5E03E77364ADEFD846080 /* User+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2B93176449139EFA1D1AC3F /* User+Extensions.swift */; };
@@ -33,6 +34,7 @@
 		44643D092AC0D28E85C9E3DA /* PediLensApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 956BF8C8109F97228EB87449 /* PediLensApp.swift */; };
 		46C4EB13C2AA99A8367E8B84 /* UncalibratedMeasurementWarningPropertyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B155D545FB6B46DAE41EEBC /* UncalibratedMeasurementWarningPropertyTests.swift */; };
 		48B1B3E2D94EE933DE7230D1 /* PatientSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E659D998C9CC36633EA64393 /* PatientSelectionView.swift */; };
+		4E94DAEC98675E45F8E75D91 /* WoundSegmentation.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = ABFC9062B301E8AB85EE4583 /* WoundSegmentation.mlpackage */; };
 		502791E87FFCD163F91E80B9 /* WoundDetectionServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 514629B1180CBD97F5C46B15 /* WoundDetectionServiceTests.swift */; };
 		51310AED5828AD5774F13546 /* MeasurementManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2285D950A378D75194A55926 /* MeasurementManager.swift */; };
 		5387EA8E621FA83FC05EF7BD /* WoundDetectionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F99A6FCFB192E6FD2774723 /* WoundDetectionService.swift */; };
@@ -77,6 +79,7 @@
 		AC4E8808C773071FE0467BBF /* CoreData.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B456FBFE09FF1B26571490FD /* CoreData.framework */; };
 		B2066A0C3E1950DED110FCC6 /* SyncStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EE86407FFD8094FFD87D55C /* SyncStatusView.swift */; };
 		B665DC51B30C7F19A4B48DC5 /* DataValidationPropertyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FB34C86C993C3C499D95D15 /* DataValidationPropertyTests.swift */; };
+		B9FEF56AF2B664A6CB3F618B /* CoreMLWoundDetectionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2156F6914979AD8CA60D756E /* CoreMLWoundDetectionService.swift */; };
 		BDAB44D6A4767F0A982C98D5 /* CoreLocation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B14A13950B8F8FBDABA0C091 /* CoreLocation.framework */; };
 		BE13163BF75EFF6D7D35A536 /* OfflineSyncQueuePropertyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 873AA6A5797EF83E8EA33B17 /* OfflineSyncQueuePropertyTests.swift */; };
 		BFC665D03469161A23DFE80F /* CloudKitSyncPropertyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7087AF21AC82EBA8DED0CAAF /* CloudKitSyncPropertyTests.swift */; };
@@ -135,6 +138,7 @@
 		1D05157E4540FD9082569FB4 /* NoThirdPartyTransmissionPropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoThirdPartyTransmissionPropertyTests.swift; sourceTree = "<group>"; };
 		1F99A6FCFB192E6FD2774723 /* WoundDetectionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WoundDetectionService.swift; sourceTree = "<group>"; };
 		1FB34C86C993C3C499D95D15 /* DataValidationPropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataValidationPropertyTests.swift; sourceTree = "<group>"; };
+		2156F6914979AD8CA60D756E /* CoreMLWoundDetectionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreMLWoundDetectionService.swift; sourceTree = "<group>"; };
 		2285D950A378D75194A55926 /* MeasurementManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeasurementManager.swift; sourceTree = "<group>"; };
 		232ABE2DEF00DCA183A4C339 /* Patient+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Patient+Extensions.swift"; sourceTree = "<group>"; };
 		2B09E71ADFC62703F2BC8401 /* SyncConflictPropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncConflictPropertyTests.swift; sourceTree = "<group>"; };
@@ -199,6 +203,7 @@
 		A838F24249AAEAC5CBE5E4E7 /* SyncConflictView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncConflictView.swift; sourceTree = "<group>"; };
 		AAE51C5953A2EDEB530652A4 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AAF257B5B484DBCEE4E55427 /* UserManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserManager.swift; sourceTree = "<group>"; };
+		ABFC9062B301E8AB85EE4583 /* WoundSegmentation.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = WoundSegmentation.mlpackage; sourceTree = "<group>"; };
 		AC82D786B78DDD34057299C8 /* LocalAuthentication.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = LocalAuthentication.framework; path = System/Library/Frameworks/LocalAuthentication.framework; sourceTree = SDKROOT; };
 		AC8F4375E7BB2B11E983FA70 /* PatientDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatientDetailView.swift; sourceTree = "<group>"; };
 		B11F2912A861AC5236226736 /* CameraMaxResolutionPropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraMaxResolutionPropertyTests.swift; sourceTree = "<group>"; };
@@ -217,6 +222,7 @@
 		C9EC5E3850FFF6D076E7735B /* CaptureSessionManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureSessionManagerTests.swift; sourceTree = "<group>"; };
 		CA4875736916D960315B9C96 /* RoleSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoleSelectionView.swift; sourceTree = "<group>"; };
 		CF53FAC258AB490DBE2EBAD1 /* Localization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Localization.swift; sourceTree = "<group>"; };
+		D09C0159215B7F171704C403 /* CoordinateTransform.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoordinateTransform.swift; sourceTree = "<group>"; };
 		D0E290A23F064A18717FDEB8 /* AccessibilityHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityHelpers.swift; sourceTree = "<group>"; };
 		D4F5E47555A4ECD04A5AECCE /* WoundManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WoundManagerTests.swift; sourceTree = "<group>"; };
 		DA893F2D78936D1AC9FE801F /* LocalOnlySyncPropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalOnlySyncPropertyTests.swift; sourceTree = "<group>"; };
@@ -333,6 +339,7 @@
 		4160FC0B39C1E0004F0B3F29 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				2156F6914979AD8CA60D756E /* CoreMLWoundDetectionService.swift */,
 				1F99A6FCFB192E6FD2774723 /* WoundDetectionService.swift */,
 			);
 			path = Services;
@@ -343,6 +350,7 @@
 			children = (
 				AAE51C5953A2EDEB530652A4 /* Assets.xcassets */,
 				31CC1434BB8F77795CD5CF3F /* Localizable.strings */,
+				ABFC9062B301E8AB85EE4583 /* WoundSegmentation.mlpackage */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -359,6 +367,7 @@
 			isa = PBXGroup;
 			children = (
 				D0E290A23F064A18717FDEB8 /* AccessibilityHelpers.swift */,
+				D09C0159215B7F171704C403 /* CoordinateTransform.swift */,
 				899C047C1BC4C4EE8F9AB50F /* DataIntegrityManager.swift */,
 				76DD846061A580DD69DB4E00 /* ErrorHandler.swift */,
 				E16A0373D9ADEEB1607F614E /* ErrorLogger.swift */,
@@ -565,6 +574,8 @@
 				2EBEE5B1F60CE6C00816FE2D /* CaptureSession+Extensions.swift in Sources */,
 				6EA0486E22B56DA88409AD10 /* CaptureSessionManager.swift in Sources */,
 				6B1B746CE9356E56DC161667 /* ContentView.swift in Sources */,
+				302D70268C033EA5876DDC37 /* CoordinateTransform.swift in Sources */,
+				B9FEF56AF2B664A6CB3F618B /* CoreMLWoundDetectionService.swift in Sources */,
 				E6C048D4F5AAA4C1CF8A3565 /* DataIntegrityManager.swift in Sources */,
 				FE96F586F4090DD871A57543 /* ErrorHandler.swift in Sources */,
 				C050EF9B98433C6C33957200 /* ErrorLogger.swift in Sources */,
@@ -601,6 +612,7 @@
 				5387EA8E621FA83FC05EF7BD /* WoundDetectionService.swift in Sources */,
 				559E5DBEE5314AFA2F843CA8 /* WoundManager.swift in Sources */,
 				0238DAAB3C0EFBA6A120277E /* WoundRecord+Extensions.swift in Sources */,
+				4E94DAEC98675E45F8E75D91 /* WoundSegmentation.mlpackage in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
