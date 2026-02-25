@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 63;
+	objectVersion = 77;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -27,6 +27,7 @@
 		2E9D82BA5DC2C0FC74DD9EA4 /* PerformanceOptimizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D75688989AFF0FA6FCB5487 /* PerformanceOptimizer.swift */; };
 		2EBEE5B1F60CE6C00816FE2D /* CaptureSession+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0756970C673F50C51296B75F /* CaptureSession+Extensions.swift */; };
 		302D70268C033EA5876DDC37 /* CoordinateTransform.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09C0159215B7F171704C403 /* CoordinateTransform.swift */; };
+		32A9656F8CCD721F67C82D07 /* CalibrationType.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FE42C19D29E8BD7F8F9A7CD /* CalibrationType.swift */; };
 		36B0F80E220A34318F01E352 /* CameraManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70E18317740869D70B34DE7F /* CameraManager.swift */; };
 		3D791313C813D29DD3B9E596 /* PatientManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 528A2FA5C4D755BBCB37BBD3 /* PatientManager.swift */; };
 		3DA5E03E77364ADEFD846080 /* User+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2B93176449139EFA1D1AC3F /* User+Extensions.swift */; };
@@ -111,6 +112,7 @@
 		F7508465488212A288868121 /* SecurityManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7453578E3ED202ED024F310C /* SecurityManagerTests.swift */; };
 		F784771B4630C1272F930770 /* WoundRecordCreationPropertyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A01B118AF7F31F687868D9D /* WoundRecordCreationPropertyTests.swift */; };
 		F7AAFC7CC1747F0D17BEEFF0 /* PatientIdentificationPropertyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 887116CAEB2D47FE10D742D2 /* PatientIdentificationPropertyTests.swift */; };
+		FABB89A3F2845004BBB1EC59 /* ScaleDetectionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBFB3E4F1897CE2B84F3D3FF /* ScaleDetectionService.swift */; };
 		FCF7EE0950BF0B664D56EC21 /* CaptureSessionManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9EC5E3850FFF6D076E7735B /* CaptureSessionManagerTests.swift */; };
 		FE96F586F4090DD871A57543 /* ErrorHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76DD846061A580DD69DB4E00 /* ErrorHandler.swift */; };
 /* End PBXBuildFile section */
@@ -159,6 +161,7 @@
 		4A63FC4B50B3E3CBF7C949F5 /* PDFKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = PDFKit.framework; path = System/Library/Frameworks/PDFKit.framework; sourceTree = SDKROOT; };
 		4E856ABF6A849224AD91EFDC /* Measurement+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Measurement+Extensions.swift"; sourceTree = "<group>"; };
 		4FB5BF9E4627CB7BE8CDED55 /* WoundBoundary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WoundBoundary.swift; sourceTree = "<group>"; };
+		4FE42C19D29E8BD7F8F9A7CD /* CalibrationType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalibrationType.swift; sourceTree = "<group>"; };
 		514629B1180CBD97F5C46B15 /* WoundDetectionServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WoundDetectionServiceTests.swift; sourceTree = "<group>"; };
 		528A2FA5C4D755BBCB37BBD3 /* PatientManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatientManager.swift; sourceTree = "<group>"; };
 		58A39E121149DE58CCABD577 /* CameraTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraTypes.swift; sourceTree = "<group>"; };
@@ -195,7 +198,7 @@
 		9BE33545B99AFE50B6578997 /* CameraMultiFormatPropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraMultiFormatPropertyTests.swift; sourceTree = "<group>"; };
 		9BFED549962510BDF31A82BD /* CoreDataOfflinePropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreDataOfflinePropertyTests.swift; sourceTree = "<group>"; };
 		9CF02566AA2D38A75B173635 /* PatientRecordFilteringPropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatientRecordFilteringPropertyTests.swift; sourceTree = "<group>"; };
-		9D02041AAE18F9C41344CDC3 /* PediLensTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = file; name = PediLensTests.xctest; path = PediLens.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		9D02041AAE18F9C41344CDC3 /* PediLensTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = PediLensTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		9E1E6554061CF6503D9769A7 /* Note+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Note+Extensions.swift"; sourceTree = "<group>"; };
 		A2B93176449139EFA1D1AC3F /* User+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "User+Extensions.swift"; sourceTree = "<group>"; };
 		A3B54A53E3BA41099F1A938F /* CameraManualControlsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraManualControlsTests.swift; sourceTree = "<group>"; };
@@ -203,7 +206,7 @@
 		A838F24249AAEAC5CBE5E4E7 /* SyncConflictView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncConflictView.swift; sourceTree = "<group>"; };
 		AAE51C5953A2EDEB530652A4 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AAF257B5B484DBCEE4E55427 /* UserManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserManager.swift; sourceTree = "<group>"; };
-		ABFC9062B301E8AB85EE4583 /* WoundSegmentation.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = WoundSegmentation.mlpackage; sourceTree = "<group>"; };
+		ABFC9062B301E8AB85EE4583 /* WoundSegmentation.mlpackage */ = {isa = PBXFileReference; path = WoundSegmentation.mlpackage; sourceTree = "<group>"; };
 		AC82D786B78DDD34057299C8 /* LocalAuthentication.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = LocalAuthentication.framework; path = System/Library/Frameworks/LocalAuthentication.framework; sourceTree = SDKROOT; };
 		AC8F4375E7BB2B11E983FA70 /* PatientDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatientDetailView.swift; sourceTree = "<group>"; };
 		B11F2912A861AC5236226736 /* CameraMaxResolutionPropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraMaxResolutionPropertyTests.swift; sourceTree = "<group>"; };
@@ -230,10 +233,11 @@
 		E16A0373D9ADEEB1607F614E /* ErrorLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorLogger.swift; sourceTree = "<group>"; };
 		E2F3BEC8AFACA28C967E64AE /* TimelineEntryCompletenessPropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineEntryCompletenessPropertyTests.swift; sourceTree = "<group>"; };
 		E659D998C9CC36633EA64393 /* PatientSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatientSelectionView.swift; sourceTree = "<group>"; };
-		E7E2FADA34EE12CBC837578E /* PediLens.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PediLens.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E7E2FADA34EE12CBC837578E /* PediLens.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PediLens.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		EB0BA0F646223B3589404665 /* CameraManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraManagerTests.swift; sourceTree = "<group>"; };
 		F234891FA87BCF433E791F5B /* WoundManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WoundManager.swift; sourceTree = "<group>"; };
 		F60F81F64E4F3E38DCD24C7E /* PediLens.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = PediLens.xcdatamodel; sourceTree = "<group>"; };
+		FBFB3E4F1897CE2B84F3D3FF /* ScaleDetectionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScaleDetectionService.swift; sourceTree = "<group>"; };
 		FF426ED791AF952104B3E7FF /* MeasurementManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeasurementManagerTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -340,6 +344,7 @@
 			isa = PBXGroup;
 			children = (
 				2156F6914979AD8CA60D756E /* CoreMLWoundDetectionService.swift */,
+				FBFB3E4F1897CE2B84F3D3FF /* ScaleDetectionService.swift */,
 				1F99A6FCFB192E6FD2774723 /* WoundDetectionService.swift */,
 			);
 			path = Services;
@@ -434,6 +439,7 @@
 		C080AB71BEBBFF6F9BEEF207 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				4FE42C19D29E8BD7F8F9A7CD /* CalibrationType.swift */,
 				58A39E121149DE58CCABD577 /* CameraTypes.swift */,
 				0756970C673F50C51296B75F /* CaptureSession+Extensions.swift */,
 				4E856ABF6A849224AD91EFDC /* Measurement+Extensions.swift */,
@@ -541,6 +547,7 @@
 			packageReferences = (
 				373811BD5FFB871471CE20D0 /* XCRemoteSwiftPackageReference "SwiftCheck" */,
 			);
+			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -569,6 +576,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				ED9B8011AB81D533FAC8BF95 /* AccessibilityHelpers.swift in Sources */,
+				32A9656F8CCD721F67C82D07 /* CalibrationType.swift in Sources */,
 				36B0F80E220A34318F01E352 /* CameraManager.swift in Sources */,
 				1E3ACC803CDDACE3194A7C0E /* CameraTypes.swift in Sources */,
 				2EBEE5B1F60CE6C00816FE2D /* CaptureSession+Extensions.swift in Sources */,
@@ -597,6 +605,7 @@
 				2E9D82BA5DC2C0FC74DD9EA4 /* PerformanceOptimizer.swift in Sources */,
 				99999F92009DE86566CFA65B /* PersistenceController.swift in Sources */,
 				D804CA353FBCAC647E263854 /* RoleSelectionView.swift in Sources */,
+				FABB89A3F2845004BBB1EC59 /* ScaleDetectionService.swift in Sources */,
 				251F42890D0C4B0CE19A89E6 /* SecurityManager.swift in Sources */,
 				D40D9C942D7C7E9B97BF1D77 /* StorageManagementView.swift in Sources */,
 				7A91F5E530DF2F6BCFE48977 /* SyncConflictView.swift in Sources */,
@@ -901,7 +910,6 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = PediLens/PediLens.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEVELOPMENT_TEAM = 375V6L2KMV;
 				INFOPLIST_FILE = PediLens/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -922,7 +930,6 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = PediLens/PediLens.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEVELOPMENT_TEAM = 375V6L2KMV;
 				INFOPLIST_FILE = PediLens/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
