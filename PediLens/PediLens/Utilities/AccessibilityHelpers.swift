@@ -41,8 +41,8 @@ struct AccessibleMeasurementTools {
     }
     
     /// Announces calibration set
-    static func announceCalibrationSet(referenceObject: String) {
-        UIAccessibility.post(notification: .announcement, argument: "Calibration set using \(referenceObject)")
+    static func announceCalibrationSet(calibrationType: String) {
+        UIAccessibility.post(notification: .announcement, argument: "Calibration set using \(calibrationType)")
     }
     
     /// Provides haptic feedback for boundary interactions

@@ -68,21 +68,12 @@ class MeasurementManager: MeasurementManagerProtocol {
         var depthMM: Double? = nil
         var volumeMM3: Double? = nil
         
-        if let depthData = depthData, let depthCalibration = calibration.depthCalibration {
-            depthMM = calculateAverageDepth(
-                depthData: depthData,
-                boundary: boundary,
-                depthCalibration: depthCalibration
-            )
-            
-            if let depth = depthMM {
-                volumeMM3 = calculateVolume(
-                    depthData: depthData,
-                    boundary: boundary,
-                    calibration: calibration,
-                    depthCalibration: depthCalibration
-                )
-            }
+        // Note: Depth calculation currently not supported with new calibration model
+        // Will be re-implemented with LiDAR support
+        if let depthData = depthData {
+            // TODO: Implement depth calculation with LiDAR
+            depthMM = nil
+            volumeMM3 = nil
         }
         
         // Create measurement with Foundation's Measurement types

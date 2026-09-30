@@ -57,9 +57,19 @@ struct UncalibratedMeasurementInlineWarning: View {
 
 /// Helper to check if a calibration is valid
 extension MeasurementCalibration {
-    /// Returns true if this calibration has a reference object (is calibrated)
+    /// Returns true if this calibration is not just estimated
     var isCalibrated: Bool {
-        return referenceObject != nil
+        switch calibrationType {
+        case .estimated:
+            return false
+        case .lidar, .referenceScale:
+            return true
+        }
+    }
+    
+    /// Returns a user-friendly description of the calibration
+    var calibrationDescription: String {
+        return calibrationType.displayName
     }
 }
 

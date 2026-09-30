@@ -1044,33 +1044,62 @@ struct CaptureSessionDetailView: View {
         
         Task {
             do {
-                // Load depth data if available
+                // STEP 1: Detect reference scale for calibration
+                print("🔍 Step 1: Detecting reference scale...")
+                let scaleService = ScaleDetectionService()
+                let calibration: MeasurementCalibration
+                
+                if let scaleInfo = try? await scaleService.detectReferenceScale(in: image) {
+                    // Scale detected! Use it for calibration
+                    if let detectedCalibration = MeasurementCalibration.fromReferenceScale(scaleInfo) {
+                        calibration = detectedCalibration
+                        print("✅ Scale detected: \(calibration.calibrationType.displayName)")
+                        print("   Accuracy: \(calibration.accuracy.description)")
+                        print("   Pixels per cm: \(String(format: "%.2f", calibration.pixelsPerCentimeter))")
+                    } else {
+                        // Scale detected but calibration failed
+                        calibration = MeasurementCalibration.estimated()
+                        print("⚠️ Scale detected but calibration failed, using estimated")
+                    }
+                } else {
+                    // No scale detected, use estimated calibration
+                    calibration = MeasurementCalibration.estimated()
+                    print("ℹ️ No reference scale detected, using estimated calibration")
+                    print("   Accuracy: \(calibration.accuracy.description)")
+                }
+                
+                // STEP 2: Load depth data if available
+                print("🔍 Step 2: Loading depth data...")
                 var depthData: DepthData? = nil
                 if let depthPath = session.depthDataPath, let sessionID = session.id {
                     depthData = try? await loadDepthData(sessionID: sessionID, depthPath: depthPath)
+                    if depthData != nil {
+                        print("✅ Depth data loaded")
+                    }
                 }
                 
-                // Run wound detection using CoreML model
+                // STEP 3: Run wound detection using CoreML model
+                print("🔍 Step 3: Detecting wound boundary...")
                 let detectionService = CoreMLWoundDetectionService()
-                let boundary = try await detectionService.detectWoundBoundary(in: image, calibration: nil)
+                let boundary = try await detectionService.detectWoundBoundary(in: image, calibration: calibration)
+                print("✅ Wound boundary detected with \(boundary.points.count) points")
                 
-                // Calculate measurements
-                // For now, use a default calibration (in production, this would come from user calibration)
-                let defaultCalibration = MeasurementCalibration(
-                    pixelsPerMillimeter: 10.0, // Placeholder value
-                    referenceObject: .ruler(lengthMM: 100),
-                    calibrationDate: Date(),
-                    depthCalibration: nil
-                )
-                
+                // STEP 4: Calculate measurements with detected calibration
+                print("🔍 Step 4: Calculating measurements...")
                 let measurementManager = MeasurementManager()
                 let measurements = measurementManager.calculateMeasurements(
                     boundary: boundary,
-                    calibration: defaultCalibration,
+                    calibration: calibration,
                     depthData: depthData
                 )
+                print("✅ Measurements calculated:")
+                print("   Length: \(String(format: "%.2f", measurements.length.value))mm")
+                print("   Width: \(String(format: "%.2f", measurements.width.value))mm")
+                print("   Area: \(String(format: "%.2f", measurements.area.value))mm²")
+                print("   Calibration: \(calibration.calibrationType.displayName)")
                 
-                // Save measurement to Core Data
+                // STEP 5: Save measurement to Core Data
+                print("🔍 Step 5: Saving to database...")
                 let measurement = Measurement(context: viewContext)
                 measurement.id = UUID()
                 measurement.lengthMM = measurements.length.value
@@ -1088,12 +1117,13 @@ struct CaptureSessionDetailView: View {
                     measurement.boundaryPoints = boundaryData
                 }
                 
-                // Encode calibration data
-                if let calibrationData = try? JSONEncoder().encode(defaultCalibration) {
+                // Encode calibration data (with new calibration type)
+                if let calibrationData = try? JSONEncoder().encode(calibration) {
                     measurement.calibrationData = calibrationData
                 }
                 
                 try viewContext.save()
+                print("✅ Saved to database")
                 
                 await MainActor.run {
                     self.woundBoundary = boundary

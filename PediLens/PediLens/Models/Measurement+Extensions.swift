@@ -244,11 +244,11 @@ extension Measurement {
     var hasCalibration: Bool {
         guard let calibrationData = calibrationData else { return false }
         
-        // Try to decode the calibration data to check if it has a reference object
+        // Try to decode the calibration data to check if it's calibrated
         do {
             let decoder = JSONDecoder()
             let calibration = try decoder.decode(MeasurementCalibration.self, from: calibrationData)
-            return calibration.referenceObject != nil
+            return calibration.isCalibrated
         } catch {
             return false
         }
