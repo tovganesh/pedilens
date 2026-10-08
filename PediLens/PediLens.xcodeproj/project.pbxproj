@@ -22,6 +22,13 @@
 		1F5DAE8E3078194C005CB1DB /* ARMeasurementManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5DAE8D3078194C005CB1DB /* ARMeasurementManager.swift */; };
 		1F5DAE90307819E5005CB1DB /* CalibrationGuideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5DAE8F307819E5005CB1DB /* CalibrationGuideView.swift */; };
 		1F5DAE9230781A29005CB1DB /* ARMeasurementManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5DAE9130781A29005CB1DB /* ARMeasurementManagerTests.swift */; };
+		1F5DAE9430782001005CB1DB /* ManualBoundaryTraceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5DAE9330782001005CB1DB /* ManualBoundaryTraceView.swift */; };
+		1F5DAE9630782001005CB1DB /* WoundBoundaryOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5DAE9530782001005CB1DB /* WoundBoundaryOverlay.swift */; };
+		1F5DAE9830782001005CB1DB /* CameraView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5DAE9730782001005CB1DB /* CameraView.swift */; };
+		1F5DAE9A30782001005CB1DB /* CaptureSessionDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5DAE9930782001005CB1DB /* CaptureSessionDetailView.swift */; };
+		1F5DAE9C30782001005CB1DB /* NewWoundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5DAE9B30782001005CB1DB /* NewWoundView.swift */; };
+		1F5DAE9E30782001005CB1DB /* WoundDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5DAE9D30782001005CB1DB /* WoundDetailView.swift */; };
+		1F5DAEA030782001005CB1DB /* WoundListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5DAE9F30782001005CB1DB /* WoundListView.swift */; };
 		1F7911D4C92FE91F50A6D335 /* CameraManualControlsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3B54A53E3BA41099F1A938F /* CameraManualControlsTests.swift */; };
 		251F42890D0C4B0CE19A89E6 /* SecurityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C105D781E00C00030C27679C /* SecurityManager.swift */; };
 		257E24020AB1DA2373BB8885 /* PatientDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC8F4375E7BB2B11E983FA70 /* PatientDetailView.swift */; };
@@ -247,6 +254,13 @@
 		F60F81F64E4F3E38DCD24C7E /* PediLens.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = PediLens.xcdatamodel; sourceTree = "<group>"; };
 		FBFB3E4F1897CE2B84F3D3FF /* ScaleDetectionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScaleDetectionService.swift; sourceTree = "<group>"; };
 		FF426ED791AF952104B3E7FF /* MeasurementManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeasurementManagerTests.swift; sourceTree = "<group>"; };
+		1F5DAE9330782001005CB1DB /* ManualBoundaryTraceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManualBoundaryTraceView.swift; sourceTree = "<group>"; };
+		1F5DAE9530782001005CB1DB /* WoundBoundaryOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WoundBoundaryOverlay.swift; sourceTree = "<group>"; };
+		1F5DAE9730782001005CB1DB /* CameraView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraView.swift; sourceTree = "<group>"; };
+		1F5DAE9930782001005CB1DB /* CaptureSessionDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureSessionDetailView.swift; sourceTree = "<group>"; };
+		1F5DAE9B30782001005CB1DB /* NewWoundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewWoundView.swift; sourceTree = "<group>"; };
+		1F5DAE9D30782001005CB1DB /* WoundDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WoundDetailView.swift; sourceTree = "<group>"; };
+		1F5DAE9F30782001005CB1DB /* WoundListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WoundListView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -491,6 +505,13 @@
 				71DA09D5DB08316DA0C02675 /* TimelineView.swift */,
 				BA8DB0134FEAEB5F0D6B4BB3 /* UncalibratedMeasurementWarning.swift */,
 				1F5DAE8F307819E5005CB1DB /* CalibrationGuideView.swift */,
+				1F5DAE9330782001005CB1DB /* ManualBoundaryTraceView.swift */,
+				1F5DAE9530782001005CB1DB /* WoundBoundaryOverlay.swift */,
+				1F5DAE9730782001005CB1DB /* CameraView.swift */,
+				1F5DAE9930782001005CB1DB /* CaptureSessionDetailView.swift */,
+				1F5DAE9B30782001005CB1DB /* NewWoundView.swift */,
+				1F5DAE9D30782001005CB1DB /* WoundDetailView.swift */,
+				1F5DAE9F30782001005CB1DB /* WoundListView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -635,6 +656,13 @@
 				559E5DBEE5314AFA2F843CA8 /* WoundManager.swift in Sources */,
 				0238DAAB3C0EFBA6A120277E /* WoundRecord+Extensions.swift in Sources */,
 				4E94DAEC98675E45F8E75D91 /* WoundSegmentation.mlpackage in Sources */,
+				1F5DAE9430782001005CB1DB /* ManualBoundaryTraceView.swift in Sources */,
+				1F5DAE9630782001005CB1DB /* WoundBoundaryOverlay.swift in Sources */,
+				1F5DAE9830782001005CB1DB /* CameraView.swift in Sources */,
+				1F5DAE9A30782001005CB1DB /* CaptureSessionDetailView.swift in Sources */,
+				1F5DAE9C30782001005CB1DB /* NewWoundView.swift in Sources */,
+				1F5DAE9E30782001005CB1DB /* WoundDetailView.swift in Sources */,
+				1F5DAEA030782001005CB1DB /* WoundListView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

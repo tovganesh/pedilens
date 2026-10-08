@@ -383,18 +383,14 @@ class FileStorageManager: FileStorageManagerProtocol {
         let context = PersistenceController.shared.container.viewContext
         
         return try await context.perform {
-            let fetchRequest = NSFetchRequest<NSManagedObject>(entityName: "CaptureSession")
+            let fetchRequest = NSFetchRequest<NSDictionary>(entityName: "CaptureSession")
             fetchRequest.propertiesToFetch = ["id"]
             fetchRequest.resultType = .dictionaryResultType
             
             let results = try context.fetch(fetchRequest)
             
-            return results.compactMap { result in
-                guard let dict = result as? [String: Any],
-                      let id = dict["id"] as? UUID else {
-                    return nil
-                }
-                return id
+            return results.compactMap { dict in
+                return dict["id"] as? UUID
             }
         }
     }
