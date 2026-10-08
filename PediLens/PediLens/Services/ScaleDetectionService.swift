@@ -10,6 +10,25 @@ import Foundation
 import UIKit
 import Vision
 import CoreImage
+import ImageIO
+
+// MARK: - Orientation Helper
+
+private extension CGImagePropertyOrientation {
+    init(_ uiOrientation: UIImage.Orientation) {
+        switch uiOrientation {
+        case .up: self = .up
+        case .upMirrored: self = .upMirrored
+        case .down: self = .down
+        case .downMirrored: self = .downMirrored
+        case .left: self = .left
+        case .leftMirrored: self = .leftMirrored
+        case .right: self = .right
+        case .rightMirrored: self = .rightMirrored
+        @unknown default: self = .up
+        }
+    }
+}
 
 /// Service for detecting reference scales in images
 class ScaleDetectionService {
@@ -27,20 +46,34 @@ class ScaleDetectionService {
     func detectReferenceScale(in image: UIImage) async throws -> ReferenceScaleInfo? {
         print("🔍 Detecting reference scale in image...")
         
-        // Try different detection methods in order of reliability
-        if let creditCard = try await detectCreditCard(in: image) {
-            print("✅ Detected credit card")
-            return creditCard
+        // Try credit card detection
+        do {
+            if let creditCard = try await detectCreditCard(in: image) {
+                print("✅ Detected credit card")
+                return creditCard
+            }
+        } catch {
+            print("⚠️ Credit card detection error: \(error.localizedDescription)")
         }
         
-        if let quarter = try await detectUSQuarter(in: image) {
-            print("✅ Detected US quarter")
-            return quarter
+        // Try quarter detection
+        do {
+            if let quarter = try await detectUSQuarter(in: image) {
+                print("✅ Detected US quarter")
+                return quarter
+            }
+        } catch {
+            print("⚠️ Quarter detection error: \(error.localizedDescription)")
         }
         
-        if let calibrationCard = try await detectCalibrationCard(in: image) {
-            print("✅ Detected calibration card")
-            return calibrationCard
+        // Try calibration card detection
+        do {
+            if let calibrationCard = try await detectCalibrationCard(in: image) {
+                print("✅ Detected calibration card")
+                return calibrationCard
+            }
+        } catch {
+            print("⚠️ Calibration card detection error: \(error.localizedDescription)")
         }
         
         print("ℹ️ No reference scale detected")
@@ -49,33 +82,55 @@ class ScaleDetectionService {
     
     // MARK: - Detection Methods
     
-    /// Detects credit card in image
-    private func detectCreditCard(in image: UIImage) async throws -> ReferenceScaleInfo? {
+    /// Detects credit card in image (standard dimensions: 85.6mm × 53.98mm)
+    func detectCreditCard(in image: UIImage) async throws -> ReferenceScaleInfo? {
         guard let cgImage = image.cgImage else { return nil }
         
-        // Use Vision framework to detect rectangles
-        let rectangles = try await detectRectangles(in: cgImage)
+        let orientation = CGImagePropertyOrientation(image.imageOrientation)
+        let pixelWidth = CGFloat(cgImage.width)
+        let pixelHeight = CGFloat(cgImage.height)
         
-        // Filter for credit card aspect ratio (85.6mm × 53.98mm = 1.586)
-        let creditCardAspectRatio: CGFloat = 1.586
-        let tolerance: CGFloat = 0.15
+        // Use Vision framework to detect rectangles
+        let rectangles = try await detectRectangles(in: cgImage, orientation: orientation)
+        
+        // Filter for credit card aspect ratio (85.6mm / 53.98mm ≈ 1.586)
+        let creditCardAspectRatio: CGFloat = 85.6 / 53.98
+        let tolerance: CGFloat = 0.18
         
         for rect in rectangles {
-            let aspectRatio = rect.boundingBox.width / rect.boundingBox.height
+            // Convert normalized coordinates to pixel coordinates
+            let pixelBox = VNImageRectForNormalizedRect(
+                rect.boundingBox,
+                Int(pixelWidth),
+                Int(pixelHeight)
+            )
             
-            if abs(aspectRatio - creditCardAspectRatio) / creditCardAspectRatio < tolerance {
-                // Convert normalized coordinates to pixel coordinates
-                let pixelBox = VNImageRectForNormalizedRect(
-                    rect.boundingBox,
-                    cgImage.width,
-                    cgImage.height
+            guard pixelBox.width > 0 && pixelBox.height > 0 else { continue }
+            let aspectRatio = pixelBox.width / pixelBox.height
+            
+            let isLandscape = abs(aspectRatio - creditCardAspectRatio) / creditCardAspectRatio < tolerance
+            let isPortrait = abs(aspectRatio - (1.0 / creditCardAspectRatio)) / (1.0 / creditCardAspectRatio) < tolerance
+            
+            if isLandscape || isPortrait {
+                // Convert pixel box to point space matching image.size
+                let scale = image.scale > 0 ? image.scale : 1.0
+                let pointsBox = CGRect(
+                    x: pixelBox.origin.x / scale,
+                    y: pixelBox.origin.y / scale,
+                    width: pixelBox.size.width / scale,
+                    height: pixelBox.size.height / scale
                 )
+                
+                // Align long dimension with knownDimensions.width (85.6mm)
+                // and short dimension with knownDimensions.height (53.98mm)
+                let longDimension = max(pointsBox.width, pointsBox.height)
+                let shortDimension = min(pointsBox.width, pointsBox.height)
                 
                 return ReferenceScaleInfo(
                     objectType: .creditCard,
-                    boundingBox: pixelBox,
-                    pixelWidth: pixelBox.width,
-                    pixelHeight: pixelBox.height,
+                    boundingBox: pointsBox,
+                    pixelWidth: longDimension,
+                    pixelHeight: shortDimension,
                     confidence: rect.confidence,
                     detectedDimensions: CGSize(width: 85.6, height: 53.98)
                 )
@@ -85,59 +140,84 @@ class ScaleDetectionService {
         return nil
     }
     
-    /// Detects US quarter in image
-    private func detectUSQuarter(in image: UIImage) async throws -> ReferenceScaleInfo? {
+    /// Detects US quarter in image (standard diameter: 24.26mm)
+    func detectUSQuarter(in image: UIImage) async throws -> ReferenceScaleInfo? {
         guard let cgImage = image.cgImage else { return nil }
         
-        // Use Vision framework to detect circles
-        let circles = try await detectCircles(in: cgImage)
+        let orientation = CGImagePropertyOrientation(image.imageOrientation)
+        let pixelWidth = CGFloat(cgImage.width)
+        let pixelHeight = CGFloat(cgImage.height)
+        let pixelSize = CGSize(width: pixelWidth, height: pixelHeight)
         
-        // US quarter is 24.26mm diameter
-        // Look for circles that are reasonable size relative to image
-        for circle in circles {
-            let diameter = circle.diameter
-            let imageWidth = CGFloat(cgImage.width)
-            
-            // Quarter should be 5-30% of image width (reasonable range)
-            let sizeRatio = diameter / imageWidth
-            if sizeRatio > 0.05 && sizeRatio < 0.3 {
-                return ReferenceScaleInfo(
-                    objectType: .usQuarter,
-                    boundingBox: circle.boundingBox,
-                    pixelWidth: diameter,
-                    pixelHeight: diameter,
-                    confidence: circle.confidence,
-                    detectedDimensions: CGSize(width: 24.26, height: 24.26)
-                )
-            }
+        // Use Vision framework to detect circles via contours
+        let circles = try await detectCircles(in: cgImage, orientation: orientation, pixelSize: pixelSize)
+        
+        let minDimension = min(pixelWidth, pixelHeight)
+        guard minDimension > 0 else { return nil }
+        
+        // Quarter should be 3% to 45% of image minimum dimension
+        let quarterCandidates = circles.filter { circle in
+            let sizeRatio = circle.diameter / minDimension
+            return sizeRatio >= 0.03 && sizeRatio <= 0.45
         }
         
-        return nil
+        // Select candidate with highest confidence
+        guard let bestCircle = quarterCandidates.max(by: { $0.confidence < $1.confidence }) else {
+            return nil
+        }
+        
+        let scale = image.scale > 0 ? image.scale : 1.0
+        let pointsBox = CGRect(
+            x: bestCircle.boundingBox.origin.x / scale,
+            y: bestCircle.boundingBox.origin.y / scale,
+            width: bestCircle.boundingBox.size.width / scale,
+            height: bestCircle.boundingBox.size.height / scale
+        )
+        let diameterInPoints = bestCircle.diameter / scale
+        
+        return ReferenceScaleInfo(
+            objectType: .usQuarter,
+            boundingBox: pointsBox,
+            pixelWidth: diameterInPoints,
+            pixelHeight: diameterInPoints,
+            confidence: bestCircle.confidence,
+            detectedDimensions: CGSize(width: 24.26, height: 24.26)
+        )
     }
     
     /// Detects calibration card in image
-    private func detectCalibrationCard(in image: UIImage) async throws -> ReferenceScaleInfo? {
+    func detectCalibrationCard(in image: UIImage) async throws -> ReferenceScaleInfo? {
         guard let cgImage = image.cgImage else { return nil }
         
-        // Look for QR code or specific pattern on calibration card
-        let barcodes = try await detectBarcodes(in: cgImage)
+        let orientation = CGImagePropertyOrientation(image.imageOrientation)
+        let pixelWidth = CGFloat(cgImage.width)
+        let pixelHeight = CGFloat(cgImage.height)
+        
+        // Look for QR code or barcode on calibration card
+        let barcodes = try await detectBarcodes(in: cgImage, orientation: orientation)
         
         for barcode in barcodes {
-            // Check if barcode payload contains our identifier
             if let payloadString = barcode.payloadStringValue,
                payloadString.contains("PediLens") {
-                // Found our calibration card
                 let pixelBox = VNImageRectForNormalizedRect(
                     barcode.boundingBox,
-                    cgImage.width,
-                    cgImage.height
+                    Int(pixelWidth),
+                    Int(pixelHeight)
+                )
+                
+                let scale = image.scale > 0 ? image.scale : 1.0
+                let pointsBox = CGRect(
+                    x: pixelBox.origin.x / scale,
+                    y: pixelBox.origin.y / scale,
+                    width: pixelBox.size.width / scale,
+                    height: pixelBox.size.height / scale
                 )
                 
                 return ReferenceScaleInfo(
                     objectType: .calibrationCard,
-                    boundingBox: pixelBox,
-                    pixelWidth: pixelBox.width,
-                    pixelHeight: pixelBox.height,
+                    boundingBox: pointsBox,
+                    pixelWidth: pointsBox.width,
+                    pixelHeight: pointsBox.height,
                     confidence: barcode.confidence,
                     detectedDimensions: CGSize(width: 100.0, height: 100.0)
                 )
@@ -150,113 +230,88 @@ class ScaleDetectionService {
     // MARK: - Vision Framework Helpers
     
     /// Detects rectangles in image
-    private func detectRectangles(in cgImage: CGImage) async throws -> [VNRectangleObservation] {
-        return try await withCheckedThrowingContinuation { continuation in
-            let request = VNDetectRectanglesRequest { request, error in
-                if let error = error {
-                    continuation.resume(throwing: error)
-                    return
-                }
-                
-                let rectangles = request.results as? [VNRectangleObservation] ?? []
-                continuation.resume(returning: rectangles)
-            }
-            
-            request.minimumConfidence = minimumConfidence
+    private func detectRectangles(in cgImage: CGImage, orientation: CGImagePropertyOrientation) async throws -> [VNRectangleObservation] {
+        let minConf = self.minimumConfidence
+        return try await Task.detached(priority: .userInitiated) {
+            let request = VNDetectRectanglesRequest()
+            request.minimumConfidence = minConf
             request.maximumObservations = 10
             
-            let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
-            do {
-                try handler.perform([request])
-            } catch {
-                continuation.resume(throwing: error)
-            }
-        }
+            let handler = VNImageRequestHandler(cgImage: cgImage, orientation: orientation, options: [:])
+            try handler.perform([request])
+            return (request.results as? [VNRectangleObservation]) ?? []
+        }.value
     }
     
     /// Detects circles in image
-    private func detectCircles(in cgImage: CGImage) async throws -> [CircleDetection] {
-        // Vision doesn't have built-in circle detection, so we use contour detection
-        return try await withCheckedThrowingContinuation { continuation in
-            let request = VNDetectContoursRequest { request, error in
-                if let error = error {
-                    continuation.resume(throwing: error)
-                    return
-                }
-                
-                guard let results = request.results as? [VNContoursObservation] else {
-                    continuation.resume(returning: [])
-                    return
-                }
-                
-                var circles: [CircleDetection] = []
-                
-                for observation in results {
-                    // Check if contour is circular
-                    if let circle = self.isCircular(contour: observation) {
-                        circles.append(circle)
-                    }
-                }
-                
-                continuation.resume(returning: circles)
-            }
-            
+    private func detectCircles(in cgImage: CGImage, orientation: CGImagePropertyOrientation, pixelSize: CGSize) async throws -> [CircleDetection] {
+        return try await Task.detached(priority: .userInitiated) {
+            let request = VNDetectContoursRequest()
             request.contrastAdjustment = 1.5
             request.detectsDarkOnLight = true
             
-            let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
-            do {
-                try handler.perform([request])
-            } catch {
-                continuation.resume(throwing: error)
+            let handler = VNImageRequestHandler(cgImage: cgImage, orientation: orientation, options: [:])
+            try handler.perform([request])
+            
+            guard let results = request.results as? [VNContoursObservation] else {
+                return []
             }
-        }
+            
+            var circles: [CircleDetection] = []
+            for observation in results {
+                for index in 0..<observation.contourCount {
+                    guard let contour = try? observation.contour(at: index) else { continue }
+                    if let circle = Self.isCircular(contour: contour, pixelSize: pixelSize, baseConfidence: observation.confidence) {
+                        circles.append(circle)
+                    }
+                }
+            }
+            return circles
+        }.value
     }
     
     /// Detects barcodes/QR codes in image
-    private func detectBarcodes(in cgImage: CGImage) async throws -> [VNBarcodeObservation] {
-        return try await withCheckedThrowingContinuation { continuation in
-            let request = VNDetectBarcodesRequest { request, error in
-                if let error = error {
-                    continuation.resume(throwing: error)
-                    return
-                }
-                
-                let barcodes = request.results as? [VNBarcodeObservation] ?? []
-                continuation.resume(returning: barcodes)
-            }
-            
-            let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
-            do {
-                try handler.perform([request])
-            } catch {
-                continuation.resume(throwing: error)
-            }
-        }
+    private func detectBarcodes(in cgImage: CGImage, orientation: CGImagePropertyOrientation) async throws -> [VNBarcodeObservation] {
+        return try await Task.detached(priority: .userInitiated) {
+            let request = VNDetectBarcodesRequest()
+            let handler = VNImageRequestHandler(cgImage: cgImage, orientation: orientation, options: [:])
+            try handler.perform([request])
+            return (request.results as? [VNBarcodeObservation]) ?? []
+        }.value
     }
     
-    /// Checks if a contour is circular
-    private func isCircular(contour: VNContoursObservation) -> CircleDetection? {
-        // Get the normalized path and calculate bounding box
-        guard let normalizedPath = try? contour.normalizedPath else {
+    /// Checks if a contour is circular in pixel coordinates
+    private static func isCircular(contour: VNContour, pixelSize: CGSize, baseConfidence: Float) -> CircleDetection? {
+        // Need at least 8 points to form a polygon approximation of a circle
+        guard contour.pointCount >= 8 else { return nil }
+        
+        let pixelBox = VNImageRectForNormalizedRect(
+            contour.normalizedPath.boundingBox,
+            Int(pixelSize.width),
+            Int(pixelSize.height)
+        )
+        
+        guard pixelBox.width > 0 && pixelBox.height > 0 else { return nil }
+        
+        // Aspect ratio in true pixel coordinates
+        let aspectRatio = pixelBox.width / pixelBox.height
+        guard abs(aspectRatio - 1.0) <= 0.25 else {
             return nil
         }
         
-        let boundingBox = normalizedPath.boundingBox
-        
-        // Check aspect ratio (circle should be ~1:1)
-        let aspectRatio = boundingBox.width / boundingBox.height
-        if abs(aspectRatio - 1.0) > 0.2 {
-            return nil // Not circular enough
+        // Minimum diameter threshold (in pixels)
+        let diameter = (pixelBox.width + pixelBox.height) / 2.0
+        guard diameter >= 15.0 else {
+            return nil
         }
         
-        // Calculate diameter (average of width and height)
-        let diameter = (boundingBox.width + boundingBox.height) / 2.0
+        let circularityScore = Float(max(0.0, 1.0 - Double(abs(aspectRatio - 1.0)) * 4.0))
+        let confidence = baseConfidence * circularityScore
         
         return CircleDetection(
-            boundingBox: boundingBox,
+            boundingBox: pixelBox,
             diameter: diameter,
-            confidence: contour.confidence
+            confidence: confidence
         )
     }
 }

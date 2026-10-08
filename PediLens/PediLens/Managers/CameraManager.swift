@@ -510,7 +510,7 @@ private class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate {
             
             self.depthData = DepthData(
                 depthMap: depthPixelBuffer,
-                calibrationData: calibrationData!,
+                calibrationData: calibrationData,
                 accuracy: accuracy
             )
         }

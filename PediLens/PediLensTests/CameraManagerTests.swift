@@ -63,8 +63,16 @@ class CameraManagerTests: XCTestCase {
         XCTAssertEqual(status, kCVReturnSuccess)
         XCTAssertNotNil(pixelBuffer)
         
-        // Note: We can't easily create AVCameraCalibrationData in tests
-        // as it's created by the system during capture
+        if let buffer = pixelBuffer {
+            let depthData = DepthData(
+                depthMap: buffer,
+                calibrationData: nil,
+                accuracy: .relative
+            )
+            XCTAssertNotNil(depthData)
+            XCTAssertEqual(depthData.accuracy, .relative)
+            XCTAssertNil(depthData.calibrationData)
+        }
     }
     
     func testCapturedMediaStructure() {

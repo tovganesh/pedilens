@@ -18,6 +18,7 @@
 		1BAB97EC2F89B3F51E1F837E /* TimelineChronologicalOrderPropertyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71053B481F683EA334D5F032 /* TimelineChronologicalOrderPropertyTests.swift */; };
 		1E3ACC803CDDACE3194A7C0E /* CameraTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58A39E121149DE58CCABD577 /* CameraTypes.swift */; };
 		1E8C436BA2267A59A885D3B7 /* PatientRecordDisplayPropertyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72B239A9A443C26B784B6D63 /* PatientRecordDisplayPropertyTests.swift */; };
+		1F5DAE8C3078174B005CB1DB /* ScaleDetectionServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5DAE8B3078174B005CB1DB /* ScaleDetectionServiceTests.swift */; };
 		1F7911D4C92FE91F50A6D335 /* CameraManualControlsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3B54A53E3BA41099F1A938F /* CameraManualControlsTests.swift */; };
 		251F42890D0C4B0CE19A89E6 /* SecurityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C105D781E00C00030C27679C /* SecurityManager.swift */; };
 		257E24020AB1DA2373BB8885 /* PatientDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC8F4375E7BB2B11E983FA70 /* PatientDetailView.swift */; };
@@ -138,6 +139,7 @@
 		16BB9D3A3FAC6E1BAF9D95DA /* SyncConflictViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncConflictViewModel.swift; sourceTree = "<group>"; };
 		1B9E005E1BAC29CF028E4BD8 /* SecurityManager_README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = SecurityManager_README.md; sourceTree = "<group>"; };
 		1D05157E4540FD9082569FB4 /* NoThirdPartyTransmissionPropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoThirdPartyTransmissionPropertyTests.swift; sourceTree = "<group>"; };
+		1F5DAE8B3078174B005CB1DB /* ScaleDetectionServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScaleDetectionServiceTests.swift; sourceTree = "<group>"; };
 		1F99A6FCFB192E6FD2774723 /* WoundDetectionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WoundDetectionService.swift; sourceTree = "<group>"; };
 		1FB34C86C993C3C499D95D15 /* DataValidationPropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataValidationPropertyTests.swift; sourceTree = "<group>"; };
 		2156F6914979AD8CA60D756E /* CoreMLWoundDetectionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreMLWoundDetectionService.swift; sourceTree = "<group>"; };
@@ -432,6 +434,7 @@
 				9A01B118AF7F31F687868D9D /* WoundRecordCreationPropertyTests.swift */,
 				9AAFBDA137DEA3DD4B572623 /* WoundRecordDeletionPropertyTests.swift */,
 				8185F25801E92CEFD8652499 /* WoundSizeChangePropertyTests.swift */,
+				1F5DAE8B3078174B005CB1DB /* ScaleDetectionServiceTests.swift */,
 			);
 			path = PediLensTests;
 			sourceTree = "<group>";
@@ -656,6 +659,7 @@
 				F7AAFC7CC1747F0D17BEEFF0 /* PatientIdentificationPropertyTests.swift in Sources */,
 				7E3934903DA0A36D9C2BAEE9 /* PatientManagerTests.swift in Sources */,
 				1E8C436BA2267A59A885D3B7 /* PatientRecordDisplayPropertyTests.swift in Sources */,
+				1F5DAE8C3078174B005CB1DB /* ScaleDetectionServiceTests.swift in Sources */,
 				748969EB247735E0BF540F14 /* PatientRecordFilteringPropertyTests.swift in Sources */,
 				A8714A95A837CCD0A7775837 /* PatientSearchPropertyTests.swift in Sources */,
 				A91C423C9E248BCAEFFBD49C /* PersistenceControllerTests.swift in Sources */,

@@ -23,11 +23,17 @@ struct DepthData {
     /// Depth map as a pixel buffer
     let depthMap: CVPixelBuffer
     
-    /// Camera calibration data
-    let calibrationData: AVCameraCalibrationData
+    /// Camera calibration data (optional as some devices/setups do not provide factory calibration)
+    let calibrationData: AVCameraCalibrationData?
     
     /// Depth accuracy level
     let accuracy: DepthAccuracy
+    
+    init(depthMap: CVPixelBuffer, calibrationData: AVCameraCalibrationData? = nil, accuracy: DepthAccuracy) {
+        self.depthMap = depthMap
+        self.calibrationData = calibrationData
+        self.accuracy = accuracy
+    }
 }
 
 /// Depth measurement accuracy levels
