@@ -31,6 +31,12 @@ struct MeasurementCalibration: Codable {
     /// Additional metadata
     let metadata: [String: String]?
     
+    /// Reference object used for calibration (if any)
+    let referenceObject: ReferenceObject?
+    
+    /// Depth calibration data (if available)
+    let depthCalibration: DepthCalibration?
+    
     /// Convenience: pixels per centimeter
     var pixelsPerCentimeter: Double {
         return pixelsPerMillimeter * 10.0
@@ -44,12 +50,16 @@ struct MeasurementCalibration: Codable {
     ///   - captureDistance: Optional distance from camera
     ///   - captureAngle: Optional angle from perpendicular
     ///   - metadata: Optional additional information
+    ///   - referenceObject: Optional reference object used
+    ///   - depthCalibration: Optional depth calibration data
     init(pixelsPerMillimeter: Double,
          calibrationType: CalibrationType,
          calibrationDate: Date = Date(),
          captureDistance: Float? = nil,
          captureAngle: Float? = nil,
-         metadata: [String: String]? = nil) {
+         metadata: [String: String]? = nil,
+         referenceObject: ReferenceObject? = nil,
+         depthCalibration: DepthCalibration? = nil) {
         self.pixelsPerMillimeter = pixelsPerMillimeter
         self.calibrationType = calibrationType
         self.accuracy = calibrationType.accuracy
@@ -57,6 +67,8 @@ struct MeasurementCalibration: Codable {
         self.captureDistance = captureDistance
         self.captureAngle = captureAngle
         self.metadata = metadata
+        self.referenceObject = referenceObject
+        self.depthCalibration = depthCalibration
     }
     
     /// Creates calibration from LiDAR depth info
@@ -78,6 +90,20 @@ struct MeasurementCalibration: Codable {
             return nil
         }
         
+        let refObj: ReferenceObject
+        switch scaleInfo.objectType {
+        case .ruler:
+            refObj = .ruler(lengthMM: 100.0)
+        case .usQuarter:
+            refObj = .coin(type: .usQuarter)
+        case .creditCard:
+            refObj = .custom(name: "Credit Card", dimensionMM: 85.6)
+        case .calibrationCard:
+            refObj = .custom(name: "Calibration Card", dimensionMM: 50.0)
+        case .custom:
+            refObj = .custom(name: "Custom", dimensionMM: 10.0)
+        }
+        
         return MeasurementCalibration(
             pixelsPerMillimeter: Double(ppmm),
             calibrationType: .referenceScale(
@@ -87,7 +113,8 @@ struct MeasurementCalibration: Codable {
             metadata: [
                 "objectType": scaleInfo.objectType.rawValue,
                 "boundingBox": "\(scaleInfo.boundingBox)"
-            ]
+            ],
+            referenceObject: refObj
         )
     }
     
@@ -116,6 +143,8 @@ struct MeasurementCalibration: Codable {
         self.calibrationDate = calibrationDate
         self.captureDistance = nil
         self.captureAngle = nil
+        self.referenceObject = referenceObject
+        self.depthCalibration = depthCalibration
         
         // Convert legacy reference object to new calibration type
         if let refObj = referenceObject {
@@ -136,6 +165,51 @@ struct MeasurementCalibration: Codable {
             self.calibrationType = .estimated
             self.accuracy = .low
             self.metadata = ["legacy": "true"]
+        }
+    }
+    
+    // MARK: - Codable
+    
+    enum CodingKeys: String, CodingKey {
+        case pixelsPerMillimeter
+        case calibrationType
+        case accuracy
+        case calibrationDate
+        case captureDistance
+        case captureAngle
+        case metadata
+        case referenceObject
+        case depthCalibration
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        pixelsPerMillimeter = try container.decode(Double.self, forKey: .pixelsPerMillimeter)
+        calibrationDate = try container.decode(Date.self, forKey: .calibrationDate)
+        captureDistance = try container.decodeIfPresent(Float.self, forKey: .captureDistance)
+        captureAngle = try container.decodeIfPresent(Float.self, forKey: .captureAngle)
+        metadata = try container.decodeIfPresent([String: String].self, forKey: .metadata)
+        let refObj = try container.decodeIfPresent(ReferenceObject.self, forKey: .referenceObject)
+        referenceObject = refObj
+        depthCalibration = try container.decodeIfPresent(DepthCalibration.self, forKey: .depthCalibration)
+        
+        if let type = try container.decodeIfPresent(CalibrationType.self, forKey: .calibrationType) {
+            calibrationType = type
+            accuracy = try container.decodeIfPresent(MeasurementAccuracy.self, forKey: .accuracy) ?? type.accuracy
+        } else if let refObj = refObj {
+            switch refObj {
+            case .ruler:
+                calibrationType = .referenceScale(objectType: .ruler, confidence: 0.8)
+            case .coin(let type):
+                let objectType: ReferenceObjectType = type == .usQuarter ? .usQuarter : .custom
+                calibrationType = .referenceScale(objectType: objectType, confidence: 0.7)
+            case .custom:
+                calibrationType = .referenceScale(objectType: .custom, confidence: 0.6)
+            }
+            accuracy = calibrationType.accuracy
+        } else {
+            calibrationType = .estimated
+            accuracy = .low
         }
     }
 }
