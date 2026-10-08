@@ -19,6 +19,9 @@
 		1E3ACC803CDDACE3194A7C0E /* CameraTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58A39E121149DE58CCABD577 /* CameraTypes.swift */; };
 		1E8C436BA2267A59A885D3B7 /* PatientRecordDisplayPropertyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72B239A9A443C26B784B6D63 /* PatientRecordDisplayPropertyTests.swift */; };
 		1F5DAE8C3078174B005CB1DB /* ScaleDetectionServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5DAE8B3078174B005CB1DB /* ScaleDetectionServiceTests.swift */; };
+		1F5DAE8E3078194C005CB1DB /* ARMeasurementManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5DAE8D3078194C005CB1DB /* ARMeasurementManager.swift */; };
+		1F5DAE90307819E5005CB1DB /* CalibrationGuideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5DAE8F307819E5005CB1DB /* CalibrationGuideView.swift */; };
+		1F5DAE9230781A29005CB1DB /* ARMeasurementManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5DAE9130781A29005CB1DB /* ARMeasurementManagerTests.swift */; };
 		1F7911D4C92FE91F50A6D335 /* CameraManualControlsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3B54A53E3BA41099F1A938F /* CameraManualControlsTests.swift */; };
 		251F42890D0C4B0CE19A89E6 /* SecurityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C105D781E00C00030C27679C /* SecurityManager.swift */; };
 		257E24020AB1DA2373BB8885 /* PatientDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC8F4375E7BB2B11E983FA70 /* PatientDetailView.swift */; };
@@ -140,6 +143,9 @@
 		1B9E005E1BAC29CF028E4BD8 /* SecurityManager_README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = SecurityManager_README.md; sourceTree = "<group>"; };
 		1D05157E4540FD9082569FB4 /* NoThirdPartyTransmissionPropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoThirdPartyTransmissionPropertyTests.swift; sourceTree = "<group>"; };
 		1F5DAE8B3078174B005CB1DB /* ScaleDetectionServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScaleDetectionServiceTests.swift; sourceTree = "<group>"; };
+		1F5DAE8D3078194C005CB1DB /* ARMeasurementManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ARMeasurementManager.swift; sourceTree = "<group>"; };
+		1F5DAE8F307819E5005CB1DB /* CalibrationGuideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalibrationGuideView.swift; sourceTree = "<group>"; };
+		1F5DAE9130781A29005CB1DB /* ARMeasurementManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ARMeasurementManagerTests.swift; sourceTree = "<group>"; };
 		1F99A6FCFB192E6FD2774723 /* WoundDetectionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WoundDetectionService.swift; sourceTree = "<group>"; };
 		1FB34C86C993C3C499D95D15 /* DataValidationPropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataValidationPropertyTests.swift; sourceTree = "<group>"; };
 		2156F6914979AD8CA60D756E /* CoreMLWoundDetectionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreMLWoundDetectionService.swift; sourceTree = "<group>"; };
@@ -348,6 +354,7 @@
 				2156F6914979AD8CA60D756E /* CoreMLWoundDetectionService.swift */,
 				FBFB3E4F1897CE2B84F3D3FF /* ScaleDetectionService.swift */,
 				1F99A6FCFB192E6FD2774723 /* WoundDetectionService.swift */,
+				1F5DAE8D3078194C005CB1DB /* ARMeasurementManager.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -435,6 +442,7 @@
 				9AAFBDA137DEA3DD4B572623 /* WoundRecordDeletionPropertyTests.swift */,
 				8185F25801E92CEFD8652499 /* WoundSizeChangePropertyTests.swift */,
 				1F5DAE8B3078174B005CB1DB /* ScaleDetectionServiceTests.swift */,
+				1F5DAE9130781A29005CB1DB /* ARMeasurementManagerTests.swift */,
 			);
 			path = PediLensTests;
 			sourceTree = "<group>";
@@ -482,6 +490,7 @@
 				0EE86407FFD8094FFD87D55C /* SyncStatusView.swift */,
 				71DA09D5DB08316DA0C02675 /* TimelineView.swift */,
 				BA8DB0134FEAEB5F0D6B4BB3 /* UncalibratedMeasurementWarning.swift */,
+				1F5DAE8F307819E5005CB1DB /* CalibrationGuideView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -602,6 +611,7 @@
 				6E8F32F38B499DD28E8DBA20 /* PatientListView.swift in Sources */,
 				3D791313C813D29DD3B9E596 /* PatientManager.swift in Sources */,
 				48B1B3E2D94EE933DE7230D1 /* PatientSelectionView.swift in Sources */,
+				1F5DAE8E3078194C005CB1DB /* ARMeasurementManager.swift in Sources */,
 				E41783CEB8BBEE484D4E070D /* PediLens.xcdatamodeld in Sources */,
 				44643D092AC0D28E85C9E3DA /* PediLensApp.swift in Sources */,
 				2E9D82BA5DC2C0FC74DD9EA4 /* PerformanceOptimizer.swift in Sources */,
@@ -610,6 +620,7 @@
 				FABB89A3F2845004BBB1EC59 /* ScaleDetectionService.swift in Sources */,
 				251F42890D0C4B0CE19A89E6 /* SecurityManager.swift in Sources */,
 				D40D9C942D7C7E9B97BF1D77 /* StorageManagementView.swift in Sources */,
+				1F5DAE90307819E5005CB1DB /* CalibrationGuideView.swift in Sources */,
 				7A91F5E530DF2F6BCFE48977 /* SyncConflictView.swift in Sources */,
 				5EF147DCF08D3FDF8A0C564C /* SyncConflictViewModel.swift in Sources */,
 				2A2E0B4BC7E958B79F2C779C /* SyncManager.swift in Sources */,
@@ -646,6 +657,7 @@
 				9371AB884DCCFEE70E27C1E9 /* DataAnonymizationPropertyTests.swift in Sources */,
 				C642491CF59FAA993C03E601 /* DataIntegrityPropertyTests.swift in Sources */,
 				B665DC51B30C7F19A4B48DC5 /* DataValidationPropertyTests.swift in Sources */,
+				1F5DAE9230781A29005CB1DB /* ARMeasurementManagerTests.swift in Sources */,
 				C714186618F37B09A44D4145 /* ExportPackageCreationPropertyTests.swift in Sources */,
 				176F7A1D386307A89D085D68 /* FileStorageManagerTests.swift in Sources */,
 				F07971FF72AA52FA37B37921 /* HIPAAExportWarningPropertyTests.swift in Sources */,

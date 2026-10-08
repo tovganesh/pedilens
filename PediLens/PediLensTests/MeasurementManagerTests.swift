@@ -586,4 +586,86 @@ class MeasurementManagerTests: XCTestCase {
         XCTAssertLessThanOrEqual(measurement.timestamp, afterTime, 
                                 "Timestamp should be <= after time")
     }
+    
+    // MARK: - Depth and Volume Tests
+    
+    func testCalculateMeasurements_WithDepthData_CalculatesDepthAndVolume() {
+        // Given: A 100x100 square boundary
+        let points = [
+            CGPoint(x: 10, y: 10),
+            CGPoint(x: 90, y: 10),
+            CGPoint(x: 90, y: 90),
+            CGPoint(x: 10, y: 90)
+        ]
+        let boundary = WoundBoundary(
+            points: points,
+            confidence: 0.95,
+            boundingBox: CGRect(x: 10, y: 10, width: 80, height: 80),
+            detectionMethod: .automatic(modelVersion: "1.0")
+        )
+        
+        let calibration = MeasurementCalibration(
+            pixelsPerMillimeter: 1.0,
+            referenceObject: nil,
+            calibrationDate: Date()
+        )
+        
+        // Create depth pixel buffer (100x100): rim is at 0.300m, cavity center is at 0.305m (5mm deep)
+        var pixelBuffer: CVPixelBuffer?
+        let width = 100
+        let height = 100
+        let status = CVPixelBufferCreate(
+            kCFAllocatorDefault,
+            width, height,
+            kCVPixelFormatType_DepthFloat32,
+            nil,
+            &pixelBuffer
+        )
+        XCTAssertEqual(status, kCVReturnSuccess)
+        guard let buffer = pixelBuffer else {
+            XCTFail("Failed to allocate depth buffer")
+            return
+        }
+        
+        CVPixelBufferLockBaseAddress(buffer, [])
+        let base = CVPixelBufferGetBaseAddress(buffer)!
+        let bytesPerRow = CVPixelBufferGetBytesPerRow(buffer)
+        for y in 0..<height {
+            let row = base.advanced(by: y * bytesPerRow).assumingMemoryBound(to: Float32.self)
+            for x in 0..<width {
+                if x >= 20 && x <= 80 && y >= 20 && y <= 80 {
+                    row[x] = 0.305 // 5mm cavity inside wound
+                } else {
+                    row[x] = 0.300 // Baseline skin level
+                }
+            }
+        }
+        CVPixelBufferUnlockBaseAddress(buffer, [])
+        
+        let depthData = DepthData(
+            depthMap: buffer,
+            calibrationData: nil,
+            accuracy: .absolute
+        )
+        
+        // When: Calculating measurements with depth data
+        let measurement = manager.calculateMeasurements(
+            boundary: boundary,
+            calibration: calibration,
+            depthData: depthData
+        )
+        
+        // Then: Depth and volume should be computed
+        XCTAssertNotNil(measurement.depth, "Depth should not be nil when depth data is provided")
+        XCTAssertNotNil(measurement.volume, "Volume should not be nil when depth data is provided")
+        
+        if let depth = measurement.depth {
+            // Expected max depth is ~5.0 mm
+            XCTAssertEqual(depth.value, 5.0, accuracy: 0.5, "Wound depth should be ~5.0 mm")
+        }
+        
+        if let volume = measurement.volume {
+            XCTAssertGreaterThan(volume.value, 0.0, "Volume should be greater than zero")
+        }
+    }
 }

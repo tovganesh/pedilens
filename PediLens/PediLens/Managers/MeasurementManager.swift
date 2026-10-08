@@ -68,12 +68,15 @@ class MeasurementManager: MeasurementManagerProtocol {
         var depthMM: Double? = nil
         var volumeMM3: Double? = nil
         
-        // Note: Depth calculation currently not supported with new calibration model
-        // Will be re-implemented with LiDAR support
         if let depthData = depthData {
-            // TODO: Implement depth calculation with LiDAR
-            depthMM = nil
-            volumeMM3 = nil
+            let (calculatedDepth, calculatedVolume) = calculateDepthAndVolume(
+                boundary: boundary,
+                calibration: calibration,
+                depthData: depthData,
+                areaMM2: areaMM2
+            )
+            depthMM = calculatedDepth
+            volumeMM3 = calculatedVolume
         }
         
         // Create measurement with Foundation's Measurement types
@@ -449,6 +452,113 @@ class MeasurementManager: MeasurementManagerProtocol {
                 y: center.y + dy * scale
             )
         }
+    }
+    
+    /// Calculate wound cavity depth and 3D volume using CVPixelBuffer depth data
+    /// - Parameters:
+    ///   - boundary: Wound boundary with perimeter points
+    ///   - calibration: Calibration data for unit conversion
+    ///   - depthData: Depth map from LiDAR or camera depth
+    ///   - areaMM2: Wound 2D surface area in square millimeters
+    /// - Returns: Tuple of max depth in mm and 3D volume in mm3
+    private func calculateDepthAndVolume(
+        boundary: WoundBoundary,
+        calibration: MeasurementCalibration,
+        depthData: DepthData,
+        areaMM2: Double
+    ) -> (depthMM: Double?, volumeMM3: Double?) {
+        guard boundary.points.count >= 3, areaMM2 > 0 else {
+            return (nil, nil)
+        }
+        
+        let depthMap = depthData.depthMap
+        CVPixelBufferLockBaseAddress(depthMap, .readOnly)
+        defer { CVPixelBufferUnlockBaseAddress(depthMap, .readOnly) }
+        
+        let width = CVPixelBufferGetWidth(depthMap)
+        let height = CVPixelBufferGetHeight(depthMap)
+        guard width > 0, height > 0 else { return (nil, nil) }
+        
+        guard let baseAddress = CVPixelBufferGetBaseAddress(depthMap) else { return (nil, nil) }
+        let bytesPerRow = CVPixelBufferGetBytesPerRow(depthMap)
+        let pixelFormat = CVPixelBufferGetPixelFormatType(depthMap)
+        
+        let getDepthAt: (Int, Int) -> Float? = { px, py in
+            guard px >= 0, px < width, py >= 0, py < height else { return nil }
+            if pixelFormat == kCVPixelFormatType_DepthFloat32 || pixelFormat == kCVPixelFormatType_DisparityFloat32 {
+                let row = baseAddress.advanced(by: py * bytesPerRow)
+                let ptr = row.assumingMemoryBound(to: Float32.self)
+                let val = ptr[px]
+                return val.isFinite && val > 0 ? val : nil
+            } else if pixelFormat == kCVPixelFormatType_DepthFloat16 || pixelFormat == kCVPixelFormatType_DisparityFloat16 {
+                let row = baseAddress.advanced(by: py * bytesPerRow)
+                let ptr = row.assumingMemoryBound(to: UInt16.self)
+                let val = Float(Float16(bitPattern: ptr[px]))
+                return val.isFinite && val > 0 ? val : nil
+            }
+            return nil
+        }
+        
+        let bbox = boundary.boundingBox
+        guard bbox.width > 0, bbox.height > 0 else { return (nil, nil) }
+        
+        // 1. Sample intact skin / rim depth values along perimeter
+        var rimDepths: [Float] = []
+        let maxCoordX = max(bbox.maxX, CGFloat(width))
+        let maxCoordY = max(bbox.maxY, CGFloat(height))
+        
+        for pt in boundary.points {
+            let normX = bbox.maxX <= 1.0 ? pt.x : pt.x / maxCoordX
+            let normY = bbox.maxY <= 1.0 ? pt.y : pt.y / maxCoordY
+            let px = max(0, min(width - 1, Int(normX * CGFloat(width))))
+            let py = max(0, min(height - 1, Int(normY * CGFloat(height))))
+            if let d = getDepthAt(px, py) {
+                rimDepths.append(d)
+            }
+        }
+        
+        guard !rimDepths.isEmpty else { return (nil, nil) }
+        let sortedRim = rimDepths.sorted()
+        let baselineSkinDepthMeters = sortedRim[sortedRim.count / 2]
+        
+        // 2. Sample inside the wound boundary
+        var cavityDifferencesMM: [Double] = []
+        let minX = max(0, Int((bbox.minX <= 1.0 ? bbox.minX : bbox.minX / maxCoordX) * CGFloat(width)))
+        let maxX = min(width - 1, Int((bbox.maxX <= 1.0 ? bbox.maxX : bbox.maxX / maxCoordX) * CGFloat(width)))
+        let minY = max(0, Int((bbox.minY <= 1.0 ? bbox.minY : bbox.minY / maxCoordY) * CGFloat(height)))
+        let maxY = min(height - 1, Int((bbox.maxY <= 1.0 ? bbox.maxY : bbox.maxY / maxCoordY) * CGFloat(height)))
+        
+        let step = max(1, (maxX - minX) / 20)
+        if minX < maxX && minY < maxY {
+            for y in stride(from: minY, through: maxY, by: max(1, step)) {
+                for x in stride(from: minX, through: maxX, by: max(1, step)) {
+                    let ptNorm = CGPoint(x: CGFloat(x) / CGFloat(width), y: CGFloat(y) / CGFloat(height))
+                    let testPt = bbox.maxX <= 1.0 ? ptNorm : CGPoint(x: ptNorm.x * maxCoordX, y: ptNorm.y * maxCoordY)
+                    if self.isPointInPolygon(point: testPt, polygon: boundary.points) {
+                        if let d = getDepthAt(x, y) {
+                            let diffMM = Double(d - baselineSkinDepthMeters) * 1000.0
+                            if diffMM > 0 && diffMM < 50.0 {
+                                cavityDifferencesMM.append(diffMM)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        let maxDepthMM: Double
+        let meanDepthMM: Double
+        
+        if !cavityDifferencesMM.isEmpty {
+            maxDepthMM = cavityDifferencesMM.max() ?? 0.0
+            meanDepthMM = cavityDifferencesMM.reduce(0, +) / Double(cavityDifferencesMM.count)
+        } else {
+            maxDepthMM = 0.0
+            meanDepthMM = 0.0
+        }
+        
+        let volumeMM3 = areaMM2 * meanDepthMM
+        return (maxDepthMM, volumeMM3)
     }
 }
 

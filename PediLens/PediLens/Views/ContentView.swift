@@ -397,6 +397,7 @@ struct CameraView: View {
     @Environment(\.dismiss) private var dismiss
     
     @StateObject private var cameraManager = CameraManager()
+    @StateObject private var arManager = ARMeasurementManager()
     @State private var captureSessionManager: CaptureSessionManager?
     @State private var patientCaptureManager = PatientCaptureManager.shared
     
@@ -441,6 +442,14 @@ struct CameraView: View {
                     }
                 }
                 
+                // Calibration Guidance HUD
+                CalibrationGuideView(
+                    isLiDARAvailable: arManager.isLiDARAvailable,
+                    distanceStatus: arManager.distanceStatus,
+                    currentDistance: arManager.currentDistance,
+                    detectedScale: nil
+                )
+                
                 Spacer()
                 
                 // Bottom controls
@@ -471,6 +480,10 @@ struct CameraView: View {
             // Initialize capture session manager
             captureSessionManager = CaptureSessionManager(persistenceController: .shared)
             
+            if arManager.isLiDARAvailable {
+                arManager.startSession()
+            }
+            
             Task {
                 do {
                     try await cameraManager.startSession()
@@ -481,6 +494,9 @@ struct CameraView: View {
             }
         }
         .onDisappear {
+            if arManager.isLiDARAvailable {
+                arManager.pauseSession()
+            }
             cameraManager.stopSession()
         }
         .alert("Error", isPresented: $showingError) {
@@ -761,8 +777,31 @@ struct CaptureSessionDetailView: View {
                 // Measurements section
                 if let measurements = measurements {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("Measurements")
-                            .font(.headline)
+                        HStack {
+                            Text("Measurements")
+                                .font(.headline)
+                            Spacer()
+                            // Calibration status indicator
+                            HStack(spacing: 4) {
+                                Image(systemName: measurements.calibrationUsed.calibrationType.icon)
+                                    .font(.caption)
+                                Text(measurements.calibrationUsed.calibrationType.displayName)
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                            }
+                            .foregroundColor(measurements.calibrationUsed.accuracy == .high ? .green : (measurements.calibrationUsed.accuracy == .medium ? .blue : .orange))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(
+                                (measurements.calibrationUsed.accuracy == .high ? Color.green : (measurements.calibrationUsed.accuracy == .medium ? Color.blue : Color.orange)).opacity(0.12)
+                            )
+                            .clipShape(Capsule())
+                        }
+                        
+                        // Warning if uncalibrated
+                        if measurements.needsCalibrationWarning {
+                            UncalibratedMeasurementWarning()
+                        }
                         
                         Grid(alignment: .leading, horizontalSpacing: 20, verticalSpacing: 8) {
                             GridRow {
@@ -1014,6 +1053,14 @@ struct CaptureSessionDetailView: View {
             let depthValue = existingMeasurement.depthMM
             let volumeValue = existingMeasurement.volumeMM3
             
+            let savedCalibration: MeasurementCalibration
+            if let calData = existingMeasurement.calibrationData,
+               let decodedCal = try? JSONDecoder().decode(MeasurementCalibration.self, from: calData) {
+                savedCalibration = decodedCal
+            } else {
+                savedCalibration = MeasurementCalibration.estimated(pixelsPerMillimeter: 10.0)
+            }
+            
             let measurement = WoundMeasurement(
                 length: Foundation.Measurement(value: lengthValue, unit: UnitLength.millimeters),
                 width: Foundation.Measurement(value: widthValue, unit: UnitLength.millimeters),
@@ -1022,12 +1069,7 @@ struct CaptureSessionDetailView: View {
                 volume: volumeValue > 0 ? Foundation.Measurement(value: volumeValue, unit: UnitVolume.cubicMillimeters) : nil,
                 perimeter: Foundation.Measurement(value: perimeterValue, unit: UnitLength.millimeters),
                 timestamp: session.timestamp ?? Date(),
-                calibrationUsed: MeasurementCalibration(
-                    pixelsPerMillimeter: 10.0,
-                    referenceObject: .ruler(lengthMM: 100),
-                    calibrationDate: Date(),
-                    depthCalibration: nil
-                )
+                calibrationUsed: savedCalibration
             )
             
             await MainActor.run {
@@ -1194,9 +1236,11 @@ struct CaptureSessionDetailView: View {
         
         let accuracy: DepthAccuracy = (depthDict["accuracy"] as? String) == "absolute" ? .absolute : .relative
         
-        // Create a mock calibration data - in production this would be properly saved/restored
-        // For now, we'll use the depth map without full calibration
-        throw NSError(domain: "DepthDataError", code: -3, userInfo: [NSLocalizedDescriptionKey: "Depth data loading not fully implemented - calibration data cannot be reconstructed"])
+        return DepthData(
+            depthMap: depthMap,
+            calibrationData: nil,
+            accuracy: accuracy
+        )
     }
     
     /// Process manually traced boundary
@@ -1234,18 +1278,22 @@ struct CaptureSessionDetailView: View {
                     depthData = try? await loadDepthData(sessionID: sessionID, depthPath: depthPath)
                 }
                 
-                // Calculate measurements
-                let defaultCalibration = MeasurementCalibration(
-                    pixelsPerMillimeter: 10.0,
-                    referenceObject: .ruler(lengthMM: 100),
-                    calibrationDate: Date(),
-                    depthCalibration: nil
-                )
+                // Determine calibration to use (reuse existing calibration, detect scale, or fallback to estimated)
+                let calibration: MeasurementCalibration
+                if let existingCalData = session.measurement?.calibrationData,
+                   let decodedCal = try? JSONDecoder().decode(MeasurementCalibration.self, from: existingCalData) {
+                    calibration = decodedCal
+                } else if let scaleInfo = try? await ScaleDetectionService().detectReferenceScale(in: image),
+                          let detectedCal = MeasurementCalibration.fromReferenceScale(scaleInfo) {
+                    calibration = detectedCal
+                } else {
+                    calibration = MeasurementCalibration.estimated(pixelsPerMillimeter: 10.0)
+                }
                 
                 let measurementManager = MeasurementManager()
                 let measurements = measurementManager.calculateMeasurements(
                     boundary: boundary,
-                    calibration: defaultCalibration,
+                    calibration: calibration,
                     depthData: depthData
                 )
                 
@@ -1273,7 +1321,7 @@ struct CaptureSessionDetailView: View {
                 }
                 
                 // Encode calibration data
-                if let calibrationData = try? JSONEncoder().encode(defaultCalibration) {
+                if let calibrationData = try? JSONEncoder().encode(calibration) {
                     measurement.calibrationData = calibrationData
                 }
                 
