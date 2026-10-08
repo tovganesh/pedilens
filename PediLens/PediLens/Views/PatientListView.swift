@@ -10,12 +10,14 @@ import CoreData
 
 struct PatientListView: View {
     @Environment(\.managedObjectContext) private var viewContext
+    @StateObject private var syncManager = SyncManager.shared
     
     let user: User
     
     @FetchRequest private var patients: FetchedResults<Patient>
     @State private var searchText: String = ""
     @State private var showingAddPatient: Bool = false
+    @State private var showingStorageSheet: Bool = false
     
     init(user: User) {
         self.user = user
@@ -42,7 +44,15 @@ struct PatientListView: View {
     
     var body: some View {
         NavigationView {
-            VStack {
+            VStack(spacing: 0) {
+                // Sync status indicator bar
+                HStack {
+                    SyncStatusView(syncStatus: syncManager.syncStatus)
+                    Spacer()
+                }
+                .padding(.horizontal)
+                .padding(.vertical, 6)
+                
                 // Search bar
                 SearchBar(text: $searchText)
                     .padding(.horizontal)
@@ -58,17 +68,28 @@ struct PatientListView: View {
             .navigationTitle("Patients")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { showingAddPatient = true }) {
-                        Image(systemName: "plus")
+                    HStack(spacing: 16) {
+                        Button(action: { showingStorageSheet = true }) {
+                            Image(systemName: "internaldrive")
+                        }
+                        .accessibilityLabel("Storage Management")
+                        .accessibilityHint("Opens storage management and cache settings")
+                        
+                        Button(action: { showingAddPatient = true }) {
+                            Image(systemName: "plus")
+                        }
+                        .accessibilityLabel("Add new patient")
+                        .accessibilityHint("Opens form to add a new patient")
+                        .accessibilityInputLabels(["Add patient", "New patient", "Add"])
                     }
-                    .accessibilityLabel("Add new patient")
-                    .accessibilityHint("Opens form to add a new patient")
-                    .accessibilityInputLabels(["Add patient", "New patient", "Add"])
                 }
             }
             .sheet(isPresented: $showingAddPatient) {
                 AddPatientView(user: user)
                     .environment(\.managedObjectContext, viewContext)
+            }
+            .sheet(isPresented: $showingStorageSheet) {
+                StorageManagementView()
             }
         }
     }

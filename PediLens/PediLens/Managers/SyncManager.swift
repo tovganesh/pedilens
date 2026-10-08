@@ -60,10 +60,11 @@ protocol SyncManagerProtocol {
 }
 
 /// Manages CloudKit synchronization
-class SyncManager: SyncManagerProtocol {
+class SyncManager: ObservableObject, SyncManagerProtocol {
     static let shared = SyncManager()
     
     private let persistenceController: PersistenceController
+    @Published public private(set) var syncStatus: SyncStatus = .synced
     private var syncStatusSubject = CurrentValueSubject<SyncStatus, Never>(.synced)
     private var cancellables = Set<AnyCancellable>()
     private var syncQueue: [SyncOperation] = []
@@ -76,6 +77,15 @@ class SyncManager: SyncManagerProtocol {
     
     init(persistenceController: PersistenceController = .shared) {
         self.persistenceController = persistenceController
+        
+        // Sync published property with CurrentValueSubject
+        syncStatusSubject
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] status in
+                self?.syncStatus = status
+            }
+            .store(in: &cancellables)
+            
         setupNotifications()
         checkNetworkStatus()
     }
@@ -344,32 +354,30 @@ enum SyncError: LocalizedError {
     case cloudKitUnavailable
     case enableFailed(String)
     case disableFailed(String)
-    case storeConfigurationFailed
     case syncDisabled
     case networkUnavailable
     case syncFailed(String)
+    case storeConfigurationFailed
     
     var errorDescription: String? {
         switch self {
         case .cloudKitUnavailable:
-            return "iCloud is not available. Please check your iCloud settings."
+            return "iCloud is not available. Please sign in to iCloud in Settings."
         case .enableFailed(let message):
-            return "Failed to enable sync: \(message)"
+            return "Failed to enable iCloud sync: \(message)"
         case .disableFailed(let message):
-            return "Failed to disable sync: \(message)"
-        case .storeConfigurationFailed:
-            return "Failed to configure persistent store."
+            return "Failed to disable iCloud sync: \(message)"
         case .syncDisabled:
-            return "Sync is disabled. Enable sync in settings."
+            return "iCloud sync is disabled"
         case .networkUnavailable:
-            return "Network is unavailable. Sync will resume when connected."
+            return "Network connection unavailable"
         case .syncFailed(let message):
             return "Sync failed: \(message)"
+        case .storeConfigurationFailed:
+            return "Failed to configure persistent store for iCloud"
         }
     }
 }
-
-// MARK: - Notification Names
 
 extension Notification.Name {
     static let networkStatusChanged = Notification.Name("networkStatusChanged")
