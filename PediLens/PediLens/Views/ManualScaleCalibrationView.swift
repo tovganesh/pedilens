@@ -18,6 +18,14 @@ struct CalibrationPreset: Identifiable, Hashable {
     
     static let defaults: [CalibrationPreset] = [
         CalibrationPreset(
+            id: "inrOneRupee",
+            name: "₹1 Coin (New)",
+            referenceType: .inrOneRupee,
+            lengthMM: 20.00,
+            icon: "indianrupeesign.circle.fill",
+            description: "20.0 mm diameter"
+        ),
+        CalibrationPreset(
             id: "usQuarter",
             name: "US Quarter",
             referenceType: .usQuarter,

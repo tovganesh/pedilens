@@ -40,6 +40,32 @@ class ManualScaleCalibrationTests: XCTestCase {
         XCTAssertEqual(calibration.metadata?["notes"], "Caliper pins placed on quarter coin outer edges")
     }
     
+    func testIndianOneRupeeCoin_PresetAndCalibration() {
+        // Indian 1 Rupee New Coin is 20.00 mm in diameter
+        let rupeePreset = CalibrationPreset.defaults.first(where: { $0.id == "inrOneRupee" })
+        XCTAssertNotNil(rupeePreset)
+        XCTAssertEqual(rupeePreset?.lengthMM, 20.00)
+        XCTAssertEqual(rupeePreset?.referenceType, .inrOneRupee)
+        XCTAssertEqual(ReferenceObjectType.inrOneRupee.displayName, "₹1 Coin (New)")
+        XCTAssertEqual(ReferenceObjectType.inrOneRupee.knownDimensions, CGSize(width: 20.00, height: 20.00))
+        
+        // Calibrate with 200 pixels spanning the 20mm coin
+        let pixelSpan: CGFloat = 200.0
+        let pixelsPerMM = Double(pixelSpan) / rupeePreset!.lengthMM // 10.0 px/mm
+        
+        let calibration = MeasurementCalibration.manual(
+            pixelsPerMillimeter: pixelsPerMM,
+            referenceType: .inrOneRupee,
+            referenceLengthMM: rupeePreset!.lengthMM,
+            pixelDistance: Double(pixelSpan),
+            notes: "Indian ₹1 coin reference"
+        )
+        
+        XCTAssertEqual(calibration.calibrationType, CalibrationType.referenceScale(objectType: .inrOneRupee, confidence: 1.0))
+        XCTAssertEqual(calibration.pixelsPerMillimeter, 10.0, accuracy: 0.001)
+        XCTAssertEqual(calibration.metadata?["referenceType"], "₹1 Coin (New)")
+    }
+    
     func testCalibrationType_IsUserCalibrated_Distinction() {
         let userCal = MeasurementCalibration.manual(
             pixelsPerMillimeter: 12.5,

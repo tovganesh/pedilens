@@ -70,7 +70,7 @@ struct CalibrationGuideView: View {
             if showTips {
                 VStack(alignment: .leading, spacing: 6) {
                     tipRow(icon: "viewfinder", text: "Position camera 20-30 cm directly above the wound")
-                    tipRow(icon: "creditcard", text: "Place a US quarter or card next to the wound for scale")
+                    tipRow(icon: "creditcard", text: "Place a reference coin (₹1 coin, quarter), card, or ruler next to the wound")
                     tipRow(icon: "sun.max", text: "Ensure bright, even lighting without heavy shadows")
                 }
                 .padding(10)

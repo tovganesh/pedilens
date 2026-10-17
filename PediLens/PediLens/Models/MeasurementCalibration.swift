@@ -96,6 +96,8 @@ struct MeasurementCalibration: Codable, Equatable {
             refObj = .ruler(lengthMM: 100.0)
         case .usQuarter:
             refObj = .coin(type: .usQuarter)
+        case .inrOneRupee:
+            refObj = .coin(type: .inrOneRupee)
         case .creditCard:
             refObj = .custom(name: "Credit Card", dimensionMM: 85.6)
         case .calibrationCard:
@@ -198,7 +200,12 @@ struct MeasurementCalibration: Codable, Equatable {
                 self.calibrationType = .referenceScale(objectType: .ruler, confidence: 0.8)
                 self.accuracy = .medium
             case .coin(let type):
-                let objectType: ReferenceObjectType = type == .usQuarter ? .usQuarter : .custom
+                let objectType: ReferenceObjectType
+                switch type {
+                case .usQuarter: objectType = .usQuarter
+                case .inrOneRupee: objectType = .inrOneRupee
+                default: objectType = .custom
+                }
                 self.calibrationType = .referenceScale(objectType: objectType, confidence: 0.7)
                 self.accuracy = .medium
             case .custom:
@@ -246,7 +253,12 @@ struct MeasurementCalibration: Codable, Equatable {
             case .ruler:
                 calibrationType = .referenceScale(objectType: .ruler, confidence: 0.8)
             case .coin(let type):
-                let objectType: ReferenceObjectType = type == .usQuarter ? .usQuarter : .custom
+                let objectType: ReferenceObjectType
+                switch type {
+                case .usQuarter: objectType = .usQuarter
+                case .inrOneRupee: objectType = .inrOneRupee
+                default: objectType = .custom
+                }
                 calibrationType = .referenceScale(objectType: objectType, confidence: 0.7)
             case .custom:
                 calibrationType = .referenceScale(objectType: .custom, confidence: 0.6)
@@ -275,10 +287,11 @@ enum ReferenceObject: Codable, Equatable {
 
 /// Common coin types with standard dimensions (legacy)
 enum CoinType: Codable, Equatable {
-    case usQuarter  // 24.26mm diameter
-    case usDime     // 17.91mm diameter
-    case usPenny    // 19.05mm diameter
-    case usNickel   // 21.21mm diameter
+    case usQuarter   // 24.26mm diameter
+    case usDime      // 17.91mm diameter
+    case usPenny     // 19.05mm diameter
+    case usNickel    // 21.21mm diameter
+    case inrOneRupee // 20.00mm diameter (New series circular coin)
     
     /// Diameter in millimeters
     var diameterMM: Double {
@@ -287,6 +300,7 @@ enum CoinType: Codable, Equatable {
         case .usDime: return 17.91
         case .usPenny: return 19.05
         case .usNickel: return 21.21
+        case .inrOneRupee: return 20.00
         }
     }
 }

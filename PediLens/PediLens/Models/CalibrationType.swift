@@ -78,6 +78,7 @@ enum CalibrationType: Codable, Equatable {
 enum ReferenceObjectType: String, Codable, Equatable {
     case ruler          // Standard ruler with markings
     case usQuarter      // US Quarter (24.26mm diameter)
+    case inrOneRupee    // Indian 1 Rupee New Coin (20.0mm diameter)
     case creditCard     // Credit card (85.6mm × 53.98mm)
     case calibrationCard // Printed calibration card
     case custom         // User-defined reference
@@ -88,6 +89,8 @@ enum ReferenceObjectType: String, Codable, Equatable {
             return "Ruler"
         case .usQuarter:
             return "US Quarter"
+        case .inrOneRupee:
+            return "₹1 Coin (New)"
         case .creditCard:
             return "Credit Card"
         case .calibrationCard:
@@ -102,6 +105,8 @@ enum ReferenceObjectType: String, Codable, Equatable {
         switch self {
         case .usQuarter:
             return CGSize(width: 24.26, height: 24.26)
+        case .inrOneRupee:
+            return CGSize(width: 20.00, height: 20.00)
         case .creditCard:
             return CGSize(width: 85.6, height: 53.98)
         case .calibrationCard:
