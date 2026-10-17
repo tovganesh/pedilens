@@ -67,44 +67,51 @@ struct CaptureSessionDetailView: View {
                     
                     // Wound boundary overlay if available
                     if let boundary = woundBoundary {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Wound Detection")
-                                .font(.headline)
-                            
+                        VStack(alignment: .leading, spacing: 10) {
                             HStack {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(.green)
-                                Text("Boundary detected")
-                                    .font(.subheadline)
+                                Label("Wound Detection", systemImage: "viewfinder.circle.fill")
+                                    .font(.headline)
+                                    .foregroundColor(.primary)
+                                
                                 Spacer()
-                                Text("Confidence: \(Int(boundary.confidence * 100))%")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
+                                
+                                HStack(spacing: 4) {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundColor(.green)
+                                    Text("Detected (\(Int(boundary.confidence * 100))%)")
+                                        .font(.caption)
+                                        .fontWeight(.semibold)
+                                }
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 4)
+                                .pediLensGlassPill(tint: .green)
                             }
                             
                             // Disclaimer for automatic detection
                             if case .automatic = boundary.detectionMethod {
-                                Divider()
-                                    .padding(.vertical, 4)
-                                
                                 HStack(alignment: .top, spacing: 8) {
                                     Image(systemName: "exclamationmark.triangle.fill")
                                         .foregroundColor(.orange)
                                         .font(.caption)
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text("Experimental Feature")
+                                    
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("AI Boundary is Experimental")
                                             .font(.caption)
                                             .fontWeight(.semibold)
-                                        Text("Automatic detection is experimental. For accurate measurements, please use Manual Trace to verify or adjust the boundary.")
+                                            .foregroundColor(.primary)
+                                        Text("Verify with Manual Trace for clinical accuracy.")
                                             .font(.caption2)
                                             .foregroundColor(.secondary)
                                     }
                                 }
+                                .padding(10)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(Color.orange.opacity(0.08))
+                                .cornerRadius(8)
                             }
                         }
-                        .padding()
-                        .background(Color.green.opacity(0.1))
-                        .cornerRadius(8)
+                        .padding(14)
+                        .pediLensGlass(cornerRadius: 14)
                     }
                 } else {
                     VStack(spacing: 12) {
@@ -118,42 +125,63 @@ struct CaptureSessionDetailView: View {
                 }
                 
                 // Session metadata
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Session Information")
+                VStack(alignment: .leading, spacing: 10) {
+                    Label("Session Information", systemImage: "calendar.badge.clock")
                         .font(.headline)
+                        .foregroundColor(.primary)
                     
-                    LabeledContent("Captured", value: session.timestamp ?? Date(), format: .dateTime)
+                    Divider()
+                        .opacity(0.5)
+                    
+                    HStack {
+                        Text("Captured")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                        Text(session.timestamp ?? Date(), format: .dateTime)
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(.primary)
+                    }
                     
                     if session.locationAvailable, let location = session.location {
-                        LabeledContent("Location", value: "Lat: \(String(format: "%.4f", location.coordinate.latitude)), Lon: \(String(format: "%.4f", location.coordinate.longitude))")
+                        HStack {
+                            Text("Coordinates")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Text("\(String(format: "%.4f", location.coordinate.latitude)), \(String(format: "%.4f", location.coordinate.longitude))")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundColor(.primary)
+                        }
                     }
                 }
-                .padding()
-                .background(Color.gray.opacity(0.1))
-                .cornerRadius(8)
+                .padding(14)
+                .pediLensGlass(cornerRadius: 14)
                 
                 // Measurements section
                 if let measurements = measurements {
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack {
-                            Text("Measurements")
+                    VStack(alignment: .leading, spacing: 14) {
+                        HStack(alignment: .center) {
+                            Label("Clinical Measurements", systemImage: "ruler.fill")
                                 .font(.headline)
+                                .foregroundColor(.primary)
+                            
                             Spacer()
+                            
                             // Calibration status indicator
-                            HStack(spacing: 4) {
+                            HStack(spacing: 5) {
                                 Image(systemName: measurements.calibrationUsed.calibrationType.icon)
-                                    .font(.caption)
+                                    .font(.caption2)
                                 Text(measurements.calibrationUsed.calibrationType.displayName)
                                     .font(.caption)
                                     .fontWeight(.medium)
                             }
                             .foregroundColor(measurements.calibrationUsed.accuracy == .high ? .green : (measurements.calibrationUsed.accuracy == .medium ? .blue : .orange))
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
-                            .background(
-                                (measurements.calibrationUsed.accuracy == .high ? Color.green : (measurements.calibrationUsed.accuracy == .medium ? Color.blue : Color.orange)).opacity(0.12)
-                            )
-                            .clipShape(Capsule())
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .pediLensGlassPill(tint: measurements.calibrationUsed.accuracy == .high ? .green : (measurements.calibrationUsed.accuracy == .medium ? .blue : .orange))
                         }
                         
                         // Warning if uncalibrated
@@ -161,72 +189,44 @@ struct CaptureSessionDetailView: View {
                             UncalibratedMeasurementWarning()
                         }
                         
-                        Grid(alignment: .leading, horizontalSpacing: 20, verticalSpacing: 8) {
-                            GridRow {
-                                Text("Length:")
-                                    .foregroundColor(.secondary)
-                                Text(measurements.length.formatted())
-                            }
-                            
-                            GridRow {
-                                Text("Width:")
-                                    .foregroundColor(.secondary)
-                                Text(measurements.width.formatted())
-                            }
-                            
-                            GridRow {
-                                Text("Area:")
-                                    .foregroundColor(.secondary)
-                                Text(measurements.area.formatted())
-                            }
-                            
-                            GridRow {
-                                Text("Perimeter:")
-                                    .foregroundColor(.secondary)
-                                Text(measurements.perimeter.formatted())
-                            }
+                        // Structured Clinical Metric Grid
+                        LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
+                            clinicalMetricCard(title: "Length", value: measurements.length.formatted(), icon: "arrow.left.and.right")
+                            clinicalMetricCard(title: "Width", value: measurements.width.formatted(), icon: "arrow.up.and.down")
+                            clinicalMetricCard(title: "Surface Area", value: measurements.area.formatted(), icon: "square.dashed")
+                            clinicalMetricCard(title: "Perimeter", value: measurements.perimeter.formatted(), icon: "circle.dashed")
                             
                             if let depth = measurements.depth {
-                                GridRow {
-                                    Text("Depth:")
-                                        .foregroundColor(.secondary)
-                                    Text(depth.formatted())
-                                }
+                                clinicalMetricCard(title: "Depth", value: depth.formatted(), icon: "arrow.down.to.line")
                             }
-                            
                             if let volume = measurements.volume {
-                                GridRow {
-                                    Text("Volume:")
-                                        .foregroundColor(.secondary)
-                                    Text(volume.formatted())
-                                }
+                                clinicalMetricCard(title: "Volume", value: volume.formatted(), icon: "cube")
                             }
                         }
                     }
-                    .padding()
-                    .background(Color.blue.opacity(0.1))
-                    .cornerRadius(8)
+                    .padding(14)
+                    .pediLensGlass(cornerRadius: 14)
                     
                     // Action buttons when measurements exist
                     HStack(spacing: 12) {
                         Button(action: { showingManualTrace = true }) {
                             Label("Manual Trace", systemImage: "hand.draw")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
                                 .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(Color.orange)
-                                .foregroundColor(.white)
-                                .cornerRadius(8)
+                                .padding(.vertical, 12)
                         }
+                        .pediLensGlassButton(prominent: true)
                         .accessibilityLabel("Manually trace wound boundary")
                         
                         Button(action: { showingReanalyzeConfirmation = true }) {
                             Label("Re-analyze", systemImage: "arrow.clockwise")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
                                 .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(Color.purple)
-                                .foregroundColor(.white)
-                                .cornerRadius(8)
+                                .padding(.vertical, 12)
                         }
+                        .pediLensGlassButton()
                         .accessibilityLabel("Re-analyze wound boundary")
                     }
                 } else if isAnalyzing {
@@ -237,47 +237,49 @@ struct CaptureSessionDetailView: View {
                     }
                     .padding()
                     .frame(maxWidth: .infinity)
-                    .background(Color.gray.opacity(0.1))
-                    .cornerRadius(8)
+                    .pediLensGlass(cornerRadius: 14)
                 } else if photoImage != nil {
                     VStack(spacing: 12) {
                         // Disclaimer before analysis
                         HStack(alignment: .top, spacing: 8) {
                             Image(systemName: "info.circle.fill")
-                                .foregroundColor(.blue)
+                                .foregroundColor(.accentColor)
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("Analysis Options")
                                     .font(.subheadline)
                                     .fontWeight(.semibold)
-                                Text("Automatic detection is experimental. For best accuracy, use Manual Trace to draw the wound boundary yourself.")
+                                Text("Automatic AI detection is experimental. For clinical accuracy, use Manual Trace to confirm wound boundaries.")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                             }
                         }
-                        .padding()
-                        .background(Color.blue.opacity(0.1))
-                        .cornerRadius(8)
-                        
-                        Button(action: analyzeWound) {
-                            Label("Auto-Detect Wound", systemImage: "waveform.path.ecg")
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(Color.accentColor)
-                                .foregroundColor(.white)
-                                .cornerRadius(8)
-                        }
-                        .accessibilityLabel("Automatically analyze wound and calculate measurements")
+                        .padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.accentColor.opacity(0.08))
+                        .cornerRadius(10)
                         
                         Button(action: { showingManualTrace = true }) {
                             Label("Manual Trace (Recommended)", systemImage: "hand.draw")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
                                 .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(Color.orange)
-                                .foregroundColor(.white)
-                                .cornerRadius(8)
+                                .padding(.vertical, 12)
                         }
+                        .pediLensGlassButton(prominent: true)
                         .accessibilityLabel("Manually trace wound boundary for accurate measurements")
+                        
+                        Button(action: analyzeWound) {
+                            Label("Auto-Detect Wound", systemImage: "waveform.path.ecg")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                        }
+                        .pediLensGlassButton()
+                        .accessibilityLabel("Automatically analyze wound and calculate measurements")
                     }
+                    .padding(14)
+                    .pediLensGlass(cornerRadius: 14)
                 }
             }
             .padding()
@@ -296,6 +298,7 @@ struct CaptureSessionDetailView: View {
                 } label: {
                     Image(systemName: "square.and.arrow.up")
                 }
+                .pediLensGlassButton()
                 .accessibilityLabel("Export session")
                 .disabled(session.woundRecord == nil || isExporting)
             }
@@ -773,6 +776,33 @@ struct CaptureSessionDetailView: View {
                 }
             }
         }
+    }
+    
+    // MARK: - Clinical Metric Tile
+    
+    private func clinicalMetricCard(title: String, value: String, icon: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 5) {
+                Image(systemName: icon)
+                    .font(.caption2)
+                    .foregroundColor(.accentColor)
+                Text(title)
+                    .font(.caption2)
+                    .fontWeight(.medium)
+                    .foregroundColor(.secondary)
+                    .textCase(.uppercase)
+            }
+            Text(value)
+                .font(.headline)
+                .fontWeight(.bold)
+                .foregroundColor(.primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(Color(uiColor: .secondarySystemBackground).opacity(0.7))
+        .cornerRadius(10)
     }
 }
 

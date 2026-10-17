@@ -2,7 +2,7 @@
 //  CameraView.swift
 //  PediLens
 //
-//  Camera capture view with live preview, LiDAR distance guidance, and media persistence
+//  Camera capture view with live preview, LiDAR distance guidance, and media persistence (Liquid Glass styling)
 //
 
 import SwiftUI
@@ -36,11 +36,18 @@ struct CameraView: View {
             VStack {
                 // Top bar
                 HStack {
-                    Button("Cancel") {
-                        dismiss()
+                    Button(action: { dismiss() }) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "xmark")
+                            Text("Cancel")
+                        }
+                        .font(.subheadline)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
                     }
-                    .foregroundColor(.white)
-                    .padding()
+                    .pediLensGlassPill(interactive: true)
+                    .padding(.leading)
                     
                     Spacer()
                     
@@ -49,19 +56,21 @@ struct CameraView: View {
                         VStack(alignment: .trailing, spacing: 2) {
                             Text(patient.name ?? "Unknown")
                                 .font(.caption)
+                                .fontWeight(.semibold)
                                 .foregroundColor(.white)
                             if let patientID = patient.patientID {
                                 Text("ID: \(patientID)")
                                     .font(.caption2)
-                                    .foregroundColor(.white.opacity(0.8))
+                                    .foregroundColor(.white.opacity(0.85))
                             }
                         }
-                        .padding()
-                        .background(Color.black.opacity(0.5))
-                        .cornerRadius(8)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .pediLensGlass(cornerRadius: 12)
                         .padding(.trailing)
                     }
                 }
+                .padding(.top, 8)
                 
                 // Calibration Guidance HUD
                 CalibrationGuideView(
@@ -74,7 +83,7 @@ struct CameraView: View {
                 Spacer()
                 
                 // Bottom controls
-                VStack(spacing: 20) {
+                VStack(spacing: 16) {
                     // Capture button
                     Button(action: capturePhoto) {
                         ZStack {
@@ -83,8 +92,8 @@ struct CameraView: View {
                                 .frame(width: 70, height: 70)
                             
                             Circle()
-                                .stroke(Color.white, lineWidth: 3)
-                                .frame(width: 80, height: 80)
+                                .stroke(Color.white.opacity(0.85), lineWidth: 3)
+                                .frame(width: 82, height: 82)
                         }
                     }
                     .disabled(isCapturing)
@@ -93,8 +102,11 @@ struct CameraView: View {
                     Text("Tap to capture wound photo")
                         .foregroundColor(.white)
                         .font(.caption)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 6)
+                        .pediLensGlassPill()
                 }
-                .padding(.bottom, 40)
+                .padding(.bottom, 36)
             }
         }
         .onAppear {

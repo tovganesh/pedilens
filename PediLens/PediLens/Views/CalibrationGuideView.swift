@@ -2,7 +2,7 @@
 //  CalibrationGuideView.swift
 //  PediLens
 //
-//  HUD overlay view that provides real-time capture distance and calibration guidance
+//  HUD overlay view that provides real-time capture distance and calibration guidance with Liquid Glass styling
 //
 
 import SwiftUI
@@ -48,13 +48,8 @@ struct CalibrationGuideView: View {
                     .font(.system(size: 10, weight: .bold))
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
-                    .background(statusColor.opacity(0.3))
                     .foregroundColor(statusColor)
-                    .clipShape(Capsule())
-                    .overlay(
-                        Capsule()
-                            .stroke(statusColor.opacity(0.6), lineWidth: 1)
-                    )
+                    .pediLensGlassPill(tint: statusColor)
                 
                 // Tips Button
                 Button(action: {
@@ -69,12 +64,7 @@ struct CalibrationGuideView: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(Color.black.opacity(0.65))
-            .cornerRadius(12)
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(statusColor.opacity(0.4), lineWidth: 1)
-            )
+            .pediLensGlass(cornerRadius: 12, tint: statusColor, interactive: true)
             
             // Expandable Clinical Guidance Tips
             if showTips {
@@ -84,8 +74,7 @@ struct CalibrationGuideView: View {
                     tipRow(icon: "sun.max", text: "Ensure bright, even lighting without heavy shadows")
                 }
                 .padding(10)
-                .background(Color.black.opacity(0.75))
-                .cornerRadius(10)
+                .pediLensGlass(cornerRadius: 10)
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }

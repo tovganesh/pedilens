@@ -2,7 +2,7 @@
 //  PatientDetailView.swift
 //  PediLens
 //
-//  Patient detail view with wound records and aggregate statistics
+//  Patient detail view with wound records and aggregate statistics (Liquid Glass styling)
 //
 
 import SwiftUI
@@ -38,6 +38,7 @@ struct PatientDetailView: View {
                 Button(action: { viewModel.showingEditPatient = true }) {
                     Text("Edit")
                 }
+                .pediLensGlassButton()
                 .accessibilityLabel("Edit patient information")
                 .accessibilityHint("Opens form to edit patient details")
                 .accessibilityInputLabels(["Edit", "Edit patient", "Modify"])
@@ -105,9 +106,7 @@ struct PatientDetailView: View {
             }
         }
         .padding()
-        .background(Color(.systemBackground))
-        .cornerRadius(12)
-        .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+        .pediLensGlass(cornerRadius: 16)
     }
     
     private var statisticsCard: some View {
@@ -116,27 +115,29 @@ struct PatientDetailView: View {
                 .font(.headline)
                 .frame(maxWidth: .infinity, alignment: .leading)
             
-            HStack(spacing: 16) {
-                StatisticView(
-                    title: "Total Wounds",
-                    value: "\(viewModel.statistics.totalWounds)",
-                    icon: "chart.bar.fill",
-                    color: .blue
-                )
-                
-                StatisticView(
-                    title: "Active",
-                    value: "\(viewModel.statistics.activeWounds)",
-                    icon: "exclamationmark.circle.fill",
-                    color: .red
-                )
-                
-                StatisticView(
-                    title: "Healed",
-                    value: "\(viewModel.statistics.healedWounds)",
-                    icon: "checkmark.circle.fill",
-                    color: .green
-                )
+            PediLensGlassContainer(spacing: 12) {
+                HStack(spacing: 12) {
+                    StatisticView(
+                        title: "Total Wounds",
+                        value: "\(viewModel.statistics.totalWounds)",
+                        icon: "chart.bar.fill",
+                        color: .blue
+                    )
+                    
+                    StatisticView(
+                        title: "Active",
+                        value: "\(viewModel.statistics.activeWounds)",
+                        icon: "exclamationmark.circle.fill",
+                        color: .red
+                    )
+                    
+                    StatisticView(
+                        title: "Healed",
+                        value: "\(viewModel.statistics.healedWounds)",
+                        icon: "checkmark.circle.fill",
+                        color: .green
+                    )
+                }
             }
             
             // Healing rate progress bar
@@ -170,9 +171,7 @@ struct PatientDetailView: View {
             }
         }
         .padding()
-        .background(Color(.systemBackground))
-        .cornerRadius(12)
-        .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+        .pediLensGlass(cornerRadius: 16)
     }
     
     private var woundRecordsSection: some View {
@@ -187,6 +186,7 @@ struct PatientDetailView: View {
                     Label("Add", systemImage: "plus.circle.fill")
                         .font(.subheadline)
                 }
+                .pediLensGlassButton()
                 .accessibilityLabel("Add wound record")
                 .accessibilityInputLabels(["Add wound", "New wound", "Add record"])
             }
@@ -203,9 +203,7 @@ struct PatientDetailView: View {
             }
         }
         .padding()
-        .background(Color(.systemBackground))
-        .cornerRadius(12)
-        .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+        .pediLensGlass(cornerRadius: 16)
     }
     
     private var emptyWoundRecordsView: some View {
@@ -222,7 +220,7 @@ struct PatientDetailView: View {
                 Text("Add First Wound Record")
                     .font(.subheadline)
             }
-            .buttonStyle(.bordered)
+            .pediLensGlassButton(prominent: true)
             .accessibilityInputLabels(["Add wound", "Add first wound", "New wound"])
         }
         .frame(maxWidth: .infinity)
@@ -254,8 +252,7 @@ struct StatisticView: View {
         }
         .frame(maxWidth: .infinity)
         .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(10)
+        .pediLensGlass(cornerRadius: 12, tint: color, interactive: false)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(title): \(value)")
         .accessibilityAddTraits(.isStaticText)
@@ -292,11 +289,10 @@ struct WoundRecordRowView: View {
             Text(woundRecord.status ?? "unknown")
                 .font(.caption)
                 .fontWeight(.semibold)
-                .foregroundColor(.white)
+                .foregroundColor(statusColor(for: woundRecord.status ?? "unknown"))
                 .padding(.horizontal, 10)
                 .padding(.vertical, 4)
-                .background(statusColor(for: woundRecord.status ?? "unknown"))
-                .cornerRadius(8)
+                .pediLensGlassPill(tint: statusColor(for: woundRecord.status ?? "unknown"))
             
             // Chevron indicator
             Image(systemName: "chevron.right")
@@ -401,12 +397,14 @@ struct AddPatientView: View {
                     Button("Cancel") {
                         dismiss()
                     }
+                    .pediLensGlassButton()
                 }
                 
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         savePatient()
                     }
+                    .pediLensGlassButton(prominent: true)
                     .disabled(isLoading || name.isEmpty || patientID.isEmpty)
                 }
             }
@@ -492,12 +490,14 @@ struct EditPatientView: View {
                     Button("Cancel") {
                         dismiss()
                     }
+                    .pediLensGlassButton()
                 }
                 
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         savePatient()
                     }
+                    .pediLensGlassButton(prominent: true)
                     .disabled(isLoading || name.isEmpty || patientID.isEmpty)
                 }
             }
