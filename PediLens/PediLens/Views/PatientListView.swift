@@ -2,7 +2,7 @@
 //  PatientListView.swift
 //  PediLens
 //
-//  Patient list view grouped by patient for doctor role
+//  Doctor role: Patient directory and list management with Liquid Glass styling
 //
 
 import SwiftUI
@@ -14,22 +14,18 @@ struct PatientListView: View {
     
     let user: User
     
-    @FetchRequest private var patients: FetchedResults<Patient>
-    @State private var searchText: String = ""
-    @State private var showingAddPatient: Bool = false
-    @State private var showingStorageSheet: Bool = false
+    @State private var searchText = ""
+    @State private var showingAddPatient = false
+    @State private var showingStorageSheet = false
+    @State private var selectedPatient: Patient?
     
-    init(user: User) {
-        self.user = user
-        // Create fetch request filtered by user
-        _patients = FetchRequest<Patient>(
-            sortDescriptors: [NSSortDescriptor(keyPath: \Patient.name, ascending: true)],
-            predicate: NSPredicate(format: "user == %@", user),
-            animation: .default
-        )
-    }
+    @FetchRequest(
+        sortDescriptors: [NSSortDescriptor(keyPath: \Patient.name, ascending: true)],
+        animation: .default
+    )
+    private var patients: FetchedResults<Patient>
     
-    var filteredPatients: [Patient] {
+    private var filteredPatients: [Patient] {
         if searchText.isEmpty {
             return Array(patients)
         } else {
@@ -56,6 +52,7 @@ struct PatientListView: View {
                 // Search bar
                 SearchBar(text: $searchText)
                     .padding(.horizontal)
+                    .padding(.bottom, 6)
                     .accessibilityLabel("Search patients")
                     .accessibilityHint("Enter patient name or ID to search")
                 
@@ -68,16 +65,18 @@ struct PatientListView: View {
             .navigationTitle("Patients")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    HStack(spacing: 16) {
+                    HStack(spacing: 12) {
                         Button(action: { showingStorageSheet = true }) {
                             Image(systemName: "internaldrive")
                         }
+                        .pediLensGlassButton()
                         .accessibilityLabel("Storage Management")
                         .accessibilityHint("Opens storage management and cache settings")
                         
                         Button(action: { showingAddPatient = true }) {
                             Image(systemName: "plus")
                         }
+                        .pediLensGlassButton()
                         .accessibilityLabel("Add new patient")
                         .accessibilityHint("Opens form to add a new patient")
                         .accessibilityInputLabels(["Add patient", "New patient", "Add"])
@@ -132,7 +131,7 @@ struct PatientListView: View {
                     Label("Add Patient", systemImage: "plus.circle.fill")
                         .font(.headline)
                 }
-                .buttonStyle(.borderedProminent)
+                .pediLensGlassButton(prominent: true)
                 .padding(.top)
                 .accessibilityLabel("Add first patient")
                 .accessibilityHint("Opens form to add your first patient")
@@ -173,11 +172,10 @@ struct PatientRowView: View {
                     Text("\(patient.activeWoundCount)")
                         .font(.caption)
                         .fontWeight(.semibold)
-                        .foregroundColor(.white)
+                        .foregroundColor(.red)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
-                        .background(Color.red)
-                        .cornerRadius(12)
+                        .pediLensGlassPill(tint: .red)
                         .accessibilityLabel("\(patient.activeWoundCount) active wound\(patient.activeWoundCount == 1 ? "" : "s")")
                 }
             }
@@ -230,9 +228,8 @@ struct SearchBar: View {
                 .accessibilityInputLabels(["Clear", "Clear search", "Delete"])
             }
         }
-        .padding(8)
-        .background(Color(.systemGray6))
-        .cornerRadius(10)
+        .padding(10)
+        .pediLensGlass(cornerRadius: 12, interactive: true)
         .accessibilityElement(children: .contain)
     }
 }

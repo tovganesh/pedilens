@@ -2,7 +2,7 @@
 //  WoundListView.swift
 //  PediLens
 //
-//  Patient role wound list view with wound management, sync status, and storage settings
+//  Patient role wound list view with wound management, sync status, and storage settings (Liquid Glass styling)
 //
 
 import SwiftUI
@@ -45,15 +45,17 @@ struct WoundListView: View {
             .navigationTitle("My Wounds")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    HStack(spacing: 16) {
+                    HStack(spacing: 12) {
                         Button(action: { showingStorageSheet = true }) {
                             Image(systemName: "internaldrive")
                         }
+                        .pediLensGlassButton()
                         .accessibilityLabel("Storage Management")
                         
                         Button(action: { showingNewWoundSheet = true }) {
                             Label("Add Wound", systemImage: "plus")
                         }
+                        .pediLensGlassButton()
                         .accessibilityLabel("Add new wound record")
                     }
                 }
@@ -135,11 +137,8 @@ struct EmptyWoundListView: View {
             Button(action: { showingNewWoundSheet = true }) {
                 Label("Add Wound Record", systemImage: "plus.circle.fill")
                     .font(.headline)
-                    .padding()
-                    .background(Color.accentColor)
-                    .foregroundColor(.white)
-                    .cornerRadius(10)
             }
+            .pediLensGlassButton(prominent: true)
             .accessibilityLabel("Add your first wound record")
         }
     }

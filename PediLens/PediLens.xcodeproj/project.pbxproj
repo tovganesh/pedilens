@@ -18,6 +18,7 @@
 		1BAB97EC2F89B3F51E1F837E /* TimelineChronologicalOrderPropertyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71053B481F683EA334D5F032 /* TimelineChronologicalOrderPropertyTests.swift */; };
 		1E3ACC803CDDACE3194A7C0E /* CameraTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58A39E121149DE58CCABD577 /* CameraTypes.swift */; };
 		1E8C436BA2267A59A885D3B7 /* PatientRecordDisplayPropertyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72B239A9A443C26B784B6D63 /* PatientRecordDisplayPropertyTests.swift */; };
+		1F560B513083BE6B00B7A31D /* GlassUIModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F560B503083BE6B00B7A31D /* GlassUIModifier.swift */; };
 		1F5DAE8C3078174B005CB1DB /* ScaleDetectionServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5DAE8B3078174B005CB1DB /* ScaleDetectionServiceTests.swift */; };
 		1F5DAE8E3078194C005CB1DB /* ARMeasurementManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5DAE8D3078194C005CB1DB /* ARMeasurementManager.swift */; };
 		1F5DAE90307819E5005CB1DB /* CalibrationGuideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5DAE8F307819E5005CB1DB /* CalibrationGuideView.swift */; };
@@ -149,10 +150,18 @@
 		16BB9D3A3FAC6E1BAF9D95DA /* SyncConflictViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncConflictViewModel.swift; sourceTree = "<group>"; };
 		1B9E005E1BAC29CF028E4BD8 /* SecurityManager_README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = SecurityManager_README.md; sourceTree = "<group>"; };
 		1D05157E4540FD9082569FB4 /* NoThirdPartyTransmissionPropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoThirdPartyTransmissionPropertyTests.swift; sourceTree = "<group>"; };
+		1F560B503083BE6B00B7A31D /* GlassUIModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassUIModifier.swift; sourceTree = "<group>"; };
 		1F5DAE8B3078174B005CB1DB /* ScaleDetectionServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScaleDetectionServiceTests.swift; sourceTree = "<group>"; };
 		1F5DAE8D3078194C005CB1DB /* ARMeasurementManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ARMeasurementManager.swift; sourceTree = "<group>"; };
 		1F5DAE8F307819E5005CB1DB /* CalibrationGuideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalibrationGuideView.swift; sourceTree = "<group>"; };
 		1F5DAE9130781A29005CB1DB /* ARMeasurementManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ARMeasurementManagerTests.swift; sourceTree = "<group>"; };
+		1F5DAE9330782001005CB1DB /* ManualBoundaryTraceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManualBoundaryTraceView.swift; sourceTree = "<group>"; };
+		1F5DAE9530782001005CB1DB /* WoundBoundaryOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WoundBoundaryOverlay.swift; sourceTree = "<group>"; };
+		1F5DAE9730782001005CB1DB /* CameraView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraView.swift; sourceTree = "<group>"; };
+		1F5DAE9930782001005CB1DB /* CaptureSessionDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureSessionDetailView.swift; sourceTree = "<group>"; };
+		1F5DAE9B30782001005CB1DB /* NewWoundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewWoundView.swift; sourceTree = "<group>"; };
+		1F5DAE9D30782001005CB1DB /* WoundDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WoundDetailView.swift; sourceTree = "<group>"; };
+		1F5DAE9F30782001005CB1DB /* WoundListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WoundListView.swift; sourceTree = "<group>"; };
 		1F99A6FCFB192E6FD2774723 /* WoundDetectionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WoundDetectionService.swift; sourceTree = "<group>"; };
 		1FB34C86C993C3C499D95D15 /* DataValidationPropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataValidationPropertyTests.swift; sourceTree = "<group>"; };
 		2156F6914979AD8CA60D756E /* CoreMLWoundDetectionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreMLWoundDetectionService.swift; sourceTree = "<group>"; };
@@ -254,13 +263,6 @@
 		F60F81F64E4F3E38DCD24C7E /* PediLens.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = PediLens.xcdatamodel; sourceTree = "<group>"; };
 		FBFB3E4F1897CE2B84F3D3FF /* ScaleDetectionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScaleDetectionService.swift; sourceTree = "<group>"; };
 		FF426ED791AF952104B3E7FF /* MeasurementManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeasurementManagerTests.swift; sourceTree = "<group>"; };
-		1F5DAE9330782001005CB1DB /* ManualBoundaryTraceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManualBoundaryTraceView.swift; sourceTree = "<group>"; };
-		1F5DAE9530782001005CB1DB /* WoundBoundaryOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WoundBoundaryOverlay.swift; sourceTree = "<group>"; };
-		1F5DAE9730782001005CB1DB /* CameraView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraView.swift; sourceTree = "<group>"; };
-		1F5DAE9930782001005CB1DB /* CaptureSessionDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureSessionDetailView.swift; sourceTree = "<group>"; };
-		1F5DAE9B30782001005CB1DB /* NewWoundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewWoundView.swift; sourceTree = "<group>"; };
-		1F5DAE9D30782001005CB1DB /* WoundDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WoundDetailView.swift; sourceTree = "<group>"; };
-		1F5DAE9F30782001005CB1DB /* WoundListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WoundListView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -401,6 +403,7 @@
 				E16A0373D9ADEEB1607F614E /* ErrorLogger.swift */,
 				CF53FAC258AB490DBE2EBAD1 /* Localization.swift */,
 				7D75688989AFF0FA6FCB5487 /* PerformanceOptimizer.swift */,
+				1F560B503083BE6B00B7A31D /* GlassUIModifier.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -644,6 +647,7 @@
 				1F5DAE90307819E5005CB1DB /* CalibrationGuideView.swift in Sources */,
 				7A91F5E530DF2F6BCFE48977 /* SyncConflictView.swift in Sources */,
 				5EF147DCF08D3FDF8A0C564C /* SyncConflictViewModel.swift in Sources */,
+				1F560B513083BE6B00B7A31D /* GlassUIModifier.swift in Sources */,
 				2A2E0B4BC7E958B79F2C779C /* SyncManager.swift in Sources */,
 				B2066A0C3E1950DED110FCC6 /* SyncStatusView.swift in Sources */,
 				60663285C6571C4C772F11A7 /* TimelineView.swift in Sources */,

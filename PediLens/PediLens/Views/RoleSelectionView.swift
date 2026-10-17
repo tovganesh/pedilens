@@ -2,7 +2,7 @@
 //  RoleSelectionView.swift
 //  PediLens
 //
-//  First-launch onboarding view for user role selection
+//  First-launch onboarding view for user role selection with Liquid Glass styling
 //
 
 import SwiftUI
@@ -13,6 +13,7 @@ struct RoleSelectionView: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
     @ScaledMetric private var iconSize: CGFloat = 80
+    @Namespace private var glassNamespace
     
     let onRoleSelected: (UserRole) -> Void
     
@@ -41,29 +42,37 @@ struct RoleSelectionView: View {
                 }
                 .padding(.top, 40)
                 
-                // Role Selection Cards
-                VStack(spacing: 20) {
-                    RoleCard(
-                        role: .doctor,
-                        icon: "stethoscope",
-                        title: "Doctor / Care Provider",
-                        description: "Manage multiple patients and track their wound healing progress",
-                        isSelected: selectedRole == .doctor
-                    ) {
-                        selectedRole = .doctor
+                // Role Selection Cards wrapped in Glass Effect Container
+                PediLensGlassContainer(spacing: 20) {
+                    VStack(spacing: 20) {
+                        RoleCard(
+                            role: .doctor,
+                            icon: "stethoscope",
+                            title: "Doctor / Care Provider",
+                            description: "Manage multiple patients and track their wound healing progress",
+                            isSelected: selectedRole == .doctor
+                        ) {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                                selectedRole = .doctor
+                            }
+                        }
+                        .pediLensGlassID("doctorRoleCard", in: glassNamespace)
+                        
+                        RoleCard(
+                            role: .patient,
+                            icon: "person.fill",
+                            title: "Patient",
+                            description: "Track your own wound healing journey",
+                            isSelected: selectedRole == .patient
+                        ) {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                                selectedRole = .patient
+                            }
+                        }
+                        .pediLensGlassID("patientRoleCard", in: glassNamespace)
                     }
-                    
-                    RoleCard(
-                        role: .patient,
-                        icon: "person.fill",
-                        title: "Patient",
-                        description: "Track your own wound healing journey",
-                        isSelected: selectedRole == .patient
-                    ) {
-                        selectedRole = .patient
-                    }
+                    .padding(.horizontal)
                 }
-                .padding(.horizontal)
                 .accessibilityElement(children: .contain)
                 
                 Spacer()
@@ -83,7 +92,6 @@ struct RoleSelectionView: View {
                     HStack {
                         if isLoading {
                             ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                 .accessibilityLabel("Saving role selection")
                         } else {
                             Text("Continue")
@@ -92,10 +100,13 @@ struct RoleSelectionView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(selectedRole != nil ? Color.accentColor : Color.gray)
-                    .foregroundColor(.white)
-                    .cornerRadius(12)
                 }
+                .pediLensGlass(
+                    cornerRadius: 14,
+                    tint: selectedRole != nil ? Color.accentColor : nil,
+                    interactive: true
+                )
+                .foregroundColor(selectedRole != nil ? .accentColor : .secondary)
                 .disabled(selectedRole == nil || isLoading)
                 .padding(.horizontal)
                 .padding(.bottom, 30)
@@ -144,19 +155,19 @@ struct RoleCard: View {
             HStack(spacing: 16) {
                 Image(systemName: icon)
                     .font(.system(size: iconSize))
-                    .foregroundColor(isSelected ? .white : .accentColor)
+                    .foregroundColor(isSelected ? .accentColor : .secondary)
                     .frame(width: 60)
                     .accessibilityHidden(true) // Decorative
                 
                 VStack(alignment: .leading, spacing: 6) {
                     Text(title)
                         .font(.headline)
-                        .foregroundColor(isSelected ? .white : .primary)
+                        .foregroundColor(.primary)
                         .fixedSize(horizontal: false, vertical: true)
                     
                     Text(description)
                         .font(.caption)
-                        .foregroundColor(isSelected ? .white.opacity(0.9) : .secondary)
+                        .foregroundColor(.secondary)
                         .multilineTextAlignment(.leading)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -166,18 +177,15 @@ struct RoleCard: View {
                 if isSelected {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 24))
-                        .foregroundColor(.white)
+                        .foregroundColor(.accentColor)
                         .accessibilityLabel("Selected")
                 }
             }
             .padding()
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(isSelected ? Color.accentColor : Color(.systemGray6))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
+            .pediLensGlass(
+                cornerRadius: 16,
+                tint: isSelected ? .accentColor : nil,
+                interactive: true
             )
         }
         .buttonStyle(PlainButtonStyle())

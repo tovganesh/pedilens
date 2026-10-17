@@ -176,12 +176,14 @@ struct ManualBoundaryTraceView: View {
                     Button("Cancel") {
                         dismiss()
                     }
+                    .pediLensGlassButton()
                 }
                 
                 ToolbarItem(placement: .primaryAction) {
                     Button("Done") {
                         completeTrace()
                     }
+                    .pediLensGlassButton(prominent: true)
                     .disabled(tracePoints.count < 3)
                 }
             }
@@ -201,8 +203,11 @@ struct ManualBoundaryTraceView: View {
                     // Point count
                     Text("\(tracePoints.count) pts")
                         .font(.caption)
+                        .fontWeight(.medium)
                         .foregroundColor(.secondary)
-                        .frame(minWidth: 40)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .pediLensGlassPill()
                     
                     Spacer()
                     
@@ -212,7 +217,7 @@ struct ManualBoundaryTraceView: View {
                             .labelStyle(.iconOnly)
                     }
                     .disabled(tracePoints.isEmpty)
-                    .buttonStyle(.bordered)
+                    .pediLensGlassButton()
                     
                     // Clear button
                     Button(action: clearTrace) {
@@ -220,11 +225,14 @@ struct ManualBoundaryTraceView: View {
                             .labelStyle(.iconOnly)
                     }
                     .disabled(tracePoints.isEmpty)
-                    .buttonStyle(.bordered)
+                    .pediLensGlassButton()
                     .tint(.red)
                 }
-                .padding()
-                .background(.ultraThinMaterial)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .pediLensGlass(cornerRadius: 18)
+                .padding(.horizontal)
+                .padding(.bottom, 8)
             }
         }
         .onAppear {

@@ -2,7 +2,7 @@
 //  SyncStatusView.swift
 //  PediLens
 //
-//  UI component for displaying sync status
+//  UI component for displaying sync status with Liquid Glass styling
 //
 
 import SwiftUI
@@ -20,8 +20,7 @@ struct SyncStatusView: View {
         .foregroundColor(statusColor)
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
-        .background(statusBackgroundColor)
-        .cornerRadius(12)
+        .pediLensGlassPill(tint: statusColor, interactive: false)
     }
     
     @ViewBuilder
@@ -70,21 +69,6 @@ struct SyncStatusView: View {
             return .red
         }
     }
-    
-    private var statusBackgroundColor: Color {
-        switch syncStatus {
-        case .synced:
-            return .green.opacity(0.1)
-        case .syncing:
-            return .blue.opacity(0.1)
-        case .pending:
-            return .orange.opacity(0.1)
-        case .offline:
-            return .gray.opacity(0.1)
-        case .error:
-            return .red.opacity(0.1)
-        }
-    }
 }
 
 /// View model for sync status
@@ -123,6 +107,7 @@ struct SyncStatusIndicator: View {
         } label: {
             statusIcon
         }
+        .pediLensGlassButton()
         .sheet(isPresented: $showingDetail) {
             SyncStatusDetailView(viewModel: viewModel)
         }
@@ -198,6 +183,7 @@ struct SyncStatusDetailView: View {
                             }
                         }
                     }
+                    .pediLensGlassButton(prominent: true)
                     .disabled(isSyncing)
                 }
                 
@@ -214,6 +200,7 @@ struct SyncStatusDetailView: View {
                     Button("Done") {
                         dismiss()
                     }
+                    .pediLensGlassButton()
                 }
             }
         }

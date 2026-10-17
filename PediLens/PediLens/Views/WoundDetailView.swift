@@ -74,8 +74,10 @@ struct WoundDetailView: View {
             Section {
                 Button(action: { showingCameraView = true }) {
                     Label("Capture Wound Photo", systemImage: "camera.fill")
+                        .font(.headline)
                         .frame(maxWidth: .infinity)
                 }
+                .pediLensGlassButton(prominent: true)
                 .accessibilityLabel("Capture new wound photo")
             }
         }
@@ -94,6 +96,7 @@ struct WoundDetailView: View {
                 } label: {
                     Image(systemName: "square.and.arrow.up")
                 }
+                .pediLensGlassButton()
                 .accessibilityLabel("Export wound record")
                 .disabled(captureSessions.isEmpty || isExporting)
             }
