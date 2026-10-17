@@ -280,11 +280,14 @@ struct ManualScaleCalibrationView: View {
                                                 Text(preset.name)
                                                     .font(.caption)
                                                     .fontWeight(.semibold)
+                                                    .lineLimit(1)
                                                 Text(preset.description)
                                                     .font(.caption2)
                                                     .foregroundColor(.secondary)
+                                                    .lineLimit(1)
                                             }
                                         }
+                                        .fixedSize(horizontal: true, vertical: false)
                                         .padding(.horizontal, 12)
                                         .padding(.vertical, 8)
                                     }
@@ -318,16 +321,20 @@ struct ManualScaleCalibrationView: View {
                     }
                     
                     // Live Calibration Metric Summary Card
-                    HStack(spacing: 16) {
+                    HStack(spacing: 12) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("KNOWN REFERENCE")
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
+                                .lineLimit(1)
                             Text(String(format: "%.2f mm", effectiveLengthMM))
                                 .font(.subheadline)
                                 .fontWeight(.bold)
                                 .foregroundColor(.primary)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.85)
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                         
                         Divider().frame(height: 24)
                         
@@ -335,11 +342,15 @@ struct ManualScaleCalibrationView: View {
                             Text("PIXEL DISTANCE")
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
+                                .lineLimit(1)
                             Text(String(format: "%.1f px", pixelDistance))
                                 .font(.subheadline)
                                 .fontWeight(.bold)
                                 .foregroundColor(.primary)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.85)
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                         
                         Divider().frame(height: 24)
                         
@@ -347,11 +358,15 @@ struct ManualScaleCalibrationView: View {
                             Text("CALIBRATED SCALE")
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
+                                .lineLimit(1)
                             Text(String(format: "%.2f px/mm", pixelsPerMillimeter))
                                 .font(.subheadline)
                                 .fontWeight(.bold)
                                 .foregroundColor(.accentColor)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.85)
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     .padding(10)
                     .frame(maxWidth: .infinity)
@@ -364,17 +379,22 @@ struct ManualScaleCalibrationView: View {
                             Text("Cancel")
                                 .font(.subheadline)
                                 .fontWeight(.medium)
-                                .frame(maxWidth: .infinity)
+                                .padding(.horizontal, 18)
                                 .padding(.vertical, 12)
                         }
                         .pediLensGlassButton()
                         
                         Button(action: applyCalibration) {
-                            Label("Apply Calibration", systemImage: "checkmark.circle.fill")
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
+                            HStack(spacing: 6) {
+                                Image(systemName: "checkmark.circle.fill")
+                                Text("Apply Calibration")
+                                    .fontWeight(.semibold)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.85)
+                            }
+                            .font(.subheadline)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
                         }
                         .pediLensGlassButton(prominent: true)
                         .disabled(pixelDistance < 15)

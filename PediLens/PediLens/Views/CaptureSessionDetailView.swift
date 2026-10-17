@@ -166,42 +166,70 @@ struct CaptureSessionDetailView: View {
                 
                 // Measurements section
                 if let measurements = measurements {
-                    VStack(alignment: .leading, spacing: 14) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        // Section Header: Title & Recalibrate action
                         HStack(alignment: .center) {
                             Label("Clinical Measurements", systemImage: "ruler.fill")
                                 .font(.headline)
                                 .foregroundColor(.primary)
+                                .lineLimit(1)
                             
-                            Spacer()
+                            Spacer(minLength: 8)
                             
-                            // Recalibrate button
+                            // Recalibrate / Adjust scale button
                             Button(action: { showingScaleCalibration = true }) {
                                 HStack(spacing: 4) {
-                                    Image(systemName: "ruler")
+                                    Image(systemName: "slider.horizontal.below.rectangle")
                                         .font(.caption2)
                                     Text(measurements.calibrationUsed.isUserCalibrated ? "Recalibrate" : "Adjust Scale")
-                                        .font(.caption2)
+                                        .font(.caption)
                                         .fontWeight(.semibold)
+                                        .lineLimit(1)
                                 }
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
                             }
                             .pediLensGlassPill(tint: .accentColor)
                             .accessibilityLabel("Recalibrate scale")
-                            
-                            // Calibration status indicator
+                        }
+                        
+                        // Calibration reference badge & scale readout row
+                        HStack(spacing: 8) {
                             HStack(spacing: 5) {
                                 Image(systemName: measurements.calibrationUsed.calibrationType.icon)
                                     .font(.caption2)
                                 Text(measurements.calibrationUsed.calibrationType.displayName)
                                     .font(.caption)
                                     .fontWeight(.medium)
+                                    .lineLimit(1)
                             }
                             .foregroundColor(measurements.calibrationUsed.accuracy == .high ? .green : (measurements.calibrationUsed.accuracy == .medium ? .blue : .orange))
                             .padding(.horizontal, 10)
                             .padding(.vertical, 4)
                             .pediLensGlassPill(tint: measurements.calibrationUsed.accuracy == .high ? .green : (measurements.calibrationUsed.accuracy == .medium ? .blue : .orange))
+                            
+                            if measurements.calibrationUsed.isUserCalibrated {
+                                Text("Manual")
+                                    .font(.caption2)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.secondary)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 3)
+                                    .background(Color(.secondarySystemBackground))
+                                    .cornerRadius(4)
+                            }
+                            
+                            Spacer()
+                            
+                            Text(String(format: "%.1f px/mm", measurements.calibrationUsed.pixelsPerMillimeter))
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
                         }
+                        
+                        Divider()
+                            .opacity(0.4)
                         
                         // Warning if uncalibrated
                         if measurements.needsCalibrationWarning {
