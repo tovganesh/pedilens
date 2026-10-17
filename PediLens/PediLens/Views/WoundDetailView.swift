@@ -128,6 +128,13 @@ struct WoundDetailView: View {
         
         Task {
             do {
+                if UserManager.shared.currentUserRole == .doctor {
+                    try await SecurityManager.shared.authenticateUser(
+                        reason: "Authenticate with Face ID or Touch ID to export clinical wound records",
+                        forcePrompt: false
+                    )
+                }
+                
                 let exportManager = ExportManager.shared
                 let options = ExportOptions(
                     includePhotos: true,

@@ -9,7 +9,7 @@ import Foundation
 import CoreGraphics
 
 /// Accuracy level for measurements
-enum MeasurementAccuracy: String, Codable {
+enum MeasurementAccuracy: String, Codable, Equatable {
     case high      // ±1-2mm (LiDAR)
     case medium    // ±2-5mm (Reference scale)
     case low       // ±10-20mm (Estimated)
@@ -35,7 +35,7 @@ enum MeasurementAccuracy: String, Codable {
 }
 
 /// Type of calibration used for measurements
-enum CalibrationType: Codable {
+enum CalibrationType: Codable, Equatable {
     case lidar(depth: Float, confidence: Float)
     case referenceScale(objectType: ReferenceObjectType, confidence: Float)
     case estimated
@@ -75,9 +75,10 @@ enum CalibrationType: Codable {
 }
 
 /// Types of reference objects that can be used for calibration
-enum ReferenceObjectType: String, Codable {
+enum ReferenceObjectType: String, Codable, Equatable {
     case ruler          // Standard ruler with markings
     case usQuarter      // US Quarter (24.26mm diameter)
+    case inrOneRupee    // Indian 1 Rupee New Coin (20.0mm diameter)
     case creditCard     // Credit card (85.6mm × 53.98mm)
     case calibrationCard // Printed calibration card
     case custom         // User-defined reference
@@ -88,6 +89,8 @@ enum ReferenceObjectType: String, Codable {
             return "Ruler"
         case .usQuarter:
             return "US Quarter"
+        case .inrOneRupee:
+            return "₹1 Coin (New)"
         case .creditCard:
             return "Credit Card"
         case .calibrationCard:
@@ -102,6 +105,8 @@ enum ReferenceObjectType: String, Codable {
         switch self {
         case .usQuarter:
             return CGSize(width: 24.26, height: 24.26)
+        case .inrOneRupee:
+            return CGSize(width: 20.00, height: 20.00)
         case .creditCard:
             return CGSize(width: 85.6, height: 53.98)
         case .calibrationCard:

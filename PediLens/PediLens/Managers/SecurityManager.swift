@@ -18,6 +18,13 @@ protocol SecurityManagerProtocol {
     func storeEncryptionKey() throws
     func retrieveEncryptionKey() throws -> Data
     func authenticateUser() async throws -> Bool
+    func authenticateUser(reason: String?, forcePrompt: Bool) async throws -> Bool
+}
+
+extension SecurityManagerProtocol {
+    func authenticateUser() async throws -> Bool {
+        return try await authenticateUser(reason: nil, forcePrompt: false)
+    }
 }
 
 /// Errors that can occur during security operations
@@ -198,11 +205,15 @@ class SecurityManager: SecurityManagerProtocol {
     }
     
     /// Authenticates the user using biometric or device passcode
+    /// - Parameters:
+    ///   - reason: Optional custom reason for authentication
+    ///   - forcePrompt: Whether to force prompt even if session is currently valid
     /// - Returns: True if authentication succeeds
     /// - Throws: SecurityError if authentication fails
-    func authenticateUser() async throws -> Bool {
+    @discardableResult
+    func authenticateUser(reason: String? = nil, forcePrompt: Bool = false) async throws -> Bool {
         // Check if session is still valid
-        if isSessionValid() {
+        if !forcePrompt && isSessionValid() {
             return true
         }
         
@@ -222,13 +233,13 @@ class SecurityManager: SecurityManagerProtocol {
         context.localizedCancelTitle = "Cancel"
         
         // Determine the authentication type available
-        let reason = biometricType(for: context)
+        let promptReason = reason ?? biometricType(for: context)
         
         do {
             // Perform authentication
             let success = try await context.evaluatePolicy(
                 .deviceOwnerAuthentication,
-                localizedReason: reason
+                localizedReason: promptReason
             )
             
             if success {

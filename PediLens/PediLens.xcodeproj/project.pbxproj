@@ -20,6 +20,7 @@
 		1E8C436BA2267A59A885D3B7 /* PatientRecordDisplayPropertyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72B239A9A443C26B784B6D63 /* PatientRecordDisplayPropertyTests.swift */; };
 		1F560B513083BE6B00B7A31D /* GlassUIModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F560B503083BE6B00B7A31D /* GlassUIModifier.swift */; };
 		1F5DAE8C3078174B005CB1DB /* ScaleDetectionServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5DAE8B3078174B005CB1DB /* ScaleDetectionServiceTests.swift */; };
+		1F5DAEA630782001005CB1DB /* ManualScaleCalibrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5DAEA530782001005CB1DB /* ManualScaleCalibrationTests.swift */; };
 		1F5DAE8E3078194C005CB1DB /* ARMeasurementManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5DAE8D3078194C005CB1DB /* ARMeasurementManager.swift */; };
 		1F5DAE90307819E5005CB1DB /* CalibrationGuideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5DAE8F307819E5005CB1DB /* CalibrationGuideView.swift */; };
 		1F5DAE9230781A29005CB1DB /* ARMeasurementManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5DAE9130781A29005CB1DB /* ARMeasurementManagerTests.swift */; };
@@ -30,6 +31,8 @@
 		1F5DAE9C30782001005CB1DB /* NewWoundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5DAE9B30782001005CB1DB /* NewWoundView.swift */; };
 		1F5DAE9E30782001005CB1DB /* WoundDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5DAE9D30782001005CB1DB /* WoundDetailView.swift */; };
 		1F5DAEA030782001005CB1DB /* WoundListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5DAE9F30782001005CB1DB /* WoundListView.swift */; };
+		1F5DAEA230782001005CB1DB /* ManualScaleCalibrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5DAEA130782001005CB1DB /* ManualScaleCalibrationView.swift */; };
+		1F5DAEA430782001005CB1DB /* DoctorBiometricLockView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5DAEA330782001005CB1DB /* DoctorBiometricLockView.swift */; };
 		1F7911D4C92FE91F50A6D335 /* CameraManualControlsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3B54A53E3BA41099F1A938F /* CameraManualControlsTests.swift */; };
 		251F42890D0C4B0CE19A89E6 /* SecurityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C105D781E00C00030C27679C /* SecurityManager.swift */; };
 		257E24020AB1DA2373BB8885 /* PatientDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC8F4375E7BB2B11E983FA70 /* PatientDetailView.swift */; };
@@ -152,6 +155,7 @@
 		1D05157E4540FD9082569FB4 /* NoThirdPartyTransmissionPropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoThirdPartyTransmissionPropertyTests.swift; sourceTree = "<group>"; };
 		1F560B503083BE6B00B7A31D /* GlassUIModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassUIModifier.swift; sourceTree = "<group>"; };
 		1F5DAE8B3078174B005CB1DB /* ScaleDetectionServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScaleDetectionServiceTests.swift; sourceTree = "<group>"; };
+		1F5DAEA530782001005CB1DB /* ManualScaleCalibrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManualScaleCalibrationTests.swift; sourceTree = "<group>"; };
 		1F5DAE8D3078194C005CB1DB /* ARMeasurementManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ARMeasurementManager.swift; sourceTree = "<group>"; };
 		1F5DAE8F307819E5005CB1DB /* CalibrationGuideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalibrationGuideView.swift; sourceTree = "<group>"; };
 		1F5DAE9130781A29005CB1DB /* ARMeasurementManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ARMeasurementManagerTests.swift; sourceTree = "<group>"; };
@@ -162,6 +166,8 @@
 		1F5DAE9B30782001005CB1DB /* NewWoundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewWoundView.swift; sourceTree = "<group>"; };
 		1F5DAE9D30782001005CB1DB /* WoundDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WoundDetailView.swift; sourceTree = "<group>"; };
 		1F5DAE9F30782001005CB1DB /* WoundListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WoundListView.swift; sourceTree = "<group>"; };
+		1F5DAEA130782001005CB1DB /* ManualScaleCalibrationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManualScaleCalibrationView.swift; sourceTree = "<group>"; };
+		1F5DAEA330782001005CB1DB /* DoctorBiometricLockView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoctorBiometricLockView.swift; sourceTree = "<group>"; };
 		1F99A6FCFB192E6FD2774723 /* WoundDetectionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WoundDetectionService.swift; sourceTree = "<group>"; };
 		1FB34C86C993C3C499D95D15 /* DataValidationPropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataValidationPropertyTests.swift; sourceTree = "<group>"; };
 		2156F6914979AD8CA60D756E /* CoreMLWoundDetectionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreMLWoundDetectionService.swift; sourceTree = "<group>"; };
@@ -459,6 +465,7 @@
 				9AAFBDA137DEA3DD4B572623 /* WoundRecordDeletionPropertyTests.swift */,
 				8185F25801E92CEFD8652499 /* WoundSizeChangePropertyTests.swift */,
 				1F5DAE8B3078174B005CB1DB /* ScaleDetectionServiceTests.swift */,
+				1F5DAEA530782001005CB1DB /* ManualScaleCalibrationTests.swift */,
 				1F5DAE9130781A29005CB1DB /* ARMeasurementManagerTests.swift */,
 			);
 			path = PediLensTests;
@@ -515,6 +522,8 @@
 				1F5DAE9B30782001005CB1DB /* NewWoundView.swift */,
 				1F5DAE9D30782001005CB1DB /* WoundDetailView.swift */,
 				1F5DAE9F30782001005CB1DB /* WoundListView.swift */,
+				1F5DAEA130782001005CB1DB /* ManualScaleCalibrationView.swift */,
+				1F5DAEA330782001005CB1DB /* DoctorBiometricLockView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -667,6 +676,8 @@
 				1F5DAE9C30782001005CB1DB /* NewWoundView.swift in Sources */,
 				1F5DAE9E30782001005CB1DB /* WoundDetailView.swift in Sources */,
 				1F5DAEA030782001005CB1DB /* WoundListView.swift in Sources */,
+				1F5DAEA230782001005CB1DB /* ManualScaleCalibrationView.swift in Sources */,
+				1F5DAEA430782001005CB1DB /* DoctorBiometricLockView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -704,6 +715,7 @@
 				7E3934903DA0A36D9C2BAEE9 /* PatientManagerTests.swift in Sources */,
 				1E8C436BA2267A59A885D3B7 /* PatientRecordDisplayPropertyTests.swift in Sources */,
 				1F5DAE8C3078174B005CB1DB /* ScaleDetectionServiceTests.swift in Sources */,
+				1F5DAEA630782001005CB1DB /* ManualScaleCalibrationTests.swift in Sources */,
 				748969EB247735E0BF540F14 /* PatientRecordFilteringPropertyTests.swift in Sources */,
 				A8714A95A837CCD0A7775837 /* PatientSearchPropertyTests.swift in Sources */,
 				A91C423C9E248BCAEFFBD49C /* PersistenceControllerTests.swift in Sources */,
