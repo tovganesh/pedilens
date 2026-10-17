@@ -13,6 +13,7 @@ import AVFoundation
 struct CaptureSessionDetailView: View {
     let session: CaptureSession
     @Environment(\.managedObjectContext) private var viewContext
+    @Environment(\.dismiss) private var dismiss
     
     @State private var photoImage: UIImage?
     @State private var isLoadingPhoto = true
@@ -23,8 +24,11 @@ struct CaptureSessionDetailView: View {
     @State private var showingError = false
     @State private var imageIdentifier: String = ""
     @State private var showingManualTrace = false
+    @State private var showingScaleCalibration = false
+    @State private var showingDeleteConfirmation = false
     @State private var showingReanalyzeConfirmation = false
     @State private var manualTracePoints: [CGPoint] = []
+    @State private var customCalibration: MeasurementCalibration?
     
     // Export state
     @State private var showingExportSheet = false
@@ -170,6 +174,21 @@ struct CaptureSessionDetailView: View {
                             
                             Spacer()
                             
+                            // Recalibrate button
+                            Button(action: { showingScaleCalibration = true }) {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "ruler")
+                                        .font(.caption2)
+                                    Text(measurements.calibrationUsed.isUserCalibrated ? "Recalibrate" : "Adjust Scale")
+                                        .font(.caption2)
+                                        .fontWeight(.semibold)
+                                }
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                            }
+                            .pediLensGlassPill(tint: .accentColor)
+                            .accessibilityLabel("Recalibrate scale")
+                            
                             // Calibration status indicator
                             HStack(spacing: 5) {
                                 Image(systemName: measurements.calibrationUsed.calibrationType.icon)
@@ -186,7 +205,19 @@ struct CaptureSessionDetailView: View {
                         
                         // Warning if uncalibrated
                         if measurements.needsCalibrationWarning {
-                            UncalibratedMeasurementWarning()
+                            VStack(alignment: .leading, spacing: 8) {
+                                UncalibratedMeasurementWarning()
+                                
+                                Button(action: { showingScaleCalibration = true }) {
+                                    Label("Calibrate Scale (Define Reference)", systemImage: "ruler.fill")
+                                        .font(.subheadline)
+                                        .fontWeight(.semibold)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 10)
+                                }
+                                .pediLensGlassButton(prominent: true)
+                                .accessibilityLabel("Calibrate scale using interactive calipers")
+                            }
                         }
                         
                         // Structured Clinical Metric Grid
@@ -277,6 +308,16 @@ struct CaptureSessionDetailView: View {
                         }
                         .pediLensGlassButton()
                         .accessibilityLabel("Automatically analyze wound and calculate measurements")
+                        
+                        Button(action: { showingScaleCalibration = true }) {
+                            Label(customCalibration != nil ? "Scale Calibrated (Tap to Change)" : "Define Scale Reference", systemImage: "ruler")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                        }
+                        .pediLensGlassButton()
+                        .accessibilityLabel("Define scale reference using photo calipers")
                     }
                     .padding(14)
                     .pediLensGlass(cornerRadius: 14)
@@ -288,19 +329,28 @@ struct CaptureSessionDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Menu {
-                    Button(action: { exportSession(format: .pdf) }) {
-                        Label("Export PDF Report", systemImage: "doc.text.fill")
+                HStack(spacing: 8) {
+                    Menu {
+                        Button(action: { exportSession(format: .pdf) }) {
+                            Label("Export PDF Report", systemImage: "doc.text.fill")
+                        }
+                        Button(action: { exportSession(format: .images) }) {
+                            Label("Export Image Package", systemImage: "photo.stack")
+                        }
+                    } label: {
+                        Image(systemName: "square.and.arrow.up")
                     }
-                    Button(action: { exportSession(format: .images) }) {
-                        Label("Export Image Package", systemImage: "photo.stack")
+                    .pediLensGlassButton()
+                    .accessibilityLabel("Export session")
+                    .disabled(session.woundRecord == nil || isExporting)
+                    
+                    Button(role: .destructive, action: { showingDeleteConfirmation = true }) {
+                        Image(systemName: "trash")
+                            .foregroundColor(.red)
                     }
-                } label: {
-                    Image(systemName: "square.and.arrow.up")
+                    .pediLensGlassButton()
+                    .accessibilityLabel("Delete photo session")
                 }
-                .pediLensGlassButton()
-                .accessibilityLabel("Export session")
-                .disabled(session.woundRecord == nil || isExporting)
             }
         }
         .task {
@@ -330,6 +380,17 @@ struct CaptureSessionDetailView: View {
                 )
             }
         }
+        .sheet(isPresented: $showingScaleCalibration) {
+            if let image = photoImage {
+                ManualScaleCalibrationView(
+                    image: image,
+                    existingCalibration: customCalibration ?? measurements?.calibrationUsed,
+                    onSave: { newCal in
+                        applyCustomCalibration(newCal)
+                    }
+                )
+            }
+        }
         .sheet(isPresented: $showingShareSheet) {
             if let package = exportPackageToShare {
                 ActivityViewController(activityItems: [package.fileURL])
@@ -347,6 +408,14 @@ struct CaptureSessionDetailView: View {
         } message: {
             Text("This will replace the current wound boundary and measurements. This action cannot be undone.")
         }
+        .alert("Delete Photo Session", isPresented: $showingDeleteConfirmation) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) {
+                deleteCurrentSession()
+            }
+        } message: {
+            Text("Are you sure you want to permanently delete this photo and all associated wound measurements and notes? This action cannot be undone.")
+        }
         .alert("Error", isPresented: $showingError) {
             Button("OK", role: .cancel) { }
         } message: {
@@ -362,6 +431,13 @@ struct CaptureSessionDetailView: View {
         
         Task {
             do {
+                // Biometric protection for exporting patient data
+                if UserManager.shared.currentUserRole == .doctor {
+                    try await SecurityManager.shared.authenticateUser(
+                        reason: "Authenticate with Face ID or Touch ID to export clinical records",
+                        forcePrompt: false
+                    )
+                }
                 let exportManager = ExportManager.shared
                 let options = ExportOptions(
                     includePhotos: true,
@@ -490,6 +566,7 @@ struct CaptureSessionDetailView: View {
             await MainActor.run {
                 self.woundBoundary = boundary
                 self.measurements = measurement
+                self.customCalibration = savedCalibration
             }
         }
     }
@@ -501,28 +578,25 @@ struct CaptureSessionDetailView: View {
         
         Task {
             do {
-                // STEP 1: Detect reference scale for calibration
-                print("🔍 Step 1: Detecting reference scale...")
-                let scaleService = ScaleDetectionService()
+                // STEP 1: Detect reference scale for calibration or use custom user calibration
+                print("🔍 Step 1: Determining calibration...")
                 let calibration: MeasurementCalibration
-                
-                if let scaleInfo = try? await scaleService.detectReferenceScale(in: image) {
-                    // Scale detected! Use it for calibration
-                    if let detectedCalibration = MeasurementCalibration.fromReferenceScale(scaleInfo) {
+                if let custom = self.customCalibration {
+                    calibration = custom
+                    print("✅ Using user-calibrated scale: \(custom.calibrationType.displayName)")
+                } else {
+                    let scaleService = ScaleDetectionService()
+                    if let scaleInfo = try? await scaleService.detectReferenceScale(in: image),
+                       let detectedCalibration = MeasurementCalibration.fromReferenceScale(scaleInfo) {
                         calibration = detectedCalibration
                         print("✅ Scale detected: \(calibration.calibrationType.displayName)")
                         print("   Accuracy: \(calibration.accuracy.description)")
                         print("   Pixels per cm: \(String(format: "%.2f", calibration.pixelsPerCentimeter))")
                     } else {
-                        // Scale detected but calibration failed
                         calibration = MeasurementCalibration.estimated()
-                        print("⚠️ Scale detected but calibration failed, using estimated")
+                        print("ℹ️ No reference scale detected, using estimated calibration")
+                        print("   Accuracy: \(calibration.accuracy.description)")
                     }
-                } else {
-                    // No scale detected, use estimated calibration
-                    calibration = MeasurementCalibration.estimated()
-                    print("ℹ️ No reference scale detected, using estimated calibration")
-                    print("   Accuracy: \(calibration.accuracy.description)")
                 }
                 
                 // STEP 2: Load depth data if available
@@ -689,9 +763,11 @@ struct CaptureSessionDetailView: View {
                     depthData = try? await loadDepthData(sessionID: sessionID, depthPath: depthPath)
                 }
                 
-                // Determine calibration to use (reuse existing calibration, detect scale, or fallback to estimated)
+                // Determine calibration to use (custom calibration, existing calibration, detect scale, or fallback to estimated)
                 let calibration: MeasurementCalibration
-                if let existingCalData = session.measurement?.calibrationData,
+                if let custom = self.customCalibration {
+                    calibration = custom
+                } else if let existingCalData = session.measurement?.calibrationData,
                    let decodedCal = try? JSONDecoder().decode(MeasurementCalibration.self, from: existingCalData) {
                     calibration = decodedCal
                 } else if let scaleInfo = try? await ScaleDetectionService().detectReferenceScale(in: image),
@@ -772,6 +848,97 @@ struct CaptureSessionDetailView: View {
                 await MainActor.run {
                     self.isAnalyzing = false
                     self.errorMessage = "Re-analysis failed: \(error.localizedDescription)"
+                    self.showingError = true
+                }
+            }
+        }
+    }
+    
+    // MARK: - Scale Calibration & Photo Deletion
+    
+    /// Applies a newly defined or adjusted scale calibration and recalculates measurements
+    private func applyCustomCalibration(_ newCalibration: MeasurementCalibration) {
+        self.customCalibration = newCalibration
+        
+        guard let boundary = woundBoundary else {
+            // No wound boundary yet; save calibration to session measurement if exists
+            if let measurement = session.measurement {
+                if let calData = try? JSONEncoder().encode(newCalibration) {
+                    measurement.calibrationData = calData
+                    try? viewContext.save()
+                }
+            }
+            return
+        }
+        
+        Task {
+            // Load depth data if available
+            var depthData: DepthData? = nil
+            if let depthPath = session.depthDataPath, let sessionID = session.id {
+                depthData = try? await loadDepthData(sessionID: sessionID, depthPath: depthPath)
+            }
+            
+            let measurementManager = MeasurementManager()
+            let updatedMeasurements = measurementManager.calculateMeasurements(
+                boundary: boundary,
+                calibration: newCalibration,
+                depthData: depthData
+            )
+            
+            await MainActor.run {
+                // Update Core Data
+                let measurement = session.measurement ?? Measurement(context: viewContext)
+                measurement.id = measurement.id ?? UUID()
+                measurement.lengthMM = updatedMeasurements.length.value
+                measurement.widthMM = updatedMeasurements.width.value
+                measurement.areaMM2 = updatedMeasurements.area.value
+                measurement.perimeterMM = updatedMeasurements.perimeter.value
+                measurement.depthMM = updatedMeasurements.depth?.value ?? 0.0
+                measurement.volumeMM3 = updatedMeasurements.volume?.value ?? 0.0
+                measurement.isManuallyAdjusted = true
+                measurement.captureSession = session
+                
+                if let calData = try? JSONEncoder().encode(newCalibration) {
+                    measurement.calibrationData = calData
+                }
+                
+                try? viewContext.save()
+                self.measurements = updatedMeasurements
+            }
+        }
+    }
+    
+    /// Deletes the current capture session and associated files with confirmation
+    private func deleteCurrentSession() {
+        Task {
+            // Biometric gate for doctors
+            if UserManager.shared.currentUserRole == .doctor {
+                do {
+                    _ = try await SecurityManager.shared.authenticateUser(
+                        reason: "Authenticate with Face ID or Touch ID to delete clinical photo record",
+                        forcePrompt: true
+                    )
+                } catch {
+                    await MainActor.run {
+                        self.errorMessage = "Biometric authentication required to delete record."
+                        self.showingError = true
+                    }
+                    return
+                }
+            }
+            
+            // Delete files on disk
+            if let sessionID = session.id {
+                try? await FileStorageManager.shared.deleteFiles(for: sessionID)
+            }
+            
+            await MainActor.run {
+                session.delete(from: viewContext)
+                do {
+                    try viewContext.save()
+                    dismiss()
+                } catch {
+                    self.errorMessage = "Failed to delete photo session: \(error.localizedDescription)"
                     self.showingError = true
                 }
             }

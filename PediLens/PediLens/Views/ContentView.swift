@@ -17,6 +17,8 @@ struct ContentView: View {
         animation: .default)
     private var users: FetchedResults<User>
     
+    @State private var isDoctorUnlocked: Bool = false
+    
     var currentUser: User? {
         users.first
     }
@@ -26,7 +28,20 @@ struct ContentView: View {
             if let user = currentUser, let role = userManager.currentUserRole {
                 switch role {
                 case .doctor:
-                    PatientListView(user: user)
+                    if isDoctorUnlocked {
+                        PatientListView(user: user)
+                    } else {
+                        DoctorBiometricLockView(
+                            onUnlocked: {
+                                isDoctorUnlocked = true
+                            },
+                            onSwitchRole: {
+                                Task {
+                                    try? await userManager.setUserRole(.patient)
+                                }
+                            }
+                        )
+                    }
                 case .patient:
                     WoundListView()
                 }
@@ -37,6 +52,21 @@ struct ContentView: View {
         }
         .onAppear {
             userManager.loadCurrentUser()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .sessionExpired)) { _ in
+            // Re-lock doctor mode when security session expires
+            isDoctorUnlocked = false
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.willResignActiveNotification)) { _ in
+            // Re-lock doctor mode when app leaves foreground for security
+            if userManager.currentUserRole == .doctor {
+                isDoctorUnlocked = false
+            }
+        }
+        .onChange(of: userManager.currentUserRole) { newRole in
+            if newRole != .doctor {
+                isDoctorUnlocked = false
+            }
         }
     }
 }

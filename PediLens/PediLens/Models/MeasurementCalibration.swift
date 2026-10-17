@@ -9,7 +9,7 @@ import Foundation
 import CoreGraphics
 
 /// Calibration data for accurate wound measurements
-struct MeasurementCalibration: Codable {
+struct MeasurementCalibration: Codable, Equatable {
     /// Conversion ratio from pixels to millimeters
     let pixelsPerMillimeter: Double
     
@@ -127,6 +127,51 @@ struct MeasurementCalibration: Codable {
         )
     }
     
+    /// Creates manual calibration defined by the user mapping photo pixels to real-world reference
+    static func manual(
+        pixelsPerMillimeter: Double,
+        referenceType: ReferenceObjectType,
+        referenceLengthMM: Double,
+        pixelDistance: Double,
+        notes: String? = nil
+    ) -> MeasurementCalibration {
+        var meta: [String: String] = [
+            "calibrationMethod": "manualCalipers",
+            "referenceType": referenceType.displayName,
+            "referenceLengthMM": String(format: "%.2f", referenceLengthMM),
+            "pixelDistance": String(format: "%.2f", pixelDistance)
+        ]
+        if let notes = notes {
+            meta["notes"] = notes
+        }
+        
+        let refObj: ReferenceObject
+        switch referenceType {
+        case .ruler:
+            refObj = .ruler(lengthMM: referenceLengthMM)
+        case .usQuarter:
+            refObj = .coin(type: .usQuarter)
+        default:
+            refObj = .custom(name: referenceType.displayName, dimensionMM: referenceLengthMM)
+        }
+        
+        return MeasurementCalibration(
+            pixelsPerMillimeter: pixelsPerMillimeter,
+            calibrationType: .referenceScale(
+                objectType: referenceType,
+                confidence: 1.0
+            ),
+            calibrationDate: Date(),
+            metadata: meta,
+            referenceObject: refObj
+        )
+    }
+    
+    /// Returns true if this calibration was manually set or verified by user
+    var isUserCalibrated: Bool {
+        return metadata?["calibrationMethod"] == "manualCalipers"
+    }
+    
     // MARK: - Legacy Initializer
     
     /// Legacy initializer for backward compatibility
@@ -217,7 +262,7 @@ struct MeasurementCalibration: Codable {
 // MARK: - Legacy Support
 
 /// Reference object used for measurement calibration (legacy)
-enum ReferenceObject: Codable {
+enum ReferenceObject: Codable, Equatable {
     /// Standard ruler with known length
     case ruler(lengthMM: Double)
     
@@ -229,7 +274,7 @@ enum ReferenceObject: Codable {
 }
 
 /// Common coin types with standard dimensions (legacy)
-enum CoinType: Codable {
+enum CoinType: Codable, Equatable {
     case usQuarter  // 24.26mm diameter
     case usDime     // 17.91mm diameter
     case usPenny    // 19.05mm diameter
@@ -247,7 +292,7 @@ enum CoinType: Codable {
 }
 
 /// Depth calibration data for 3D measurements (legacy)
-struct DepthCalibration: Codable {
+struct DepthCalibration: Codable, Equatable {
     /// Scale factor to convert depth map values to millimeters
     let depthScale: Float
     

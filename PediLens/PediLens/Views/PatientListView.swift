@@ -18,6 +18,10 @@ struct PatientListView: View {
     @State private var showingAddPatient = false
     @State private var showingStorageSheet = false
     @State private var selectedPatient: Patient?
+    @State private var patientToDelete: Patient?
+    @State private var showingDeleteConfirmation = false
+    @State private var errorMessage: String?
+    @State private var showingError = false
     
     @FetchRequest(
         sortDescriptors: [NSSortDescriptor(keyPath: \Patient.name, ascending: true)],
@@ -90,6 +94,25 @@ struct PatientListView: View {
             .sheet(isPresented: $showingStorageSheet) {
                 StorageManagementView()
             }
+            .alert("Delete Patient Record", isPresented: $showingDeleteConfirmation) {
+                Button("Cancel", role: .cancel) { patientToDelete = nil }
+                Button("Delete", role: .destructive) {
+                    confirmDeletePatient()
+                }
+            } message: {
+                if let patient = patientToDelete {
+                    Text("Are you sure you want to permanently delete \(patient.name ?? "this patient") and all associated wound records and photos? Biometric authentication is required.")
+                } else {
+                    Text("Are you sure you want to delete this patient?")
+                }
+            }
+            .alert("Error", isPresented: $showingError) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                if let errorMessage = errorMessage {
+                    Text(errorMessage)
+                }
+            }
         }
     }
     
@@ -100,7 +123,7 @@ struct PatientListView: View {
                     PatientRowView(patient: patient)
                 }
             }
-            .onDelete(perform: deletePatients)
+            .onDelete(perform: promptDeletePatient)
         }
         .listStyle(InsetGroupedListStyle())
     }
@@ -142,14 +165,31 @@ struct PatientListView: View {
         .accessibilityElement(children: .contain)
     }
     
-    private func deletePatients(at offsets: IndexSet) {
+    private func promptDeletePatient(at offsets: IndexSet) {
+        if let index = offsets.first {
+            patientToDelete = filteredPatients[index]
+            showingDeleteConfirmation = true
+        }
+    }
+    
+    private func confirmDeletePatient() {
+        guard let patient = patientToDelete else { return }
+        
         Task {
-            for index in offsets {
-                let patient = filteredPatients[index]
-                do {
-                    try await PatientManager.shared.deletePatient(patient)
-                } catch {
-                    print("Error deleting patient: \(error)")
+            do {
+                try await SecurityManager.shared.authenticateUser(
+                    reason: "Authenticate with Face ID or Touch ID to permanently delete patient records",
+                    forcePrompt: true
+                )
+                try await PatientManager.shared.deletePatient(patient)
+                await MainActor.run {
+                    patientToDelete = nil
+                }
+            } catch {
+                await MainActor.run {
+                    errorMessage = "Failed to delete patient: \(error.localizedDescription)"
+                    showingError = true
+                    patientToDelete = nil
                 }
             }
         }

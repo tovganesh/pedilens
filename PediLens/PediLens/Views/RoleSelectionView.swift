@@ -126,6 +126,13 @@ struct RoleSelectionView: View {
         
         Task {
             do {
+                if role == .doctor {
+                    try await SecurityManager.shared.authenticateUser(
+                        reason: "Biometric authentication is required to access Doctor mode",
+                        forcePrompt: true
+                    )
+                }
+                
                 try await UserManager.shared.setUserRole(role)
                 
                 await MainActor.run {
@@ -134,7 +141,7 @@ struct RoleSelectionView: View {
             } catch {
                 await MainActor.run {
                     isLoading = false
-                    errorMessage = "Failed to save role: \(error.localizedDescription)"
+                    errorMessage = "Authentication failed: \(error.localizedDescription)"
                 }
             }
         }

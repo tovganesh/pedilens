@@ -9,7 +9,7 @@ import Foundation
 import CoreGraphics
 
 /// Accuracy level for measurements
-enum MeasurementAccuracy: String, Codable {
+enum MeasurementAccuracy: String, Codable, Equatable {
     case high      // ±1-2mm (LiDAR)
     case medium    // ±2-5mm (Reference scale)
     case low       // ±10-20mm (Estimated)
@@ -35,7 +35,7 @@ enum MeasurementAccuracy: String, Codable {
 }
 
 /// Type of calibration used for measurements
-enum CalibrationType: Codable {
+enum CalibrationType: Codable, Equatable {
     case lidar(depth: Float, confidence: Float)
     case referenceScale(objectType: ReferenceObjectType, confidence: Float)
     case estimated
@@ -75,7 +75,7 @@ enum CalibrationType: Codable {
 }
 
 /// Types of reference objects that can be used for calibration
-enum ReferenceObjectType: String, Codable {
+enum ReferenceObjectType: String, Codable, Equatable {
     case ruler          // Standard ruler with markings
     case usQuarter      // US Quarter (24.26mm diameter)
     case creditCard     // Credit card (85.6mm × 53.98mm)
