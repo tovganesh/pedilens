@@ -153,4 +153,71 @@ class ManualScaleCalibrationTests: XCTestCase {
         XCTAssertEqual(updatedMeasurements.calibrationUsed.calibrationType, CalibrationType.referenceScale(objectType: .custom, confidence: 1.0))
         XCTAssertTrue(updatedMeasurements.calibrationUsed.isUserCalibrated)
     }
+    
+    // MARK: - Fuzzy Anatomical Calibration Tests
+    
+    func testFuzzyAnatomicalCalibration_Forefoot_CalculatesAccurately() {
+        let referenceBreadthMM = ReferenceObjectType.adultForefoot.knownDimensions?.width ?? 98.0
+        XCTAssertEqual(referenceBreadthMM, 98.0)
+        XCTAssertTrue(ReferenceObjectType.adultForefoot.isAnatomical)
+        XCTAssertEqual(ReferenceObjectType.adultForefoot.displayName, "Adult Forefoot (~9.8cm)")
+        
+        // Forefoot spanning 490 pixels across transverse metatarsal heads -> 5.0 px/mm
+        let pixelSpan: CGFloat = 490.0
+        let pixelsPerMM = Double(pixelSpan) / referenceBreadthMM
+        
+        let calibration = MeasurementCalibration.fuzzyAnatomical(
+            pixelsPerMillimeter: pixelsPerMM,
+            landmark: .adultForefoot,
+            referenceLengthMM: referenceBreadthMM,
+            pixelDistance: Double(pixelSpan),
+            confidence: 0.70
+        )
+        
+        XCTAssertEqual(calibration.pixelsPerMillimeter, 5.0, accuracy: 0.001)
+        XCTAssertEqual(calibration.accuracy, .medium)
+        XCTAssertEqual(calibration.calibrationType.displayName, "Fuzzy Scale (Adult Forefoot (~9.8cm))")
+        XCTAssertEqual(calibration.metadata?["isFuzzyAnatomical"], "true")
+        XCTAssertEqual(calibration.metadata?["calibrationMethod"], "fuzzyAnatomical")
+        XCTAssertEqual(calibration.metadata?["referenceType"], "Adult Forefoot (~9.8cm)")
+        
+        // Test measurement calculation with this fuzzy calibration
+        let manager = MeasurementManager()
+        let woundSquare = WoundBoundary(
+            points: [CGPoint(x: 0, y: 0), CGPoint(x: 50, y: 0), CGPoint(x: 50, y: 50), CGPoint(x: 0, y: 50)],
+            confidence: 0.85,
+            boundingBox: CGRect(x: 0, y: 0, width: 50, height: 50),
+            detectionMethod: .automatic(modelVersion: "1.0")
+        )
+        let measurements = manager.calculateMeasurements(boundary: woundSquare, calibration: calibration, depthData: nil)
+        // 50 pixels / (5 px/mm) = 10 mm (1.0 cm)
+        XCTAssertEqual(measurements.length.value, 10.0, accuracy: 0.5)
+        XCTAssertEqual(measurements.width.value, 10.0, accuracy: 0.5)
+    }
+    
+    func testFuzzyAnatomicalCalibration_FingerAndToes_PresetsAndAccuracy() {
+        let anatomicalTypes: [ReferenceObjectType] = [
+            .adultForefoot,
+            .adultHallux,
+            .adultLesserToe,
+            .adultFinger,
+            .adultFootLength
+        ]
+        
+        for type in anatomicalTypes {
+            XCTAssertTrue(type.isAnatomical, "\(type) should be flagged as anatomical")
+            let calibType = CalibrationType.referenceScale(objectType: type, confidence: 0.75)
+            XCTAssertTrue(calibType.displayName.contains("Fuzzy Scale"), "\(calibType.displayName) should contain 'Fuzzy Scale'")
+            XCTAssertNotNil(type.knownDimensions, "\(type) should provide standard adult dimensions")
+            XCTAssertGreaterThan(type.knownDimensions!.width, 0)
+        }
+        
+        // Check calibration presets in ManualScaleCalibrationView
+        let presets = CalibrationPreset.defaults
+        XCTAssertTrue(presets.contains(where: { $0.id == "adultForefoot" }))
+        XCTAssertTrue(presets.contains(where: { $0.id == "adultHallux" }))
+        XCTAssertTrue(presets.contains(where: { $0.id == "adultLesserToe" }))
+        XCTAssertTrue(presets.contains(where: { $0.id == "adultFinger" }))
+    }
 }
+

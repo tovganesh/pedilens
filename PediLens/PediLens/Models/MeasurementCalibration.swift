@@ -102,6 +102,16 @@ struct MeasurementCalibration: Codable, Equatable {
             refObj = .custom(name: "Credit Card", dimensionMM: 85.6)
         case .calibrationCard:
             refObj = .custom(name: "Calibration Card", dimensionMM: 50.0)
+        case .adultForefoot:
+            refObj = .custom(name: "Adult Forefoot", dimensionMM: 98.0)
+        case .adultHallux:
+            refObj = .custom(name: "Adult Great Toe", dimensionMM: 26.0)
+        case .adultLesserToe:
+            refObj = .custom(name: "Lesser Toe", dimensionMM: 14.0)
+        case .adultFinger:
+            refObj = .custom(name: "Clinician Finger", dimensionMM: 18.0)
+        case .adultFootLength:
+            refObj = .custom(name: "Adult Foot Length", dimensionMM: 255.0)
         case .custom:
             refObj = .custom(name: "Custom", dimensionMM: 10.0)
         }
@@ -126,6 +136,33 @@ struct MeasurementCalibration: Codable, Equatable {
             pixelsPerMillimeter: pixelsPerMillimeter,
             calibrationType: .estimated,
             metadata: ["note": "Estimated calibration - use reference scale for accuracy"]
+        )
+    }
+    
+    /// Creates a fuzzy anatomical calibration based on standard anthropometric body dimensions (e.g. forefoot width ~98mm, toe ~26mm)
+    static func fuzzyAnatomical(
+        pixelsPerMillimeter: Double,
+        landmark: ReferenceObjectType,
+        referenceLengthMM: Double,
+        pixelDistance: Double,
+        confidence: Float = 0.75,
+        notes: String? = nil
+    ) -> MeasurementCalibration {
+        var meta: [String: String] = [
+            "referenceType": landmark.displayName,
+            "calibrationMethod": "fuzzyAnatomical",
+            "referenceLengthMM": String(format: "%.2f", referenceLengthMM),
+            "pixelDistance": String(format: "%.2f", pixelDistance),
+            "isFuzzyAnatomical": "true"
+        ]
+        if let notes = notes {
+            meta["notes"] = notes
+        }
+        return MeasurementCalibration(
+            pixelsPerMillimeter: pixelsPerMillimeter,
+            calibrationType: .referenceScale(objectType: landmark, confidence: confidence),
+            metadata: meta,
+            referenceObject: .custom(name: landmark.displayName, dimensionMM: referenceLengthMM)
         )
     }
     

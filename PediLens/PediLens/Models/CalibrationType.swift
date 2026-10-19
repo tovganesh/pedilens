@@ -56,7 +56,11 @@ enum CalibrationType: Codable, Equatable {
         case .lidar(let depth, _):
             return "LiDAR (depth: \(String(format: "%.1f", depth * 100))cm)"
         case .referenceScale(let type, _):
-            return "Reference Scale (\(type.displayName))"
+            if type.isAnatomical {
+                return "Fuzzy Scale (\(type.displayName))"
+            } else {
+                return "Reference Scale (\(type.displayName))"
+            }
         case .estimated:
             return "Estimated"
         }
@@ -66,8 +70,8 @@ enum CalibrationType: Codable, Equatable {
         switch self {
         case .lidar:
             return "camera.metering.center.weighted"
-        case .referenceScale:
-            return "ruler"
+        case .referenceScale(let type, _):
+            return type.isAnatomical ? "shoeprints.fill" : "ruler"
         case .estimated:
             return "questionmark.circle"
         }
@@ -81,6 +85,11 @@ enum ReferenceObjectType: String, Codable, Equatable {
     case inrOneRupee    // Indian 1 Rupee New Coin (20.0mm diameter)
     case creditCard     // Credit card (85.6mm × 53.98mm)
     case calibrationCard // Printed calibration card
+    case adultForefoot  // Adult Forefoot Breadth (~98.0mm)
+    case adultHallux    // Adult Great Toe (~26.0mm)
+    case adultLesserToe // Adult Lesser Toe (~14.0mm)
+    case adultFinger    // Clinician Finger (~18.0mm)
+    case adultFootLength // Adult Foot Length (~255.0mm)
     case custom         // User-defined reference
     
     var displayName: String {
@@ -95,8 +104,28 @@ enum ReferenceObjectType: String, Codable, Equatable {
             return "Credit Card"
         case .calibrationCard:
             return "Calibration Card"
+        case .adultForefoot:
+            return "Adult Forefoot (~9.8cm)"
+        case .adultHallux:
+            return "Adult Great Toe (~2.6cm)"
+        case .adultLesserToe:
+            return "Lesser Toe (~1.4cm)"
+        case .adultFinger:
+            return "Clinician Finger (~1.8cm)"
+        case .adultFootLength:
+            return "Adult Foot Length (~25.5cm)"
         case .custom:
             return "Custom Reference"
+        }
+    }
+    
+    /// Whether this is an anthropometric anatomical reference
+    var isAnatomical: Bool {
+        switch self {
+        case .adultForefoot, .adultHallux, .adultLesserToe, .adultFinger, .adultFootLength:
+            return true
+        default:
+            return false
         }
     }
     
@@ -111,6 +140,16 @@ enum ReferenceObjectType: String, Codable, Equatable {
             return CGSize(width: 85.6, height: 53.98)
         case .calibrationCard:
             return CGSize(width: 100.0, height: 100.0) // 10cm × 10cm
+        case .adultForefoot:
+            return CGSize(width: 98.0, height: 98.0)
+        case .adultHallux:
+            return CGSize(width: 26.0, height: 26.0)
+        case .adultLesserToe:
+            return CGSize(width: 14.0, height: 14.0)
+        case .adultFinger:
+            return CGSize(width: 18.0, height: 18.0)
+        case .adultFootLength:
+            return CGSize(width: 255.0, height: 255.0)
         case .ruler, .custom:
             return nil // Variable or user-defined
         }
