@@ -34,6 +34,38 @@ struct CalibrationPreset: Identifiable, Hashable {
             description: "24.26 mm diameter"
         ),
         CalibrationPreset(
+            id: "adultForefoot",
+            name: "Adult Forefoot",
+            referenceType: .adultForefoot,
+            lengthMM: 98.00,
+            icon: "shoeprints.fill",
+            description: "98.0 mm metatarsal ball breadth"
+        ),
+        CalibrationPreset(
+            id: "adultHallux",
+            name: "Adult Great Toe",
+            referenceType: .adultHallux,
+            lengthMM: 26.00,
+            icon: "oval.portrait.fill",
+            description: "26.0 mm hallux breadth"
+        ),
+        CalibrationPreset(
+            id: "adultLesserToe",
+            name: "Lesser Toe",
+            referenceType: .adultLesserToe,
+            lengthMM: 14.00,
+            icon: "oval.portrait",
+            description: "14.0 mm lesser toe breadth"
+        ),
+        CalibrationPreset(
+            id: "adultFinger",
+            name: "Clinician Finger",
+            referenceType: .adultFinger,
+            lengthMM: 18.00,
+            icon: "hand.point.up.fill",
+            description: "18.0 mm finger breadth"
+        ),
+        CalibrationPreset(
             id: "creditCardWidth",
             name: "Credit Card (Width)",
             referenceType: .creditCard,
@@ -468,13 +500,25 @@ struct ManualScaleCalibrationView: View {
     private func applyCalibration() {
         guard pixelDistance >= 15 else { return }
         
-        let calibration = MeasurementCalibration.manual(
-            pixelsPerMillimeter: pixelsPerMillimeter,
-            referenceType: selectedPreset.referenceType,
-            referenceLengthMM: effectiveLengthMM,
-            pixelDistance: pixelDistance,
-            notes: selectedPreset.name
-        )
+        let calibration: MeasurementCalibration
+        if selectedPreset.referenceType.isAnatomical {
+            calibration = MeasurementCalibration.fuzzyAnatomical(
+                pixelsPerMillimeter: pixelsPerMillimeter,
+                landmark: selectedPreset.referenceType,
+                referenceLengthMM: effectiveLengthMM,
+                pixelDistance: pixelDistance,
+                confidence: 0.75,
+                notes: selectedPreset.name
+            )
+        } else {
+            calibration = MeasurementCalibration.manual(
+                pixelsPerMillimeter: pixelsPerMillimeter,
+                referenceType: selectedPreset.referenceType,
+                referenceLengthMM: effectiveLengthMM,
+                pixelDistance: pixelDistance,
+                notes: selectedPreset.name
+            )
+        }
         
         onSave(calibration)
         dismiss()
