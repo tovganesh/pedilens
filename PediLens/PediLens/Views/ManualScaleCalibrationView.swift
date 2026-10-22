@@ -2,7 +2,11 @@
 //  ManualScaleCalibrationView.swift
 //  PediLens
 //
-//  Interactive caliper interface for manual reference scale definition and photo calibration
+//  Interactive caliper interface for manual reference scale definition and photo calibration.
+//  Allows clinicians and patients to align dual precision calipers across any known physical
+//  reference object (ruler markings, INR coin, US quarter, credit card, anatomical landmarks).
+//  Computes true pixels-per-millimeter (px/mm) and calibrates wound area measurements.
+//  Adapted for iPhone Duo Cover Screen & Internal Screen.
 //
 
 import SwiftUI
@@ -116,17 +120,17 @@ struct CalibrationPreset: Identifiable, Hashable {
     ]
 }
 
-/// Interactive scale calibration view
 struct ManualScaleCalibrationView: View {
     let image: UIImage
-    let existingCalibration: MeasurementCalibration?
-    let onSave: (MeasurementCalibration) -> Void
+    var existingCalibration: MeasurementCalibration?
+    var onSave: (MeasurementCalibration) -> Void
     
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.duoGeometry) private var duoGeometry
     
-    // Preset selection
+    // Preset selection & custom input
     @State private var selectedPreset: CalibrationPreset = CalibrationPreset.defaults[0]
-    @State private var customLengthText: String = "10"
+    @State private var customLengthText: String = "10.0"
     @State private var customUnitIsCM: Bool = false
     
     // Caliper Pin positions in view coordinates
@@ -178,271 +182,44 @@ struct ManualScaleCalibrationView: View {
     
     var body: some View {
         NavigationView {
-            VStack(spacing: 0) {
-                // Header instruction banner
-                HStack(spacing: 8) {
-                    Image(systemName: "info.circle.fill")
-                        .foregroundColor(.accentColor)
-                    Text("Drag the calipers to span the reference object (e.g. coin, card, or ruler markings).")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color(.secondarySystemBackground))
-                
-                // Interactive Photo Canvas
-                GeometryReader { geometry in
-                    ZStack {
-                        // Background image
-                        Image(uiImage: image)
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
+            GeometryReader { proxy in
+                let availableWidth = proxy.size.width
+                Group {
+                    if availableWidth >= 780 {
+                        // Wide Screen / Internal Screen: Side-by-Side Studio Layout
+                        HStack(spacing: 0) {
+                            VStack(spacing: 0) {
+                                headerInstructionBanner
+                                photoCanvas
+                            }
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .contentShape(Rectangle())
-                        
-                        if isInitialized {
-                            // Caliper line and endcaps
-                            CaliperOverlay(
-                                pinA: pinA,
-                                pinB: pinB,
-                                pixelDistance: pixelDistance
-                            )
                             
-                            // Pin A Handle
-                            PinHandleView(
-                                pinID: .pinA,
-                                position: pinA,
-                                isSelected: selectedPin == .pinA,
-                                isDragging: draggingPin == .pinA,
-                                onDrag: { newPos in
-                                    pinA = clampPoint(newPos, in: geometry.size)
-                                    selectedPin = .pinA
-                                },
-                                onDragStateChanged: { isDragging in
-                                    draggingPin = isDragging ? .pinA : nil
-                                    if isDragging { selectedPin = .pinA }
-                                }
-                            )
-                            
-                            // Pin B Handle
-                            PinHandleView(
-                                pinID: .pinB,
-                                position: pinB,
-                                isSelected: selectedPin == .pinB,
-                                isDragging: draggingPin == .pinB,
-                                onDrag: { newPos in
-                                    pinB = clampPoint(newPos, in: geometry.size)
-                                    selectedPin = .pinB
-                                },
-                                onDragStateChanged: { isDragging in
-                                    draggingPin = isDragging ? .pinB : nil
-                                    if isDragging { selectedPin = .pinB }
-                                }
-                            )
-                            
-                            // Magnifier Loupe during drag
-                            if let activePin = draggingPin {
-                                let targetPos = activePin == .pinA ? pinA : pinB
-                                MagnifierLoupeView(
-                                    image: image,
-                                    aspectFit: aspectFitGeometry,
-                                    focusPoint: targetPos
-                                )
-                                .position(
-                                    x: min(max(targetPos.x, 50), geometry.size.width - 50),
-                                    y: max(targetPos.y - 70, 50)
-                                )
+                            // Crease separator
+                            ZStack {
+                                Rectangle()
+                                    .fill(Color(uiColor: .separator).opacity(0.3))
+                                    .frame(width: 1)
                             }
+                            .frame(width: 16)
+                            
+                            ScrollView {
+                                VStack(spacing: 14) {
+                                    controlsContent(isVertical: true)
+                                }
+                                .padding(16)
+                            }
+                            .frame(width: min(340, availableWidth * 0.42))
                         }
-                    }
-                    .onAppear {
-                        containerSize = geometry.size
-                        initializePins(in: geometry.size)
-                    }
-                    .onChange(of: geometry.size) { newSize in
-                        containerSize = newSize
-                        if !isInitialized {
-                            initializePins(in: newSize)
+                    } else {
+                        // Cover Screen, Modal Sheet, or Compact Flow (< 620 pt)
+                        VStack(spacing: 0) {
+                            headerInstructionBanner
+                            photoCanvas
+                            controlsContent(isVertical: false)
                         }
+                        .duoCoverScreenPadding()
                     }
                 }
-                .clipped()
-                
-                // Bottom Calibration Controls & Presets
-                VStack(spacing: 12) {
-                    // Reference preset horizontal scroll
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack {
-                            Text("SELECT REFERENCE")
-                                .font(.caption2)
-                                .fontWeight(.semibold)
-                                .foregroundColor(.secondary)
-                            Spacer()
-                            // Nudge buttons for active pin
-                            HStack(spacing: 8) {
-                                Text("Nudge \(selectedPin == .pinA ? "Pin A" : "Pin B"):")
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                                Button(action: { nudgeActivePin(dx: -1, dy: 0) }) {
-                                    Image(systemName: "arrow.left")
-                                        .font(.caption2)
-                                }
-                                Button(action: { nudgeActivePin(dx: 1, dy: 0) }) {
-                                    Image(systemName: "arrow.right")
-                                        .font(.caption2)
-                                }
-                                Button(action: { nudgeActivePin(dx: 0, dy: -1) }) {
-                                    Image(systemName: "arrow.up")
-                                        .font(.caption2)
-                                }
-                                Button(action: { nudgeActivePin(dx: 0, dy: 1) }) {
-                                    Image(systemName: "arrow.down")
-                                        .font(.caption2)
-                                }
-                            }
-                        }
-                        .padding(.horizontal, 16)
-                        
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 10) {
-                                ForEach(CalibrationPreset.defaults) { preset in
-                                    Button(action: {
-                                        withAnimation(.easeInOut(duration: 0.2)) {
-                                            selectedPreset = preset
-                                        }
-                                    }) {
-                                        HStack(spacing: 6) {
-                                            Image(systemName: preset.icon)
-                                                .font(.caption)
-                                            VStack(alignment: .leading, spacing: 1) {
-                                                Text(preset.name)
-                                                    .font(.caption)
-                                                    .fontWeight(.semibold)
-                                                    .lineLimit(1)
-                                                Text(preset.description)
-                                                    .font(.caption2)
-                                                    .foregroundColor(.secondary)
-                                                    .lineLimit(1)
-                                            }
-                                        }
-                                        .fixedSize(horizontal: true, vertical: false)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 8)
-                                    }
-                                    .pediLensGlassPill(tint: selectedPreset.id == preset.id ? .accentColor : nil)
-                                    .foregroundColor(selectedPreset.id == preset.id ? .accentColor : .primary)
-                                }
-                            }
-                            .padding(.horizontal, 16)
-                        }
-                    }
-                    
-                    // Custom size input row if custom is selected
-                    if selectedPreset.id == "custom" {
-                        HStack(spacing: 12) {
-                            Text("Known Length:")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                            TextField("Length", text: $customLengthText)
-                                .keyboardType(.decimalPad)
-                                .textFieldStyle(.roundedBorder)
-                                .frame(width: 80)
-                            
-                            Picker("Unit", selection: $customUnitIsCM) {
-                                Text("mm").tag(false)
-                                Text("cm").tag(true)
-                            }
-                            .pickerStyle(.segmented)
-                            .frame(width: 100)
-                        }
-                        .padding(.horizontal, 16)
-                    }
-                    
-                    // Live Calibration Metric Summary Card
-                    HStack(spacing: 12) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("KNOWN REFERENCE")
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                                .lineLimit(1)
-                            Text(String(format: "%.2f mm", effectiveLengthMM))
-                                .font(.subheadline)
-                                .fontWeight(.bold)
-                                .foregroundColor(.primary)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.85)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        
-                        Divider().frame(height: 24)
-                        
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("PIXEL DISTANCE")
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                                .lineLimit(1)
-                            Text(String(format: "%.1f px", pixelDistance))
-                                .font(.subheadline)
-                                .fontWeight(.bold)
-                                .foregroundColor(.primary)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.85)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        
-                        Divider().frame(height: 24)
-                        
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("CALIBRATED SCALE")
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                                .lineLimit(1)
-                            Text(String(format: "%.2f px/mm", pixelsPerMillimeter))
-                                .font(.subheadline)
-                                .fontWeight(.bold)
-                                .foregroundColor(.accentColor)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.85)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    .padding(10)
-                    .frame(maxWidth: .infinity)
-                    .pediLensGlass(cornerRadius: 12)
-                    .padding(.horizontal, 16)
-                    
-                    // Action Buttons
-                    HStack(spacing: 12) {
-                        Button(action: { dismiss() }) {
-                            Text("Cancel")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                                .padding(.horizontal, 18)
-                                .padding(.vertical, 12)
-                        }
-                        .pediLensGlassButton()
-                        
-                        Button(action: applyCalibration) {
-                            HStack(spacing: 6) {
-                                Image(systemName: "checkmark.circle.fill")
-                                Text("Apply Calibration")
-                                    .fontWeight(.semibold)
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.85)
-                            }
-                            .font(.subheadline)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                        }
-                        .pediLensGlassButton(prominent: true)
-                        .disabled(pixelDistance < 15)
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 12)
-                }
-                .background(Color(.systemBackground))
             }
             .navigationTitle("Calibrate Scale")
             .navigationBarTitleDisplayMode(.inline)
@@ -457,6 +234,314 @@ struct ManualScaleCalibrationView: View {
                 }
             }
         }
+    }
+    
+    // MARK: - Subviews
+    
+    private var headerInstructionBanner: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "info.circle.fill")
+                .foregroundColor(.accentColor)
+            Text("Drag the calipers to span the reference object (e.g. coin, card, or ruler markings).")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, duoGeometry.isCoverScreen ? 6 : 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(.secondarySystemBackground))
+    }
+    
+    private var photoCanvas: some View {
+        GeometryReader { geometry in
+            ZStack {
+                // Background image
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .contentShape(Rectangle())
+                
+                if isInitialized {
+                    // Caliper line and endcaps
+                    CaliperOverlay(
+                        pinA: pinA,
+                        pinB: pinB,
+                        pixelDistance: pixelDistance
+                    )
+                    
+                    // Pin A Handle
+                    PinHandleView(
+                        pinID: .pinA,
+                        position: pinA,
+                        isSelected: selectedPin == .pinA,
+                        isDragging: draggingPin == .pinA,
+                        onDrag: { newPos in
+                            pinA = clampPoint(newPos, in: geometry.size)
+                            selectedPin = .pinA
+                        },
+                        onDragStateChanged: { isDragging in
+                            draggingPin = isDragging ? .pinA : nil
+                            if isDragging { selectedPin = .pinA }
+                        }
+                    )
+                    
+                    // Pin B Handle
+                    PinHandleView(
+                        pinID: .pinB,
+                        position: pinB,
+                        isSelected: selectedPin == .pinB,
+                        isDragging: draggingPin == .pinB,
+                        onDrag: { newPos in
+                            pinB = clampPoint(newPos, in: geometry.size)
+                            selectedPin = .pinB
+                        },
+                        onDragStateChanged: { isDragging in
+                            draggingPin = isDragging ? .pinB : nil
+                            if isDragging { selectedPin = .pinB }
+                        }
+                    )
+                    
+                    // Magnifier Loupe during drag
+                    if let activePin = draggingPin {
+                        let targetPos = activePin == .pinA ? pinA : pinB
+                        MagnifierLoupeView(
+                            image: image,
+                            aspectFit: aspectFitGeometry,
+                            focusPoint: targetPos
+                        )
+                        .position(
+                            x: min(max(targetPos.x, 50), geometry.size.width - 50),
+                            y: max(targetPos.y - 70, 50)
+                        )
+                    }
+                }
+            }
+            .onAppear {
+                containerSize = geometry.size
+                initializePins(in: geometry.size)
+            }
+            .onChange(of: geometry.size) { newSize in
+                containerSize = newSize
+                if !isInitialized {
+                    initializePins(in: newSize)
+                }
+            }
+        }
+        .clipped()
+    }
+    
+    @ViewBuilder
+    private func controlsContent(isVertical: Bool) -> some View {
+        VStack(spacing: duoGeometry.isCoverScreen ? 8 : 12) {
+            // Reference preset horizontal scroll / vertical stack
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text("SELECT REFERENCE")
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    // Nudge buttons for active pin
+                    HStack(spacing: 6) {
+                        Text("Nudge \(selectedPin == .pinA ? "Pin A" : "Pin B"):")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                        Button(action: { nudgeActivePin(dx: -1, dy: 0) }) {
+                            Image(systemName: "arrow.left")
+                                .font(.caption2)
+                        }
+                        Button(action: { nudgeActivePin(dx: 1, dy: 0) }) {
+                            Image(systemName: "arrow.right")
+                                .font(.caption2)
+                        }
+                        Button(action: { nudgeActivePin(dx: 0, dy: -1) }) {
+                            Image(systemName: "arrow.up")
+                                .font(.caption2)
+                        }
+                        Button(action: { nudgeActivePin(dx: 0, dy: 1) }) {
+                            Image(systemName: "arrow.down")
+                                .font(.caption2)
+                        }
+                    }
+                }
+                .padding(.horizontal, isVertical ? 0 : 16)
+                
+                if isVertical {
+                    LazyVStack(spacing: 8) {
+                        ForEach(CalibrationPreset.defaults) { preset in
+                            Button(action: {
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    selectedPreset = preset
+                                }
+                            }) {
+                                HStack(spacing: 8) {
+                                    Image(systemName: preset.icon)
+                                        .font(.caption)
+                                    VStack(alignment: .leading, spacing: 1) {
+                                        Text(preset.name)
+                                            .font(.caption)
+                                            .fontWeight(.semibold)
+                                            .lineLimit(1)
+                                        Text(preset.description)
+                                            .font(.caption2)
+                                            .foregroundColor(.secondary)
+                                            .lineLimit(1)
+                                    }
+                                    Spacer()
+                                    if selectedPreset.id == preset.id {
+                                        Image(systemName: "checkmark")
+                                            .font(.caption)
+                                            .foregroundColor(.accentColor)
+                                    }
+                                }
+                                .padding(10)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            .pediLensGlassPill(tint: selectedPreset.id == preset.id ? .accentColor : nil)
+                            .foregroundColor(selectedPreset.id == preset.id ? .accentColor : .primary)
+                        }
+                    }
+                } else {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 10) {
+                            ForEach(CalibrationPreset.defaults) { preset in
+                                Button(action: {
+                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                        selectedPreset = preset
+                                    }
+                                }) {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: preset.icon)
+                                            .font(.caption)
+                                        VStack(alignment: .leading, spacing: 1) {
+                                            Text(preset.name)
+                                                .font(.caption)
+                                                .fontWeight(.semibold)
+                                                .lineLimit(1)
+                                            Text(preset.description)
+                                                .font(.caption2)
+                                                .foregroundColor(.secondary)
+                                                .lineLimit(1)
+                                        }
+                                    }
+                                    .fixedSize(horizontal: true, vertical: false)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                }
+                                .pediLensGlassPill(tint: selectedPreset.id == preset.id ? .accentColor : nil)
+                                .foregroundColor(selectedPreset.id == preset.id ? .accentColor : .primary)
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                    }
+                }
+            }
+            
+            // Custom size input row if custom is selected
+            if selectedPreset.id == "custom" {
+                HStack(spacing: 12) {
+                    Text("Known Length:")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    TextField("Length", text: $customLengthText)
+                        .keyboardType(.decimalPad)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 80)
+                    
+                    Picker("Unit", selection: $customUnitIsCM) {
+                        Text("mm").tag(false)
+                        Text("cm").tag(true)
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 100)
+                }
+                .padding(.horizontal, isVertical ? 0 : 16)
+            }
+            
+            // Live Calibration Metric Summary Card
+            HStack(spacing: 8) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("KNOWN REF")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                    Text(String(format: "%.1f mm", effectiveLengthMM))
+                        .font(duoGeometry.isCoverScreen ? .caption : .subheadline)
+                        .fontWeight(.bold)
+                        .foregroundColor(.primary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                
+                Divider().frame(height: 20)
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("PIXEL DIST")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                    Text(String(format: "%.1f px", pixelDistance))
+                        .font(duoGeometry.isCoverScreen ? .caption : .subheadline)
+                        .fontWeight(.bold)
+                        .foregroundColor(.primary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                
+                Divider().frame(height: 20)
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("SCALE")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                    Text(String(format: "%.2f px/mm", pixelsPerMillimeter))
+                        .font(duoGeometry.isCoverScreen ? .caption : .subheadline)
+                        .fontWeight(.bold)
+                        .foregroundColor(.accentColor)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(10)
+            .frame(maxWidth: .infinity)
+            .pediLensGlass(cornerRadius: 12)
+            .padding(.horizontal, isVertical ? 0 : 16)
+            
+            // Action Buttons
+            HStack(spacing: 12) {
+                Button(action: { dismiss() }) {
+                    Text("Cancel")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                }
+                .pediLensGlassButton()
+                
+                Button(action: applyCalibration) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "checkmark.circle.fill")
+                        Text("Apply Calibration")
+                            .fontWeight(.semibold)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.85)
+                    }
+                    .font(.subheadline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                }
+                .pediLensGlassButton(prominent: true)
+                .disabled(pixelDistance < 15)
+            }
+            .padding(.horizontal, isVertical ? 0 : 16)
+            .padding(.bottom, duoGeometry.isCoverScreen ? 8 : 12)
+        }
+        .background(Color(.systemBackground))
     }
     
     // MARK: - Helper Methods

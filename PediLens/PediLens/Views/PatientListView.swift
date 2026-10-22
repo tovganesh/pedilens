@@ -3,6 +3,7 @@
 //  PediLens
 //
 //  Doctor role: Patient directory and list management with Liquid Glass styling
+//  and adaptive layout for iPhone Duo Cover Screen & Internal Screen.
 //
 
 import SwiftUI
@@ -10,6 +11,7 @@ import CoreData
 
 struct PatientListView: View {
     @Environment(\.managedObjectContext) private var viewContext
+    @Environment(\.duoGeometry) private var duoGeometry
     @StateObject private var syncManager = SyncManager.shared
     
     let user: User
@@ -22,6 +24,7 @@ struct PatientListView: View {
     @State private var showingDeleteConfirmation = false
     @State private var errorMessage: String?
     @State private var showingError = false
+    @State private var columnVisibility: NavigationSplitViewVisibility = .all
     
     @FetchRequest(
         sortDescriptors: [NSSortDescriptor(keyPath: \Patient.name, ascending: true)],
@@ -42,108 +45,154 @@ struct PatientListView: View {
         }
     }
     
+    private var activeSelectedPatient: Patient? {
+        if let selected = selectedPatient, filteredPatients.contains(where: { $0.objectID == selected.objectID }) {
+            return selected
+        }
+        return filteredPatients.first
+    }
+    
     var body: some View {
-        NavigationView {
-            VStack(spacing: 0) {
-                // Sync status indicator bar
-                HStack {
-                    SyncStatusView(syncStatus: syncManager.syncStatus)
-                    Spacer()
+        NavigationSplitView(columnVisibility: $columnVisibility) {
+            patientSidebarContent
+                .navigationSplitViewColumnWidth(min: 280, ideal: 320, max: 360)
+        } detail: {
+            NavigationStack {
+                if let patient = activeSelectedPatient {
+                    PatientDetailView(patient: patient)
+                } else {
+                    splitPlaceholderView
                 }
+            }
+        }
+        .onAppear {
+            if selectedPatient == nil, let first = filteredPatients.first {
+                selectedPatient = first
+            }
+        }
+        .sheet(isPresented: $showingAddPatient) {
+            AddPatientView(user: user)
+                .environment(\.managedObjectContext, viewContext)
+        }
+        .sheet(isPresented: $showingStorageSheet) {
+            StorageManagementView()
+        }
+        .alert("Delete Patient Record", isPresented: $showingDeleteConfirmation) {
+            Button("Cancel", role: .cancel) { patientToDelete = nil }
+            Button("Delete", role: .destructive) {
+                confirmDeletePatient()
+            }
+        } message: {
+            if let patient = patientToDelete {
+                Text("Are you sure you want to permanently delete \(patient.name ?? "this patient") and all associated wound records and photos? Biometric authentication is required.")
+            } else {
+                Text("Are you sure you want to delete this patient?")
+            }
+        }
+        .alert("Error", isPresented: $showingError) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            if let errorMessage = errorMessage {
+                Text(errorMessage)
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private var patientSidebarContent: some View {
+        VStack(spacing: 0) {
+            // Sync status indicator bar
+            HStack {
+                SyncStatusView(syncStatus: syncManager.syncStatus)
+                Spacer()
+            }
+            .padding(.horizontal)
+            .padding(.vertical, duoGeometry.isCoverScreen ? 4 : 6)
+            
+            // Search bar
+            SearchBar(text: $searchText)
                 .padding(.horizontal)
-                .padding(.vertical, 6)
-                
-                // Search bar
-                SearchBar(text: $searchText)
-                    .padding(.horizontal)
-                    .padding(.bottom, 6)
-                    .accessibilityLabel("Search patients")
-                    .accessibilityHint("Enter patient name or ID to search")
-                
-                if filteredPatients.isEmpty {
-                    emptyStateView
-                } else {
-                    patientList
-                }
-            }
-            .navigationTitle("Patients")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    HStack(spacing: 12) {
-                        Button(action: { showingStorageSheet = true }) {
-                            Image(systemName: "internaldrive")
+                .padding(.bottom, duoGeometry.isCoverScreen ? 4 : 6)
+                .accessibilityLabel("Search patients")
+                .accessibilityHint("Enter patient name or ID to search")
+            
+            if filteredPatients.isEmpty {
+                emptyStateView
+            } else {
+                List(selection: $selectedPatient) {
+                    ForEach(filteredPatients, id: \.self) { patient in
+                        NavigationLink(value: patient) {
+                            PatientRowView(patient: patient)
                         }
-                        .pediLensGlassButton()
-                        .accessibilityLabel("Storage Management")
-                        .accessibilityHint("Opens storage management and cache settings")
-                        
-                        Button(action: { showingAddPatient = true }) {
-                            Image(systemName: "plus")
-                        }
-                        .pediLensGlassButton()
-                        .accessibilityLabel("Add new patient")
-                        .accessibilityHint("Opens form to add a new patient")
-                        .accessibilityInputLabels(["Add patient", "New patient", "Add"])
                     }
+                    .onDelete(perform: promptDeletePatient)
+                }
+                .listStyle(InsetGroupedListStyle())
+                .navigationDestination(for: Patient.self) { patient in
+                    PatientDetailView(patient: patient)
                 }
             }
-            .sheet(isPresented: $showingAddPatient) {
-                AddPatientView(user: user)
-                    .environment(\.managedObjectContext, viewContext)
-            }
-            .sheet(isPresented: $showingStorageSheet) {
-                StorageManagementView()
-            }
-            .alert("Delete Patient Record", isPresented: $showingDeleteConfirmation) {
-                Button("Cancel", role: .cancel) { patientToDelete = nil }
-                Button("Delete", role: .destructive) {
-                    confirmDeletePatient()
-                }
-            } message: {
-                if let patient = patientToDelete {
-                    Text("Are you sure you want to permanently delete \(patient.name ?? "this patient") and all associated wound records and photos? Biometric authentication is required.")
-                } else {
-                    Text("Are you sure you want to delete this patient?")
-                }
-            }
-            .alert("Error", isPresented: $showingError) {
-                Button("OK", role: .cancel) { }
-            } message: {
-                if let errorMessage = errorMessage {
-                    Text(errorMessage)
+        }
+        .navigationTitle("Patients")
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                HStack(spacing: 12) {
+                    Button(action: { showingStorageSheet = true }) {
+                        Image(systemName: "internaldrive")
+                    }
+                    .pediLensGlassButton()
+                    .accessibilityLabel("Storage Management")
+                    .accessibilityHint("Opens storage management and cache settings")
+                    
+                    Button(action: { showingAddPatient = true }) {
+                        Image(systemName: "plus")
+                    }
+                    .pediLensGlassButton()
+                    .accessibilityLabel("Add new patient")
+                    .accessibilityHint("Opens form to add a new patient")
+                    .accessibilityInputLabels(["Add patient", "New patient", "Add"])
                 }
             }
         }
     }
     
-    private var patientList: some View {
-        List {
-            ForEach(filteredPatients, id: \.id) { patient in
-                NavigationLink(destination: PatientDetailView(patient: patient)) {
-                    PatientRowView(patient: patient)
-                }
-            }
-            .onDelete(perform: promptDeletePatient)
+    private var splitPlaceholderView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "person.text.rectangle")
+                .font(.system(size: 64))
+                .foregroundColor(.secondary.opacity(0.7))
+            
+            Text("No Patient Selected")
+                .font(.title2)
+                .fontWeight(.bold)
+            
+            Text("Select a patient from the directory on the left to view comprehensive clinical records and wound assessments.")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
         }
-        .listStyle(InsetGroupedListStyle())
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .pediLensGlass(cornerRadius: 20)
+        .padding()
     }
     
     private var emptyStateView: some View {
         VStack(spacing: 16) {
             Image(systemName: "person.2.slash")
-                .font(.system(size: 60))
+                .font(.system(size: duoGeometry.isCoverScreen ? 44 : 60))
                 .foregroundColor(.secondary)
                 .accessibilityHidden(true) // Decorative
             
             Text(searchText.isEmpty ? "No Patients" : "No Results")
-                .font(.title2)
+                .font(duoGeometry.isCoverScreen ? .headline : .title2)
                 .fontWeight(.semibold)
                 .accessibilityAddTraits(.isHeader)
             
             Text(searchText.isEmpty ?
                  "Add your first patient to get started" :
                  "No patients match your search")
-                .font(.body)
+                .font(duoGeometry.isCoverScreen ? .caption : .body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
@@ -155,7 +204,7 @@ struct PatientListView: View {
                         .font(.headline)
                 }
                 .pediLensGlassButton(prominent: true)
-                .padding(.top)
+                .padding(.top, duoGeometry.isCoverScreen ? 4 : 12)
                 .accessibilityLabel("Add first patient")
                 .accessibilityHint("Opens form to add your first patient")
                 .accessibilityInputLabels(["Add patient", "Add first patient", "New patient"])
@@ -183,6 +232,9 @@ struct PatientListView: View {
                 )
                 try await PatientManager.shared.deletePatient(patient)
                 await MainActor.run {
+                    if selectedPatient?.objectID == patient.objectID {
+                        selectedPatient = nil
+                    }
                     patientToDelete = nil
                 }
             } catch {
@@ -251,37 +303,21 @@ struct SearchBar: View {
         HStack {
             Image(systemName: "magnifyingglass")
                 .foregroundColor(.secondary)
-                .accessibilityHidden(true) // Decorative
             
-            TextField("Search patients...", text: $text)
+            TextField("Search by name or ID", text: $text)
                 .textFieldStyle(PlainTextFieldStyle())
-                .accessibilityLabel("Search field")
-                .accessibilityValue(text.isEmpty ? "Empty" : text)
+                .autocapitalization(.none)
+                .disableAutocorrection(true)
             
             if !text.isEmpty {
                 Button(action: { text = "" }) {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundColor(.secondary)
                 }
-                .accessibilityLabel("Clear search")
-                .accessibilityHint("Clears the search text")
-                .accessibilityInputLabels(["Clear", "Clear search", "Delete"])
             }
         }
-        .padding(10)
-        .pediLensGlass(cornerRadius: 12, interactive: true)
-        .accessibilityElement(children: .contain)
-    }
-}
-
-// MARK: - Preview
-
-struct PatientListView_Previews: PreviewProvider {
-    static var previews: some View {
-        let context = PersistenceController.preview.container.viewContext
-        let user = User.create(in: context, role: .doctor)
-        
-        return PatientListView(user: user)
-            .environment(\.managedObjectContext, context)
+        .padding(8)
+        .background(Color(.secondarySystemBackground))
+        .cornerRadius(10)
     }
 }

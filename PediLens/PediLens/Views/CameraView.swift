@@ -2,7 +2,9 @@
 //  CameraView.swift
 //  PediLens
 //
-//  Camera capture view with live preview, LiDAR distance guidance, and media persistence (Liquid Glass styling)
+//  Camera capture view with live preview, LiDAR distance guidance, and media persistence.
+//  Adapted for iPhone Duo: Compact one-hand capture on Cover Screen (466x678 pt)
+//  and Ergonomic thumb-rail capture on Internal Screen (669x951 pt).
 //
 
 import SwiftUI
@@ -16,6 +18,7 @@ struct CameraView: View {
     
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.duoGeometry) private var duoGeometry
     
     @StateObject private var cameraManager = CameraManager()
     @StateObject private var arManager = ARMeasurementManager()
@@ -28,89 +31,20 @@ struct CameraView: View {
     
     var body: some View {
         ZStack {
-            // Camera preview
+            // Camera preview fills screen
             CameraPreviewView(cameraManager: cameraManager)
                 .ignoresSafeArea()
             
-            // Overlay UI
-            VStack {
-                // Top bar
-                HStack {
-                    Button(action: { dismiss() }) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "xmark")
-                            Text("Cancel")
-                        }
-                        .font(.subheadline)
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
-                    }
-                    .pediLensGlassPill(interactive: true)
-                    .padding(.leading)
-                    
-                    Spacer()
-                    
-                    // Show patient info if available
-                    if let patient = woundRecord.patient {
-                        VStack(alignment: .trailing, spacing: 2) {
-                            Text(patient.name ?? "Unknown")
-                                .font(.caption)
-                                .fontWeight(.semibold)
-                                .foregroundColor(.white)
-                            if let patientID = patient.patientID {
-                                Text("ID: \(patientID)")
-                                    .font(.caption2)
-                                    .foregroundColor(.white.opacity(0.85))
-                            }
-                        }
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
-                        .pediLensGlass(cornerRadius: 12)
-                        .padding(.trailing)
-                    }
-                }
-                .padding(.top, 8)
-                
-                // Calibration Guidance HUD
-                CalibrationGuideView(
-                    isLiDARAvailable: arManager.isLiDARAvailable,
-                    distanceStatus: arManager.distanceStatus,
-                    currentDistance: arManager.currentDistance,
-                    detectedScale: nil
-                )
-                
-                Spacer()
-                
-                // Bottom controls
-                VStack(spacing: 16) {
-                    // Capture button
-                    Button(action: capturePhoto) {
-                        ZStack {
-                            Circle()
-                                .fill(Color.white)
-                                .frame(width: 70, height: 70)
-                            
-                            Circle()
-                                .stroke(Color.white.opacity(0.85), lineWidth: 3)
-                                .frame(width: 82, height: 82)
-                        }
-                    }
-                    .disabled(isCapturing)
-                    .accessibilityLabel("Capture photo")
-                    
-                    Text("Tap to capture wound photo")
-                        .foregroundColor(.white)
-                        .font(.caption)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 6)
-                        .pediLensGlassPill()
-                }
-                .padding(.bottom, 36)
+            // Adaptive Controls Overlay
+            if duoGeometry.isInternalExpanded {
+                // Internal Screen: Two-Hand Ergonomic Layout with Right-Hand Thumb Rail
+                internalExpandedOverlay
+            } else {
+                // Cover Screen & Standard: Compact Vertical Overlay
+                coverScreenOverlay
             }
         }
         .onAppear {
-            // Initialize capture session manager
             captureSessionManager = CaptureSessionManager(persistenceController: .shared)
             
             if arManager.isLiDARAvailable {
@@ -143,38 +77,194 @@ struct CameraView: View {
         }
     }
     
+    // MARK: - Internal Screen Ergonomic Layout
+    
+    private var internalExpandedOverlay: some View {
+        VStack {
+            // Top Bar spanning outside edges
+            HStack {
+                Button(action: { dismiss() }) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "xmark")
+                        Text("Cancel")
+                    }
+                    .font(.subheadline)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                }
+                .pediLensGlassPill(interactive: true)
+                .padding(.leading, 20)
+                
+                Spacer()
+                
+                if let patient = woundRecord.patient {
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text(patient.name ?? "Unknown")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
+                        if let patientID = patient.patientID {
+                            Text("ID: \(patientID)")
+                                .font(.caption2)
+                                .foregroundColor(.white.opacity(0.85))
+                        }
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .pediLensGlass(cornerRadius: 12)
+                    .padding(.trailing, 20)
+                }
+            }
+            .padding(.top, 10)
+            
+            Spacer()
+            
+            // Lower cluster: Guidance on left/center, Shutter button anchored in right thumb zone
+            HStack(alignment: .bottom) {
+                // Calibration Guidance HUD on left pane
+                CalibrationGuideView(
+                    isLiDARAvailable: arManager.isLiDARAvailable,
+                    distanceStatus: arManager.distanceStatus,
+                    currentDistance: arManager.currentDistance,
+                    detectedScale: nil
+                )
+                .padding(.leading, 24)
+                .padding(.bottom, 24)
+                
+                Spacer()
+                
+                // Right thumb capture cluster
+                VStack(spacing: 12) {
+                    captureShutterButton(diameter: 74, outerDiameter: 86)
+                    
+                    Text("Capture")
+                        .foregroundColor(.white)
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 4)
+                        .pediLensGlassPill()
+                }
+                .padding(.trailing, 32)
+                .padding(.bottom, 28)
+            }
+        }
+    }
+    
+    // MARK: - Cover Screen Compact Layout
+    
+    private var coverScreenOverlay: some View {
+        VStack {
+            // Top bar
+            HStack {
+                Button(action: { dismiss() }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "xmark")
+                        Text("Cancel")
+                    }
+                    .font(.caption)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                }
+                .pediLensGlassPill(interactive: true)
+                .padding(.leading, 12)
+                
+                Spacer()
+                
+                if let patient = woundRecord.patient {
+                    VStack(alignment: .trailing, spacing: 1) {
+                        Text(patient.name ?? "Unknown")
+                            .font(.caption2)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
+                        if let patientID = patient.patientID {
+                            Text("ID: \(patientID)")
+                                .font(.system(size: 10))
+                                .foregroundColor(.white.opacity(0.85))
+                        }
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .pediLensGlass(cornerRadius: 10)
+                    .padding(.trailing, 12)
+                }
+            }
+            .padding(.top, duoGeometry.isCoverScreen ? 4 : 8)
+            
+            // Calibration Guidance HUD
+            CalibrationGuideView(
+                isLiDARAvailable: arManager.isLiDARAvailable,
+                distanceStatus: arManager.distanceStatus,
+                currentDistance: arManager.currentDistance,
+                detectedScale: nil
+            )
+            .scaleEffect(duoGeometry.isCoverScreen ? 0.9 : 1.0)
+            
+            Spacer()
+            
+            // Bottom controls
+            VStack(spacing: 10) {
+                captureShutterButton(
+                    diameter: duoGeometry.isCoverScreen ? 62 : 70,
+                    outerDiameter: duoGeometry.isCoverScreen ? 74 : 82
+                )
+                
+                Text("Tap to capture wound photo")
+                    .foregroundColor(.white)
+                    .font(.caption2)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 4)
+                    .pediLensGlassPill()
+            }
+            .padding(.bottom, duoGeometry.isCoverScreen ? 16 : 36)
+        }
+    }
+    
+    @ViewBuilder
+    private func captureShutterButton(diameter: CGFloat, outerDiameter: CGFloat) -> some View {
+        Button(action: capturePhoto) {
+            ZStack {
+                Circle()
+                    .fill(Color.white)
+                    .frame(width: diameter, height: diameter)
+                
+                Circle()
+                    .stroke(Color.white.opacity(0.85), lineWidth: 3)
+                    .frame(width: outerDiameter, height: outerDiameter)
+            }
+        }
+        .disabled(isCapturing)
+        .accessibilityLabel("Capture photo")
+    }
+    
     private func capturePhoto() {
         isCapturing = true
         
         Task {
             do {
-                // Capture photo using CameraManager
                 let capturedMedia = try await cameraManager.capturePhoto(livePhotoEnabled: false)
                 
-                // Create capture session first to get the session ID
                 guard let sessionManager = captureSessionManager else {
                     throw NSError(domain: "CameraView", code: -1, userInfo: [NSLocalizedDescriptionKey: "Capture session manager not initialized"])
                 }
                 
-                // Create session with temporary path, we'll update it after saving files
                 let session = try await sessionManager.createCaptureSession(
-                    photoPath: "photo.heic",  // Temporary, will be the actual filename
+                    photoPath: "photo.heic",
                     livePhotoVideoPath: nil,
                     depthDataPath: nil,
                     location: capturedMedia.metadata.location,
                     woundRecord: woundRecord
                 )
                 
-                // Now use the session's ID to save files
                 guard let sessionID = session.id else {
                     throw NSError(domain: "CameraView", code: -2, userInfo: [NSLocalizedDescriptionKey: "Session ID not available"])
                 }
                 
-                // Save photo to file storage
                 let fileManager = FileStorageManager.shared
                 let photoURL = try await fileManager.savePhoto(capturedMedia.photoData, for: sessionID)
                 
-                // Save depth data if available
                 var depthDataPath: String?
                 if let depthData = capturedMedia.depthData {
                     if let depthDataEncoded = try? encodeDepthData(depthData) {
@@ -183,15 +273,12 @@ struct CameraView: View {
                     }
                 }
                 
-                // Save live photo video if available
                 var livePhotoVideoPath: String?
                 if let livePhotoURL = capturedMedia.livePhotoVideoURL {
-                    // Copy live photo video to permanent storage
                     let videoURL = try await fileManager.saveLivePhotoVideo(livePhotoURL, for: sessionID)
                     livePhotoVideoPath = videoURL.lastPathComponent
                 }
                 
-                // Update session paths
                 try await sessionManager.updatePaths(
                     for: session,
                     photoPath: photoURL.lastPathComponent,
@@ -199,7 +286,6 @@ struct CameraView: View {
                     depthDataPath: depthDataPath
                 )
                 
-                // Associate patient metadata if available
                 if let patient = woundRecord.patient {
                     patientCaptureManager.associatePatientMetadata(
                         with: sessionID,
@@ -208,55 +294,46 @@ struct CameraView: View {
                     )
                 }
                 
-                // Update wound record
                 woundRecord.lastUpdated = Date()
                 try viewContext.save()
                 
-                // Call onDismiss callback before dismissing
                 await MainActor.run {
                     onDismiss?()
+                    dismiss()
                 }
-                
-                // Dismiss camera
-                dismiss()
             } catch {
-                errorMessage = "Failed to capture photo: \(error.localizedDescription)"
-                showingError = true
-                isCapturing = false
+                await MainActor.run {
+                    isCapturing = false
+                    errorMessage = "Failed to capture photo: \(error.localizedDescription)"
+                    showingError = true
+                }
             }
         }
     }
     
-    /// Encode depth data to Data for storage
     private func encodeDepthData(_ depthData: DepthData) throws -> Data {
-        // Create a dictionary to store depth information
-        var depthDict: [String: Any] = [:]
+        let depthMap = depthData.depthMap
+        CVPixelBufferLockBaseAddress(depthMap, .readOnly)
+        defer { CVPixelBufferUnlockBaseAddress(depthMap, .readOnly) }
         
-        // Store depth map dimensions
-        let width = CVPixelBufferGetWidth(depthData.depthMap)
-        let height = CVPixelBufferGetHeight(depthData.depthMap)
-        depthDict["width"] = width
-        depthDict["height"] = height
-        depthDict["accuracy"] = depthData.accuracy == .absolute ? "absolute" : "relative"
+        let width = CVPixelBufferGetWidth(depthMap)
+        let height = CVPixelBufferGetHeight(depthMap)
+        let bytesPerRow = CVPixelBufferGetBytesPerRow(depthMap)
         
-        // Lock the pixel buffer to access data
-        CVPixelBufferLockBaseAddress(depthData.depthMap, .readOnly)
-        defer { CVPixelBufferUnlockBaseAddress(depthData.depthMap, .readOnly) }
-        
-        // Get the base address and bytes per row
-        guard let baseAddress = CVPixelBufferGetBaseAddress(depthData.depthMap) else {
-            throw NSError(domain: "DepthDataError", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to get depth map base address"])
+        guard let baseAddress = CVPixelBufferGetBaseAddress(depthMap) else {
+            throw NSError(domain: "DepthDataError", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to get base address"])
         }
         
-        let bytesPerRow = CVPixelBufferGetBytesPerRow(depthData.depthMap)
-        let dataSize = bytesPerRow * height
+        let totalBytes = bytesPerRow * height
+        let depthBytes = Data(bytes: baseAddress, count: totalBytes)
         
-        // Copy depth data
-        let depthBytes = Data(bytes: baseAddress, count: dataSize)
-        
-        // Encode as JSON with depth bytes as base64
-        depthDict["depthBytes"] = depthBytes.base64EncodedString()
-        depthDict["bytesPerRow"] = bytesPerRow
+        let depthDict: [String: Any] = [
+            "width": width,
+            "height": height,
+            "bytesPerRow": bytesPerRow,
+            "depthBytes": depthBytes.base64EncodedString(),
+            "accuracy": depthData.accuracy == .absolute ? "absolute" : "relative"
+        ]
         
         return try JSONSerialization.data(withJSONObject: depthDict)
     }
@@ -270,7 +347,6 @@ struct CameraPreviewView: UIViewRepresentable {
         let view = UIView(frame: .zero)
         view.backgroundColor = .black
         
-        // Add preview layer
         if let previewLayer = cameraManager.previewLayer {
             previewLayer.frame = view.bounds
             previewLayer.videoGravity = .resizeAspectFill
@@ -281,7 +357,6 @@ struct CameraPreviewView: UIViewRepresentable {
     }
     
     func updateUIView(_ uiView: UIView, context: Context) {
-        // Update preview layer frame when view size changes
         if let previewLayer = cameraManager.previewLayer {
             DispatchQueue.main.async {
                 previewLayer.frame = uiView.bounds

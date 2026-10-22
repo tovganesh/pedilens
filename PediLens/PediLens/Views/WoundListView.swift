@@ -2,7 +2,8 @@
 //  WoundListView.swift
 //  PediLens
 //
-//  Patient role wound list view with wound management, sync status, and storage settings (Liquid Glass styling)
+//  Patient role wound list view with wound management, sync status, and storage settings
+//  with adaptive layout for iPhone Duo Cover Screen & Internal Screen.
 //
 
 import SwiftUI
@@ -11,6 +12,7 @@ import CoreData
 /// View for patient role - shows list of their wound records
 struct WoundListView: View {
     @Environment(\.managedObjectContext) private var viewContext
+    @Environment(\.duoGeometry) private var duoGeometry
     @StateObject private var syncManager = SyncManager.shared
     
     @FetchRequest(
@@ -21,61 +23,112 @@ struct WoundListView: View {
     @State private var showingNewWoundSheet = false
     @State private var showingStorageSheet = false
     @State private var selectedWound: WoundRecord?
+    @State private var columnVisibility: NavigationSplitViewVisibility = .all
+    
+    private var activeSelectedWound: WoundRecord? {
+        if let selected = selectedWound, woundRecords.contains(where: { $0.objectID == selected.objectID }) {
+            return selected
+        }
+        return woundRecords.first
+    }
     
     var body: some View {
-        NavigationView {
-            VStack(spacing: 0) {
-                // Sync status indicator bar
-                HStack {
-                    SyncStatusView(syncStatus: syncManager.syncStatus)
-                    Spacer()
-                }
-                .padding(.horizontal)
-                .padding(.vertical, 6)
-                
-                List {
-                    ForEach(woundRecords) { wound in
-                        NavigationLink(destination: WoundDetailView(woundRecord: wound)) {
-                            WoundRowView(woundRecord: wound)
-                        }
-                    }
-                    .onDelete(perform: deleteWounds)
-                }
-            }
-            .navigationTitle("My Wounds")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    HStack(spacing: 12) {
-                        Button(action: { showingStorageSheet = true }) {
-                            Image(systemName: "internaldrive")
-                        }
-                        .pediLensGlassButton()
-                        .accessibilityLabel("Storage Management")
-                        
-                        Button(action: { showingNewWoundSheet = true }) {
-                            Label("Add Wound", systemImage: "plus")
-                        }
-                        .pediLensGlassButton()
-                        .accessibilityLabel("Add new wound record")
-                    }
-                }
-                
-                ToolbarItem(placement: .navigationBarLeading) {
-                    EditButton()
-                }
-            }
-            .sheet(isPresented: $showingNewWoundSheet) {
-                NewWoundView()
-            }
-            .sheet(isPresented: $showingStorageSheet) {
-                StorageManagementView()
-            }
-            .overlay {
-                if woundRecords.isEmpty {
-                    EmptyWoundListView(showingNewWoundSheet: $showingNewWoundSheet)
+        NavigationSplitView(columnVisibility: $columnVisibility) {
+            woundSidebarContent
+                .navigationSplitViewColumnWidth(min: 280, ideal: 320, max: 360)
+        } detail: {
+            NavigationStack {
+                if let wound = activeSelectedWound {
+                    WoundDetailView(woundRecord: wound)
+                } else {
+                    splitPlaceholderView
                 }
             }
         }
+        .onAppear {
+            if selectedWound == nil, let first = woundRecords.first {
+                selectedWound = first
+            }
+        }
+        .sheet(isPresented: $showingNewWoundSheet) {
+            NewWoundView()
+        }
+        .sheet(isPresented: $showingStorageSheet) {
+            StorageManagementView()
+        }
+    }
+    
+    @ViewBuilder
+    private var woundSidebarContent: some View {
+        VStack(spacing: 0) {
+            // Sync status indicator bar
+            HStack {
+                SyncStatusView(syncStatus: syncManager.syncStatus)
+                Spacer()
+            }
+            .padding(.horizontal)
+            .padding(.vertical, duoGeometry.isCoverScreen ? 4 : 6)
+            
+            List(selection: $selectedWound) {
+                ForEach(woundRecords, id: \.self) { wound in
+                    NavigationLink(value: wound) {
+                        WoundRowView(woundRecord: wound)
+                    }
+                }
+                .onDelete(perform: deleteWounds)
+            }
+            .navigationDestination(for: WoundRecord.self) { wound in
+                WoundDetailView(woundRecord: wound)
+            }
+        }
+        .navigationTitle("My Wounds")
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                HStack(spacing: 12) {
+                    Button(action: { showingStorageSheet = true }) {
+                        Image(systemName: "internaldrive")
+                    }
+                    .pediLensGlassButton()
+                    .accessibilityLabel("Storage Management")
+                    
+                    Button(action: { showingNewWoundSheet = true }) {
+                        Label("Add Wound", systemImage: "plus")
+                    }
+                    .pediLensGlassButton()
+                    .accessibilityLabel("Add new wound record")
+                }
+            }
+            
+            ToolbarItem(placement: .navigationBarLeading) {
+                EditButton()
+            }
+        }
+        .overlay {
+            if woundRecords.isEmpty {
+                EmptyWoundListView(showingNewWoundSheet: $showingNewWoundSheet)
+            }
+        }
+    }
+    
+    private var splitPlaceholderView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "cross.case.fill")
+                .font(.system(size: 64))
+                .foregroundColor(.secondary.opacity(0.7))
+            
+            Text("No Wound Selected")
+                .font(.title2)
+                .fontWeight(.bold)
+            
+            Text("Select a wound record from the list on the left to review its history, capture photos, and inspect healing progress.")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .pediLensGlass(cornerRadius: 20)
+        .padding()
     }
     
     private func deleteWounds(offsets: IndexSet) {
@@ -105,8 +158,8 @@ struct WoundRowView: View {
                 .foregroundColor(.secondary)
             
             if let sessions = woundRecord.captureSessions as? Set<CaptureSession> {
-                Text("\(sessions.count) capture sessions")
-                    .font(.caption)
+                Text("\(sessions.count) photo sessions")
+                    .font(.caption2)
                     .foregroundColor(.secondary)
             }
         }
@@ -114,7 +167,7 @@ struct WoundRowView: View {
     }
 }
 
-/// Empty state view
+/// Empty state view when no wounds exist
 struct EmptyWoundListView: View {
     @Binding var showingNewWoundSheet: Bool
     
@@ -124,22 +177,23 @@ struct EmptyWoundListView: View {
                 .font(.system(size: 60))
                 .foregroundColor(.secondary)
             
-            Text("No Wound Records")
+            Text("No Wounds Tracked")
                 .font(.title2)
-                .fontWeight(.semibold)
+                .fontWeight(.bold)
             
-            Text("Tap the + button to create your first wound record and start documenting.")
+            Text("Start tracking your wound healing progress by adding your first wound.")
                 .font(.body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
             
             Button(action: { showingNewWoundSheet = true }) {
-                Label("Add Wound Record", systemImage: "plus.circle.fill")
+                Label("Add Your First Wound", systemImage: "plus.circle.fill")
                     .font(.headline)
             }
             .pediLensGlassButton(prominent: true)
-            .accessibilityLabel("Add your first wound record")
+            .padding(.top, 10)
         }
+        .padding()
     }
 }
