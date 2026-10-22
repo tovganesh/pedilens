@@ -23,6 +23,7 @@ struct WoundListView: View {
     @State private var showingNewWoundSheet = false
     @State private var showingStorageSheet = false
     @State private var selectedWound: WoundRecord?
+    @State private var columnVisibility: NavigationSplitViewVisibility = .all
     
     private var activeSelectedWound: WoundRecord? {
         if let selected = selectedWound, woundRecords.contains(where: { $0.objectID == selected.objectID }) {
@@ -32,43 +33,16 @@ struct WoundListView: View {
     }
     
     var body: some View {
-        Group {
-            if duoGeometry.isInternalExpanded {
-                // Internal Screen: Adaptive Dual-Pane Split Layout
-                HStack(spacing: 0) {
-                    // Master sidebar: Wound list
-                    NavigationView {
-                        woundListContent(isSplitMaster: true)
-                    }
-                    .navigationViewStyle(.stack)
-                    .frame(width: duoGeometry.masterPaneWidth)
-                    
-                    // Central hinge crease gutter / separator
-                    ZStack {
-                        Rectangle()
-                            .fill(Color(uiColor: .separator).opacity(0.3))
-                            .frame(width: 1)
-                    }
-                    .frame(width: 16)
-                    
-                    // Detail pane: Selected wound record
-                    NavigationView {
-                        if let wound = activeSelectedWound {
-                            WoundDetailView(woundRecord: wound)
-                        } else {
-                            splitPlaceholderView
-                        }
-                    }
-                    .navigationViewStyle(.stack)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+        NavigationSplitView(columnVisibility: $columnVisibility) {
+            woundSidebarContent
+                .navigationSplitViewColumnWidth(min: 280, ideal: 320, max: 360)
+        } detail: {
+            NavigationStack {
+                if let wound = activeSelectedWound {
+                    WoundDetailView(woundRecord: wound)
+                } else {
+                    splitPlaceholderView
                 }
-            } else {
-                // Cover Screen & Standard: Single-column stack navigation
-                NavigationView {
-                    woundListContent(isSplitMaster: false)
-                }
-                .navigationViewStyle(.stack)
-                .duoCoverScreenPadding()
             }
         }
         .onAppear {
@@ -85,7 +59,7 @@ struct WoundListView: View {
     }
     
     @ViewBuilder
-    private func woundListContent(isSplitMaster: Bool) -> some View {
+    private var woundSidebarContent: some View {
         VStack(spacing: 0) {
             // Sync status indicator bar
             HStack {
@@ -95,30 +69,16 @@ struct WoundListView: View {
             .padding(.horizontal)
             .padding(.vertical, duoGeometry.isCoverScreen ? 4 : 6)
             
-            List {
-                ForEach(woundRecords) { wound in
-                    if isSplitMaster {
-                        Button(action: {
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                selectedWound = wound
-                            }
-                        }) {
-                            WoundRowView(woundRecord: wound)
-                                .padding(.vertical, 2)
-                                .padding(.horizontal, 4)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .fill(activeSelectedWound?.objectID == wound.objectID ? Color.accentColor.opacity(0.15) : Color.clear)
-                                )
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                    } else {
-                        NavigationLink(destination: WoundDetailView(woundRecord: wound)) {
-                            WoundRowView(woundRecord: wound)
-                        }
+            List(selection: $selectedWound) {
+                ForEach(woundRecords, id: \.self) { wound in
+                    NavigationLink(value: wound) {
+                        WoundRowView(woundRecord: wound)
                     }
                 }
                 .onDelete(perform: deleteWounds)
+            }
+            .navigationDestination(for: WoundRecord.self) { wound in
+                WoundDetailView(woundRecord: wound)
             }
         }
         .navigationTitle("My Wounds")
@@ -198,8 +158,8 @@ struct WoundRowView: View {
                 .foregroundColor(.secondary)
             
             if let sessions = woundRecord.captureSessions as? Set<CaptureSession> {
-                Text("\(sessions.count) capture sessions")
-                    .font(.caption)
+                Text("\(sessions.count) photo sessions")
+                    .font(.caption2)
                     .foregroundColor(.secondary)
             }
         }
@@ -207,7 +167,7 @@ struct WoundRowView: View {
     }
 }
 
-/// Empty state view
+/// Empty state view when no wounds exist
 struct EmptyWoundListView: View {
     @Binding var showingNewWoundSheet: Bool
     
@@ -217,22 +177,23 @@ struct EmptyWoundListView: View {
                 .font(.system(size: 60))
                 .foregroundColor(.secondary)
             
-            Text("No Wound Records")
+            Text("No Wounds Tracked")
                 .font(.title2)
-                .fontWeight(.semibold)
+                .fontWeight(.bold)
             
-            Text("Tap the + button to create your first wound record and start documenting.")
+            Text("Start tracking your wound healing progress by adding your first wound.")
                 .font(.body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
             
             Button(action: { showingNewWoundSheet = true }) {
-                Label("Add Wound Record", systemImage: "plus.circle.fill")
+                Label("Add Your First Wound", systemImage: "plus.circle.fill")
                     .font(.headline)
             }
             .pediLensGlassButton(prominent: true)
-            .accessibilityLabel("Add your first wound record")
+            .padding(.top, 10)
         }
+        .padding()
     }
 }

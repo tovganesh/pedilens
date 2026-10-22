@@ -40,49 +40,58 @@ struct CaptureSessionDetailView: View {
     @State private var showingShareSheet = false
     
     var body: some View {
-        Group {
-            if duoGeometry.isInternalExpanded {
-                // Internal Screen: Side-by-Side Dual-Pane Medical Workstation
-                HStack(spacing: 0) {
-                    // Left Pane: High-resolution wound photo & boundary overlay
-                    VStack {
-                        photoDisplayView(isExpanded: true)
+        GeometryReader { proxy in
+            let availableWidth = proxy.size.width
+            Group {
+                if availableWidth >= 620 {
+                    // Internal Screen Full Workstation (only when available width >= 620 pt)
+                    HStack(spacing: 0) {
+                        // Left Pane: High-resolution wound photo & boundary overlay
+                        VStack {
+                            photoDisplayView(isExpanded: true)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .padding(16)
+                        
+                        // Central hinge crease gutter / separator
+                        ZStack {
+                            Rectangle()
+                                .fill(Color(uiColor: .separator).opacity(0.3))
+                                .frame(width: 1)
+                        }
+                        .frame(width: 16)
+                        
+                        // Right Pane: Clinical metrics, tissue classification & actions
+                        ScrollView {
+                            VStack(spacing: 16) {
+                                clinicalInspectorView
+                            }
+                            .padding(16)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .padding(16)
-                    
-                    // Central hinge crease gutter / separator
-                    ZStack {
-                        Rectangle()
-                            .fill(Color(uiColor: .separator).opacity(0.3))
-                            .frame(width: 1)
-                    }
-                    .frame(width: 16)
-                    
-                    // Right Pane: Clinical metrics, tissue classification & actions
+                } else {
+                    // Modal Sheet, Compact Cover Screen, or Single Column (< 620 pt)
                     ScrollView {
-                        VStack(spacing: 16) {
+                        VStack(spacing: duoGeometry.isCoverScreen ? 14 : 20) {
+                            photoDisplayView(isExpanded: false)
                             clinicalInspectorView
                         }
-                        .padding(16)
+                        .padding(duoGeometry.isCoverScreen ? 12 : 16)
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .duoCoverScreenPadding()
                 }
-            } else {
-                // Cover Screen & Standard: Single column scrollable flow
-                ScrollView {
-                    VStack(spacing: duoGeometry.isCoverScreen ? 14 : 20) {
-                        photoDisplayView(isExpanded: false)
-                        clinicalInspectorView
-                    }
-                    .padding(duoGeometry.isCoverScreen ? 12 : 16)
-                }
-                .duoCoverScreenPadding()
             }
         }
         .navigationTitle("Session Details")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button("Done") {
+                    dismiss()
+                }
+                .font(.body.weight(.semibold))
+            }
             ToolbarItem(placement: .navigationBarTrailing) {
                 HStack(spacing: 8) {
                     Menu {
@@ -191,7 +200,7 @@ struct CaptureSessionDetailView: View {
                     Image(uiImage: image)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
-                        .frame(maxHeight: isExpanded ? .infinity : (duoGeometry.isCoverScreen ? 270 : 400))
+                        .frame(maxHeight: isExpanded ? 460 : (duoGeometry.isCoverScreen ? 270 : 340))
                         .cornerRadius(12)
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
@@ -207,7 +216,7 @@ struct CaptureSessionDetailView: View {
                                 displaySize: geometry.size
                             )
                         }
-                        .frame(maxHeight: isExpanded ? .infinity : (duoGeometry.isCoverScreen ? 270 : 400))
+                        .frame(maxHeight: isExpanded ? 460 : (duoGeometry.isCoverScreen ? 270 : 340))
                         .aspectRatio(image.size.width / image.size.height, contentMode: .fit)
                     }
                 }

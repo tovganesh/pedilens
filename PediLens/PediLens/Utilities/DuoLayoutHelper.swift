@@ -50,19 +50,19 @@ public struct DuoScreenGeometry: Equatable {
         // When unfolded:
         // In portrait: width ~ 669 pt, height ~ 951 pt
         // In landscape: width ~ 951 pt, height ~ 669 pt
-        // Any width >= 580 pt or regular width class represents the internal expanded canvas
-        if isRegularWidth || width >= 580 {
+        // A container or screen is only internalExpanded if its width actually spans >= 550 pt
+        if width >= 550 {
             return .internalExpanded
         }
         
         // iPhone Duo Cover Screen:
         // Dimensions: 466 x 678 pt (@3x: 1398 x 2034 px)
-        // Shorter vertical height (height <= 720) with wide compact width (440 - 520 pt)
-        if (width >= 440 && width <= 520 && height <= 750) || (height <= 720 && width >= 420) {
+        // Shorter vertical height (height <= 750) with wide compact width (420 - 520 pt)
+        if (width >= 420 && width <= 520 && height <= 750) || (height <= 720 && width >= 420 && width < 550) {
             return .cover
         }
         
-        // Standard iPhone (390-430 pt width, 840-932 pt height)
+        // Standard iPhone (390-430 pt width, 840-932 pt height) or narrow pane/sheet
         return .standardPhone
     }
     
@@ -74,6 +74,11 @@ public struct DuoScreenGeometry: Equatable {
     /// Whether the device is currently rendering on the unfolded internal screen
     public var isInternalExpanded: Bool {
         displayMode == .internalExpanded
+    }
+    
+    /// Whether the container has sufficient width to comfortably render side-by-side dual panes (requires >= 600 pt)
+    public var canDisplayDualPane: Bool {
+        size.width >= 600
     }
     
     /// Whether the current screen orientation is landscape

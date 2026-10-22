@@ -24,6 +24,7 @@ struct PatientListView: View {
     @State private var showingDeleteConfirmation = false
     @State private var errorMessage: String?
     @State private var showingError = false
+    @State private var columnVisibility: NavigationSplitViewVisibility = .all
     
     @FetchRequest(
         sortDescriptors: [NSSortDescriptor(keyPath: \Patient.name, ascending: true)],
@@ -52,43 +53,16 @@ struct PatientListView: View {
     }
     
     var body: some View {
-        Group {
-            if duoGeometry.isInternalExpanded {
-                // Internal Screen: Adaptive Dual-Pane Split Layout
-                HStack(spacing: 0) {
-                    // Master sidebar: Patient directory
-                    NavigationView {
-                        patientListContent(isSplitMaster: true)
-                    }
-                    .navigationViewStyle(.stack)
-                    .frame(width: duoGeometry.masterPaneWidth)
-                    
-                    // Central hinge crease gutter / separator
-                    ZStack {
-                        Rectangle()
-                            .fill(Color(uiColor: .separator).opacity(0.3))
-                            .frame(width: 1)
-                    }
-                    .frame(width: 16)
-                    
-                    // Detail pane: Selected patient dashboard
-                    NavigationView {
-                        if let patient = activeSelectedPatient {
-                            PatientDetailView(patient: patient)
-                        } else {
-                            splitPlaceholderView
-                        }
-                    }
-                    .navigationViewStyle(.stack)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+        NavigationSplitView(columnVisibility: $columnVisibility) {
+            patientSidebarContent
+                .navigationSplitViewColumnWidth(min: 280, ideal: 320, max: 360)
+        } detail: {
+            NavigationStack {
+                if let patient = activeSelectedPatient {
+                    PatientDetailView(patient: patient)
+                } else {
+                    splitPlaceholderView
                 }
-            } else {
-                // Cover Screen & Standard: Single-column stack navigation
-                NavigationView {
-                    patientListContent(isSplitMaster: false)
-                }
-                .navigationViewStyle(.stack)
-                .duoCoverScreenPadding()
             }
         }
         .onAppear {
@@ -125,7 +99,7 @@ struct PatientListView: View {
     }
     
     @ViewBuilder
-    private func patientListContent(isSplitMaster: Bool) -> some View {
+    private var patientSidebarContent: some View {
         VStack(spacing: 0) {
             // Sync status indicator bar
             HStack {
@@ -145,7 +119,18 @@ struct PatientListView: View {
             if filteredPatients.isEmpty {
                 emptyStateView
             } else {
-                patientList(isSplitMaster: isSplitMaster)
+                List(selection: $selectedPatient) {
+                    ForEach(filteredPatients, id: \.self) { patient in
+                        NavigationLink(value: patient) {
+                            PatientRowView(patient: patient)
+                        }
+                    }
+                    .onDelete(perform: promptDeletePatient)
+                }
+                .listStyle(InsetGroupedListStyle())
+                .navigationDestination(for: Patient.self) { patient in
+                    PatientDetailView(patient: patient)
+                }
             }
         }
         .navigationTitle("Patients")
@@ -169,36 +154,6 @@ struct PatientListView: View {
                 }
             }
         }
-    }
-    
-    @ViewBuilder
-    private func patientList(isSplitMaster: Bool) -> some View {
-        List {
-            ForEach(filteredPatients, id: \.id) { patient in
-                if isSplitMaster {
-                    Button(action: {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            selectedPatient = patient
-                        }
-                    }) {
-                        PatientRowView(patient: patient)
-                            .padding(.vertical, 2)
-                            .padding(.horizontal, 4)
-                            .background(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .fill(activeSelectedPatient?.objectID == patient.objectID ? Color.accentColor.opacity(0.15) : Color.clear)
-                            )
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                } else {
-                    NavigationLink(destination: PatientDetailView(patient: patient)) {
-                        PatientRowView(patient: patient)
-                    }
-                }
-            }
-            .onDelete(perform: promptDeletePatient)
-        }
-        .listStyle(InsetGroupedListStyle())
     }
     
     private var splitPlaceholderView: some View {

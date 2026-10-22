@@ -182,40 +182,43 @@ struct ManualScaleCalibrationView: View {
     
     var body: some View {
         NavigationView {
-            Group {
-                if duoGeometry.isInternalExpanded {
-                    // Internal Screen: Side-by-Side Studio Layout
-                    HStack(spacing: 0) {
+            GeometryReader { proxy in
+                let availableWidth = proxy.size.width
+                Group {
+                    if availableWidth >= 620 {
+                        // Wide Screen / Internal Screen: Side-by-Side Studio Layout
+                        HStack(spacing: 0) {
+                            VStack(spacing: 0) {
+                                headerInstructionBanner
+                                photoCanvas
+                            }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            
+                            // Crease separator
+                            ZStack {
+                                Rectangle()
+                                    .fill(Color(uiColor: .separator).opacity(0.3))
+                                    .frame(width: 1)
+                            }
+                            .frame(width: 16)
+                            
+                            ScrollView {
+                                VStack(spacing: 14) {
+                                    controlsContent(isVertical: true)
+                                }
+                                .padding(16)
+                            }
+                            .frame(width: min(340, availableWidth * 0.42))
+                        }
+                    } else {
+                        // Cover Screen, Modal Sheet, or Compact Flow (< 620 pt)
                         VStack(spacing: 0) {
                             headerInstructionBanner
                             photoCanvas
+                            controlsContent(isVertical: false)
                         }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        
-                        // Crease separator
-                        ZStack {
-                            Rectangle()
-                                .fill(Color(uiColor: .separator).opacity(0.3))
-                                .frame(width: 1)
-                        }
-                        .frame(width: 16)
-                        
-                        ScrollView {
-                            VStack(spacing: 14) {
-                                controlsContent(isVertical: true)
-                            }
-                            .padding(16)
-                        }
-                        .frame(width: min(340, duoGeometry.size.width * 0.42))
+                        .duoCoverScreenPadding()
                     }
-                } else {
-                    // Cover Screen & Standard: Vertical Flow
-                    VStack(spacing: 0) {
-                        headerInstructionBanner
-                        photoCanvas
-                        controlsContent(isVertical: false)
-                    }
-                    .duoCoverScreenPadding()
                 }
             }
             .navigationTitle("Calibrate Scale")

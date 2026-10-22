@@ -79,8 +79,11 @@ struct TimelineView: View {
             }
         }
         .sheet(item: $viewModel.selectedSession) { session in
-            CaptureSessionDetailView(session: session)
-                .environment(\.managedObjectContext, viewContext)
+            NavigationView {
+                CaptureSessionDetailView(session: session)
+            }
+            .navigationViewStyle(.stack)
+            .environment(\.managedObjectContext, viewContext)
         }
         .fullScreenCover(isPresented: $viewModel.showingCamera) {
             CameraView(woundRecord: viewModel.woundRecord) {
