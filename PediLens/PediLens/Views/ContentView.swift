@@ -50,6 +50,7 @@ struct ContentView: View {
                 LoadingView()
             }
         }
+        .enableDuoAdaptiveLayout()
         .onAppear {
             userManager.loadCurrentUser()
         }
