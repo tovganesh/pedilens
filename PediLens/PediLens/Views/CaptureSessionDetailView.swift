@@ -43,7 +43,7 @@ struct CaptureSessionDetailView: View {
         GeometryReader { proxy in
             let availableWidth = proxy.size.width
             Group {
-                if availableWidth >= 620 {
+                if availableWidth >= 780 {
                     // Internal Screen Full Workstation (only when available width >= 620 pt)
                     HStack(spacing: 0) {
                         // Left Pane: High-resolution wound photo & boundary overlay
@@ -224,23 +224,46 @@ struct CaptureSessionDetailView: View {
                 // Wound boundary detection pill
                 if let boundary = woundBoundary {
                     VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Label("Wound Detection", systemImage: "viewfinder.circle.fill")
-                                .font(duoGeometry.isCoverScreen ? .subheadline : .headline)
-                                .foregroundColor(.primary)
-                            
-                            Spacer()
-                            
-                            HStack(spacing: 4) {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(.green)
-                                Text("Detected (\(Int(boundary.confidence * 100))%)")
-                                    .font(.caption)
-                                    .fontWeight(.semibold)
+                        ViewThatFits(in: .horizontal) {
+                            HStack {
+                                Label("Wound Detection", systemImage: "viewfinder.circle.fill")
+                                    .font(duoGeometry.isCoverScreen ? .subheadline : .headline)
+                                    .foregroundColor(.primary)
+                                    .lineLimit(1)
+                                
+                                Spacer()
+                                
+                                HStack(spacing: 4) {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundColor(.green)
+                                    Text("Detected (\(Int(boundary.confidence * 100))%)")
+                                        .font(.caption)
+                                        .fontWeight(.semibold)
+                                        .lineLimit(1)
+                                }
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 4)
+                                .pediLensGlassPill(tint: .green)
                             }
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 4)
-                            .pediLensGlassPill(tint: .green)
+                            
+                            VStack(alignment: .leading, spacing: 6) {
+                                Label("Wound Detection", systemImage: "viewfinder.circle.fill")
+                                    .font(duoGeometry.isCoverScreen ? .subheadline : .headline)
+                                    .foregroundColor(.primary)
+                                    .lineLimit(1)
+                                
+                                HStack(spacing: 4) {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundColor(.green)
+                                    Text("Detected (\(Int(boundary.confidence * 100))%)")
+                                        .font(.caption)
+                                        .fontWeight(.semibold)
+                                        .lineLimit(1)
+                                }
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 4)
+                                .pediLensGlassPill(tint: .green)
+                            }
                         }
                         
                         // Disclaimer for automatic detection
@@ -325,64 +348,62 @@ struct CaptureSessionDetailView: View {
             if let measurements = measurements {
                 VStack(alignment: .leading, spacing: 12) {
                     // Section Header: Title & Recalibrate action
-                    HStack(alignment: .center) {
-                        Label("Clinical Measurements", systemImage: "ruler.fill")
-                            .font(duoGeometry.isCoverScreen ? .subheadline : .headline)
-                            .foregroundColor(.primary)
-                            .lineLimit(1)
-                        
-                        Spacer(minLength: 8)
-                        
-                        // Recalibrate / Adjust scale button
-                        Button(action: { showingScaleCalibration = true }) {
-                            HStack(spacing: 4) {
-                                Image(systemName: "slider.horizontal.below.rectangle")
-                                    .font(.caption2)
-                                Text(measurements.calibrationUsed.isUserCalibrated ? "Recalibrate" : "Adjust Scale")
-                                    .font(.caption)
-                                    .fontWeight(.semibold)
-                                    .lineLimit(1)
-                            }
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 5)
+                    ViewThatFits(in: .horizontal) {
+                        HStack(alignment: .center) {
+                            Label("Clinical Measurements", systemImage: "ruler.fill")
+                                .font(duoGeometry.isCoverScreen ? .subheadline : .headline)
+                                .foregroundColor(.primary)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.85)
+                            
+                            Spacer(minLength: 8)
+                            
+                            adjustScaleButton(measurements: measurements)
                         }
-                        .pediLensGlassPill(tint: .accentColor)
-                        .accessibilityLabel("Recalibrate scale")
+                        
+                        VStack(alignment: .leading, spacing: 8) {
+                            Label("Clinical Measurements", systemImage: "ruler.fill")
+                                .font(duoGeometry.isCoverScreen ? .subheadline : .headline)
+                                .foregroundColor(.primary)
+                                .lineLimit(1)
+                            
+                            adjustScaleButton(measurements: measurements)
+                        }
                     }
                     
                     // Calibration reference badge & scale readout row
-                    HStack(spacing: 8) {
-                        HStack(spacing: 5) {
-                            Image(systemName: measurements.calibrationUsed.calibrationType.icon)
-                                .font(.caption2)
-                            Text(measurements.calibrationUsed.calibrationType.displayName)
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: 8) {
+                            calibrationBadge(measurements: measurements)
+                            
+                            if measurements.calibrationUsed.isUserCalibrated {
+                                manualTag
+                            }
+                            
+                            Spacer()
+                            
+                            Text(String(format: "%.1f px/mm", measurements.calibrationUsed.pixelsPerMillimeter))
                                 .font(.caption)
                                 .fontWeight(.medium)
+                                .foregroundColor(.secondary)
                                 .lineLimit(1)
                         }
-                        .foregroundColor(measurements.calibrationUsed.accuracy == .high ? .green : (measurements.calibrationUsed.accuracy == .medium ? .blue : .orange))
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 4)
-                        .pediLensGlassPill(tint: measurements.calibrationUsed.accuracy == .high ? .green : (measurements.calibrationUsed.accuracy == .medium ? .blue : .orange))
                         
-                        if measurements.calibrationUsed.isUserCalibrated {
-                            Text("Manual")
-                                .font(.caption2)
-                                .fontWeight(.semibold)
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack(spacing: 8) {
+                                calibrationBadge(measurements: measurements)
+                                
+                                if measurements.calibrationUsed.isUserCalibrated {
+                                    manualTag
+                                }
+                            }
+                            
+                            Text(String(format: "%.1f px/mm", measurements.calibrationUsed.pixelsPerMillimeter))
+                                .font(.caption)
+                                .fontWeight(.medium)
                                 .foregroundColor(.secondary)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 3)
-                                .background(Color(.secondarySystemBackground))
-                                .cornerRadius(4)
+                                .lineLimit(1)
                         }
-                        
-                        Spacer()
-                        
-                        Text(String(format: "%.1f px/mm", measurements.calibrationUsed.pixelsPerMillimeter))
-                            .font(.caption)
-                            .fontWeight(.medium)
-                            .foregroundColor(.secondary)
-                            .lineLimit(1)
                     }
                     
                     Divider()
@@ -424,26 +445,15 @@ struct CaptureSessionDetailView: View {
                 .pediLensGlass(cornerRadius: 14)
                 
                 // Action buttons when measurements exist
-                HStack(spacing: 12) {
-                    Button(action: { showingManualTrace = true }) {
-                        Label("Manual Trace", systemImage: "hand.draw")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 12) {
+                        manualTraceButton
+                        reanalyzeButton
                     }
-                    .pediLensGlassButton(prominent: true)
-                    .accessibilityLabel("Manually trace wound boundary")
-                    
-                    Button(action: { showingReanalyzeConfirmation = true }) {
-                        Label("Re-analyze", systemImage: "arrow.clockwise")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
+                    VStack(spacing: 10) {
+                        manualTraceButton
+                        reanalyzeButton
                     }
-                    .pediLensGlassButton()
-                    .accessibilityLabel("Re-analyze wound boundary")
                 }
             } else if isAnalyzing {
                 VStack(spacing: 12) {
@@ -477,6 +487,8 @@ struct CaptureSessionDetailView: View {
                         Label("Manual Trace (Recommended)", systemImage: "hand.draw")
                             .font(.subheadline)
                             .fontWeight(.semibold)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.85)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
                     }
@@ -487,6 +499,8 @@ struct CaptureSessionDetailView: View {
                         Label("Auto-Detect Wound", systemImage: "waveform.path.ecg")
                             .font(.subheadline)
                             .fontWeight(.medium)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.85)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
                     }
@@ -497,6 +511,8 @@ struct CaptureSessionDetailView: View {
                         Label(customCalibration != nil ? "Scale Calibrated (Tap to Change)" : "Define Scale Reference", systemImage: "ruler")
                             .font(.subheadline)
                             .fontWeight(.medium)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.85)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
                     }
@@ -1007,6 +1023,79 @@ struct CaptureSessionDetailView: View {
     
     // MARK: - Clinical Metric Tile
     
+    // MARK: - Action Buttons & Badges
+    
+    private var manualTraceButton: some View {
+        Button(action: { showingManualTrace = true }) {
+            Label("Manual Trace", systemImage: "hand.draw")
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+        }
+        .pediLensGlassButton(prominent: true)
+        .accessibilityLabel("Manually trace wound boundary")
+    }
+    
+    private var reanalyzeButton: some View {
+        Button(action: { showingReanalyzeConfirmation = true }) {
+            Label("Re-analyze", systemImage: "arrow.clockwise")
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+        }
+        .pediLensGlassButton()
+        .accessibilityLabel("Re-analyze wound boundary")
+    }
+    
+    private func adjustScaleButton(measurements: WoundMeasurement) -> some View {
+        Button(action: { showingScaleCalibration = true }) {
+            HStack(spacing: 4) {
+                Image(systemName: "slider.horizontal.below.rectangle")
+                    .font(.caption2)
+                Text(measurements.calibrationUsed.isUserCalibrated ? "Recalibrate" : "Adjust Scale")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .lineLimit(1)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+        }
+        .pediLensGlassPill(tint: .accentColor)
+        .accessibilityLabel("Recalibrate scale")
+    }
+    
+    private func calibrationBadge(measurements: WoundMeasurement) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: measurements.calibrationUsed.calibrationType.icon)
+                .font(.caption2)
+            Text(measurements.calibrationUsed.calibrationType.displayName)
+                .font(.caption)
+                .fontWeight(.medium)
+                .lineLimit(1)
+        }
+        .foregroundColor(measurements.calibrationUsed.accuracy == .high ? .green : (measurements.calibrationUsed.accuracy == .medium ? .blue : .orange))
+        .padding(.horizontal, 10)
+        .padding(.vertical, 4)
+        .pediLensGlassPill(tint: measurements.calibrationUsed.accuracy == .high ? .green : (measurements.calibrationUsed.accuracy == .medium ? .blue : .orange))
+    }
+    
+    private var manualTag: some View {
+        Text("Manual")
+            .font(.caption2)
+            .fontWeight(.semibold)
+            .foregroundColor(.secondary)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .background(Color(.secondarySystemBackground))
+            .cornerRadius(4)
+    }
+
     private func clinicalMetricCard(title: String, value: String, icon: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 5) {
@@ -1018,6 +1107,8 @@ struct CaptureSessionDetailView: View {
                     .fontWeight(.medium)
                     .foregroundColor(.secondary)
                     .textCase(.uppercase)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
             Text(value)
                 .font(duoGeometry.isCoverScreen ? .subheadline : .headline)

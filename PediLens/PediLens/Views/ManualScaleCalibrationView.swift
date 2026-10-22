@@ -185,7 +185,7 @@ struct ManualScaleCalibrationView: View {
             GeometryReader { proxy in
                 let availableWidth = proxy.size.width
                 Group {
-                    if availableWidth >= 620 {
+                    if availableWidth >= 780 {
                         // Wide Screen / Internal Screen: Side-by-Side Studio Layout
                         HStack(spacing: 0) {
                             VStack(spacing: 0) {
