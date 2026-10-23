@@ -319,4 +319,67 @@ final class MultiWoundAnnotationAndComparisonTests: XCTestCase {
         XCTAssertEqual(newTotalPerimeter, 96.0, accuracy: 0.001) // 60 + 36
         XCTAssertEqual(newTotalVolume, 768.0, accuracy: 0.001) // 648 + 120
     }
+
+    // MARK: - Pan and Zoom Synchronous Coordinate Mapping Tests
+    
+    func testManualBoundaryTrace_PanAndZoomCoordinateTransform_MaintainsLockstepWithImage() {
+        // Container size (e.g. iPad or iPhone simulator view frame)
+        let containerSize = CGSize(width: 400, height: 600)
+        let center = CGPoint(x: containerSize.width / 2, y: containerSize.height / 2) // (200, 300)
+        
+        // Image size: 1000 x 1500 (2:3 aspect ratio, matches container 400 x 600 perfectly)
+        let imageSize = CGSize(width: 1000, height: 1500)
+        let fitGeometry = AspectFitGeometry(imageSize: imageSize, containerSize: containerSize)
+        
+        // Suppose a wound vertex is at image coordinates (500, 750) [dead center of the image]
+        let originalImagePoint = CGPoint(x: 500, y: 750)
+        let originalViewPoint = fitGeometry.imageToView(originalImagePoint)
+        XCTAssertEqual(originalViewPoint.x, 200.0, accuracy: 0.001)
+        XCTAssertEqual(originalViewPoint.y, 300.0, accuracy: 0.001)
+        
+        // Scenario 1: User zooms in 2.5x and pans the image by (-100, 50)
+        let scale: CGFloat = 2.5
+        let offset = CGSize(width: -100, height: 50)
+        
+        // In the transformed container, the point is visually rendered on screen at:
+        // screenPoint = center + (viewPoint - center) * scale + offset
+        let renderedScreenX = center.x + (originalViewPoint.x - center.x) * scale + offset.width
+        let renderedScreenY = center.y + (originalViewPoint.y - center.y) * scale + offset.height
+        let screenPoint = CGPoint(x: renderedScreenX, y: renderedScreenY)
+        
+        // Center point (200, 300) with offset (-100, 50) should be at (100, 350)
+        XCTAssertEqual(screenPoint.x, 100.0, accuracy: 0.001)
+        XCTAssertEqual(screenPoint.y, 350.0, accuracy: 0.001)
+        
+        // Clinician puts finger directly on the rendered vertex handle at (100, 350)
+        // ManualBoundaryTraceView inverse transform:
+        let mappedCanvasPoint = CGPoint(
+            x: center.x + (screenPoint.x - offset.width - center.x) / scale,
+            y: center.y + (screenPoint.y - offset.height - center.y) / scale
+        )
+        
+        // Must map back exactly to unscaled viewPoint (200, 300)
+        XCTAssertEqual(mappedCanvasPoint.x, originalViewPoint.x, accuracy: 0.001)
+        XCTAssertEqual(mappedCanvasPoint.y, originalViewPoint.y, accuracy: 0.001)
+        
+        // And back to original image coordinate (500, 750)
+        let recoveredImagePoint = fitGeometry.viewToImage(mappedCanvasPoint)
+        XCTAssertEqual(recoveredImagePoint.x, originalImagePoint.x, accuracy: 0.001)
+        XCTAssertEqual(recoveredImagePoint.y, originalImagePoint.y, accuracy: 0.001)
+        
+        // Scenario 2: Off-center wound (e.g. toe ulcer at image 250, 300)
+        let toeUlcerImage = CGPoint(x: 250, y: 300)
+        let toeUlcerView = fitGeometry.imageToView(toeUlcerImage)
+        let toeScreenX = center.x + (toeUlcerView.x - center.x) * scale + offset.width
+        let toeScreenY = center.y + (toeUlcerView.y - center.y) * scale + offset.height
+        let toeScreenPoint = CGPoint(x: toeScreenX, y: toeScreenY)
+        
+        let mappedToeCanvas = CGPoint(
+            x: center.x + (toeScreenPoint.x - offset.width - center.x) / scale,
+            y: center.y + (toeScreenPoint.y - offset.height - center.y) / scale
+        )
+        let recoveredToeImage = fitGeometry.viewToImage(mappedToeCanvas)
+        XCTAssertEqual(recoveredToeImage.x, toeUlcerImage.x, accuracy: 0.001)
+        XCTAssertEqual(recoveredToeImage.y, toeUlcerImage.y, accuracy: 0.001)
+    }
 }

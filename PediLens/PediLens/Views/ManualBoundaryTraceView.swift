@@ -5,7 +5,7 @@
 //  Created by PediLens Team
 //  Interactive manual wound boundary tracing and editing tool.
 //  Upgraded to support multi-wound tracing, interactive vertex handles,
-//  per-wound color distinction, and floating precision loupe magnifier.
+//  per-wound color distinction, synchronous pan & zoom, and floating precision loupe magnifier.
 //
 
 import SwiftUI
@@ -32,6 +32,7 @@ struct ManualBoundaryTraceView: View {
     @State private var points: [CGPoint] = []
     @State private var selectedPointIndex: Int?
     @State private var isClosed: Bool = true
+    @State private var isDraggingPoint: Bool = false
     
     // Zoom & Pan state
     @State private var scale: CGFloat = 1.0
@@ -41,7 +42,8 @@ struct ManualBoundaryTraceView: View {
     
     // Loupe Magnification state
     @State private var showLoupe: Bool = false
-    @State private var loupeLocation: CGPoint = .zero
+    @State private var loupeScreenLocation: CGPoint = .zero
+    @State private var loupeCanvasPoint: CGPoint = .zero
     
     // Display coordinates
     @State private var imageSize: CGSize = .zero
@@ -76,103 +78,144 @@ struct ManualBoundaryTraceView: View {
                 ZStack {
                     Color.black.ignoresSafeArea()
                     
-                    // Base Image with Aspect-Fit
-                    Image(uiImage: image)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .scaleEffect(scale)
-                        .offset(offset)
-                        .gesture(
-                            SimultaneousGesture(
-                                MagnificationGesture()
-                                    .onChanged { value in
-                                        let delta = value / lastScale
-                                        lastScale = value
-                                        scale = min(max(scale * delta, 1.0), 5.0)
-                                    }
-                                    .onEnded { _ in
-                                        lastScale = 1.0
-                                    },
-                                DragGesture()
-                                    .onChanged { value in
-                                        offset = CGSize(
-                                            width: lastOffset.width + value.translation.width,
-                                            height: lastOffset.height + value.translation.height
-                                        )
-                                    }
-                                    .onEnded { _ in
-                                        lastOffset = offset
-                                    }
-                            )
-                        )
-                        .background(
-                            GeometryReader { imageGeometry in
-                                Color.clear.onAppear {
-                                    imageSize = imageGeometry.size
+                    // Unified Zoomable & Pannable Canvas Container:
+                    // Image, wound polygon outlines, and control point handles ALL reside together,
+                    // ensuring boundaries and handles move and scale in exact 1:1 synchrony with the photo.
+                    ZStack {
+                        // Base Image with Aspect-Fit
+                        Image(uiImage: image)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                        
+                        // Draw inactive wounds and active wound boundary path
+                        Canvas { context, size in
+                            let fitGeometry = AspectFitGeometry(imageSize: image.size, containerSize: size)
+                            
+                            // 1. Draw inactive wounds as background reference
+                            for (index, wound) in wounds.enumerated() {
+                                guard index != activeWoundIndex, wound.points.count >= 2 else { continue }
+                                var inactivePath = Path()
+                                inactivePath.move(to: fitGeometry.imageToView(wound.points[0]))
+                                for pt in wound.points.dropFirst() {
+                                    inactivePath.addLine(to: fitGeometry.imageToView(pt))
                                 }
+                                if wound.points.count > 2 {
+                                    inactivePath.closeSubpath()
+                                    context.fill(inactivePath, with: .color(wound.displayColor.opacity(0.12)))
+                                }
+                                context.stroke(
+                                    inactivePath,
+                                    with: .color(wound.displayColor.opacity(0.65)),
+                                    lineWidth: max(1.0, 1.5 / scale)
+                                )
                             }
-                        )
-                    
-                    // Draw inactive wounds and active wound
-                    Canvas { context, size in
-                        let fitGeometry = AspectFitGeometry(imageSize: image.size, containerSize: size)
-                        
-                        // 1. Draw inactive wounds as background reference
-                        for (index, wound) in wounds.enumerated() {
-                            guard index != activeWoundIndex, wound.points.count >= 2 else { continue }
-                            var inactivePath = Path()
-                            inactivePath.move(to: fitGeometry.imageToView(wound.points[0]))
-                            for pt in wound.points.dropFirst() {
-                                inactivePath.addLine(to: fitGeometry.imageToView(pt))
+                            
+                            // 2. Draw active wound path
+                            guard points.count >= 2 else { return }
+                            var activePath = Path()
+                            let firstViewPoint = fitGeometry.imageToView(points[0])
+                            activePath.move(to: firstViewPoint)
+                            
+                            for point in points.dropFirst() {
+                                let viewPoint = fitGeometry.imageToView(point)
+                                activePath.addLine(to: viewPoint)
                             }
-                            if wound.points.count > 2 {
-                                inactivePath.closeSubpath()
-                                context.fill(inactivePath, with: .color(wound.displayColor.opacity(0.12)))
+                            
+                            if isClosed && points.count > 2 {
+                                activePath.closeSubpath()
+                                // Semi-transparent fill
+                                context.fill(activePath, with: .color(activeColor.opacity(0.25)))
                             }
-                            context.stroke(inactivePath, with: .color(wound.displayColor.opacity(0.65)), lineWidth: 1.5)
+                            
+                            context.stroke(
+                                activePath,
+                                with: .color(activeColor),
+                                lineWidth: max(1.5, 2.5 / scale)
+                            )
                         }
+                        .allowsHitTesting(false)
                         
-                        // 2. Draw active wound path
-                        guard points.count >= 2 else { return }
-                        var activePath = Path()
-                        let firstViewPoint = fitGeometry.imageToView(points[0])
-                        activePath.move(to: firstViewPoint)
-                        
-                        for point in points.dropFirst() {
-                            let viewPoint = fitGeometry.imageToView(point)
-                            activePath.addLine(to: viewPoint)
-                        }
-                        
-                        if isClosed && points.count > 2 {
-                            activePath.closeSubpath()
-                            // Semi-transparent fill
-                            context.fill(activePath, with: .color(activeColor.opacity(0.25)))
-                        }
-                        
-                        context.stroke(activePath, with: .color(activeColor), lineWidth: 2.5)
+                        // Interactive Control Points on active wound
+                        controlPointsOverlay(size: geometry.size)
                     }
-                    .allowsHitTesting(false)
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+                    .scaleEffect(scale)
+                    .offset(offset)
+                    .gesture(
+                        SimultaneousGesture(
+                            MagnificationGesture()
+                                .onChanged { value in
+                                    let delta = value / lastScale
+                                    lastScale = value
+                                    scale = min(max(scale * delta, 1.0), 5.0)
+                                }
+                                .onEnded { _ in
+                                    lastScale = 1.0
+                                },
+                            DragGesture()
+                                .onChanged { value in
+                                    guard !isDraggingPoint else { return }
+                                    let maxOffsetX = max(0, (geometry.size.width * (scale - 1)) / 2) + 200
+                                    let maxOffsetY = max(0, (geometry.size.height * (scale - 1)) / 2) + 200
+                                    let newW = lastOffset.width + value.translation.width
+                                    let newH = lastOffset.height + value.translation.height
+                                    offset = CGSize(
+                                        width: min(max(newW, -maxOffsetX), maxOffsetX),
+                                        height: min(max(newH, -maxOffsetY), maxOffsetY)
+                                    )
+                                }
+                                .onEnded { _ in
+                                    guard !isDraggingPoint else { return }
+                                    lastOffset = offset
+                                }
+                        )
+                    )
                     
-                    // Interactive Control Points on active wound
-                    controlPointsOverlay(size: geometry.size)
-                    
-                    // Precision Loupe Magnifier
+                    // Precision Loupe Magnifier (positioned in screen coordinates above finger)
                     if showLoupe {
                         LoupeView(
                             sourceImage: image,
-                            touchLocation: loupeLocation,
+                            touchLocation: loupeScreenLocation,
+                            sourcePoint: loupeCanvasPoint,
                             imageSize: geometry.size,
                             points: points,
                             activeColor: activeColor
                         )
                     }
                     
-                    // Multi-Wound Bottom Toolbar / Selector
+                    // Multi-Wound Top Toolbar / Selector
                     VStack {
                         woundSelectionBar
                         Spacer()
+                        
+                        // Floating Reset View control when zoomed or panned
+                        if scale > 1.05 || abs(offset.width) > 10 || abs(offset.height) > 10 {
+                            HStack {
+                                Button(action: resetZoomAndPan) {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "arrow.counterclockwise")
+                                        Text(String(format: "%.1fx", scale))
+                                            .font(.caption.weight(.semibold))
+                                        Text("Reset View")
+                                            .font(.caption)
+                                    }
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .background(.ultraThinMaterial)
+                                    .cornerRadius(18)
+                                    .foregroundColor(.white)
+                                    .shadow(radius: 3)
+                                }
+                                .transition(.opacity.combined(with: .scale))
+                                
+                                Spacer()
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 12)
+                        }
                     }
                 }
+                .coordinateSpace(name: "ContainerSpace")
                 .navigationTitle(activeWound?.label ?? "Trace Wounds")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
@@ -289,27 +332,42 @@ struct ManualBoundaryTraceView: View {
                 
                 Circle()
                     .fill(isSelected ? .white : activeColor)
-                    .frame(width: isSelected ? 18 : 12, height: isSelected ? 18 : 12)
+                    .frame(
+                        width: (isSelected ? 18 : 12) / scale,
+                        height: (isSelected ? 18 : 12) / scale
+                    )
                     .overlay(
                         Circle()
-                            .stroke(Color.white, lineWidth: isSelected ? 3 : 1.5)
+                            .stroke(Color.white, lineWidth: (isSelected ? 3 : 1.5) / scale)
                     )
-                    .shadow(color: .black.opacity(0.5), radius: 3)
+                    .shadow(color: .black.opacity(0.5), radius: 3 / scale)
                     .position(viewPoint)
+                    .contentShape(Circle().inset(by: -12 / scale))
                     .gesture(
-                        DragGesture(minimumDistance: 0)
+                        DragGesture(minimumDistance: 0, coordinateSpace: .named("ContainerSpace"))
                             .onChanged { value in
+                                isDraggingPoint = true
                                 selectedPointIndex = index
                                 showLoupe = true
-                                loupeLocation = value.location
                                 
-                                let imagePoint = fitGeometry.viewToImage(value.location)
+                                // Map touch position in ContainerSpace back into unscaled, unoffset canvas coordinates:
+                                let center = CGPoint(x: size.width / 2, y: size.height / 2)
+                                let canvasPoint = CGPoint(
+                                    x: center.x + (value.location.x - offset.width - center.x) / scale,
+                                    y: center.y + (value.location.y - offset.height - center.y) / scale
+                                )
+                                
+                                loupeScreenLocation = value.location
+                                loupeCanvasPoint = canvasPoint
+                                
+                                let imagePoint = fitGeometry.viewToImage(canvasPoint)
                                 points[index] = CGPoint(
                                     x: max(0, min(image.size.width, imagePoint.x)),
                                     y: max(0, min(image.size.height, imagePoint.y))
                                 )
                             }
                             .onEnded { _ in
+                                isDraggingPoint = false
                                 showLoupe = false
                                 saveActivePointsToWound()
                             }
@@ -319,6 +377,15 @@ struct ManualBoundaryTraceView: View {
     }
     
     // MARK: - Multi-Wound State Handlers
+    
+    private func resetZoomAndPan() {
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            scale = 1.0
+            lastScale = 1.0
+            offset = .zero
+            lastOffset = .zero
+        }
+    }
     
     private func setupInitialWounds() {
         if let existing = existingWounds, !existing.isEmpty {
@@ -430,12 +497,17 @@ struct ManualBoundaryTraceView: View {
 struct LoupeView: View {
     let sourceImage: UIImage
     let touchLocation: CGPoint
+    let sourcePoint: CGPoint
     let imageSize: CGSize
     let points: [CGPoint]
     let activeColor: Color
     
     private let loupeSize: CGFloat = 110
     private let magnification: CGFloat = 2.0
+    
+    private var loupeY: CGFloat {
+        touchLocation.y < 120 ? touchLocation.y + 80 : touchLocation.y - 80
+    }
     
     var body: some View {
         ZStack {
@@ -447,10 +519,10 @@ struct LoupeView: View {
                         Canvas { context, size in
                             let center = CGPoint(x: size.width / 2, y: size.height / 2)
                             
-                            // Draw magnified portion of image
+                            // Draw magnified portion of image centered around sourcePoint
                             context.translateBy(x: center.x, y: center.y)
                             context.scaleBy(x: magnification, y: magnification)
-                            context.translateBy(x: -touchLocation.x, y: -touchLocation.y)
+                            context.translateBy(x: -sourcePoint.x, y: -sourcePoint.y)
                             
                             let fitGeometry = AspectFitGeometry(imageSize: sourceImage.size, containerSize: imageSize)
                             let rect = CGRect(origin: fitGeometry.offset, size: fitGeometry.displayedSize)
@@ -475,7 +547,7 @@ struct LoupeView: View {
                     }
                 )
                 .shadow(color: .black.opacity(0.4), radius: 6, x: 0, y: 3)
-                .position(x: touchLocation.x, y: max(loupeSize * 0.7, touchLocation.y - 80))
+                .position(x: touchLocation.x, y: loupeY)
                 .allowsHitTesting(false)
         }
     }
