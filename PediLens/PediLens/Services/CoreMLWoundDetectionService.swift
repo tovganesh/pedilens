@@ -45,7 +45,6 @@ class CoreMLWoundDetectionService: WoundDetectionServiceProtocol {
     
     /// Attempts to load the CoreML model from the app bundle
     private func loadCoreMLModel() {
-        // Try to load WoundSegmentation.mlmodel from bundle
         guard let modelURL = Bundle.main.url(forResource: "WoundSegmentation", withExtension: "mlmodelc") else {
             print("⚠️ CoreML model not found in bundle. Using fallback detection.")
             print("   Searched for: WoundSegmentation.mlmodelc")
@@ -72,14 +71,21 @@ class CoreMLWoundDetectionService: WoundDetectionServiceProtocol {
     
     func detectWoundBoundary(in image: UIImage, 
                             calibration: MeasurementCalibration?) async throws -> WoundBoundary {
-        
-        // Use CoreML model if available, otherwise fall back
+        let boundaries = try await detectMultipleWoundBoundaries(in: image, calibration: calibration)
+        guard let primary = boundaries.first else {
+            throw WoundDetectionError.noContoursFound
+        }
+        return primary
+    }
+    
+    func detectMultipleWoundBoundaries(in image: UIImage,
+                                      calibration: MeasurementCalibration?) async throws -> [WoundBoundary] {
         if isModelAvailable {
-            print("🤖 Using CoreML model for wound detection")
-            return try await detectWithCoreML(image: image, calibration: calibration)
+            print("🤖 Using CoreML model for multi-wound detection")
+            return try await detectMultipleWithCoreML(image: image, calibration: calibration)
         } else {
             print("ℹ️ Using fallback detection (no CoreML model)")
-            return try await fallbackService.detectWoundBoundary(in: image, calibration: calibration)
+            return try await fallbackService.detectMultipleWoundBoundaries(in: image, calibration: calibration)
         }
     }
     
@@ -95,11 +101,11 @@ class CoreMLWoundDetectionService: WoundDetectionServiceProtocol {
         let meanProbability: Float
     }
     
-    // MARK: - CoreML Detection
+    // MARK: - CoreML Multi-Wound Detection
     
-    /// Performs wound detection using the CoreML model
-    private func detectWithCoreML(image: UIImage, 
-                                 calibration: MeasurementCalibration?) async throws -> WoundBoundary {
+    /// Performs wound detection for all wound lesions in the image using CoreML and chromaticity enhancement
+    private func detectMultipleWithCoreML(image: UIImage, 
+                                          calibration: MeasurementCalibration?) async throws -> [WoundBoundary] {
         
         guard let visionModel = visionModel else {
             throw WoundDetectionError.modelLoadFailed
@@ -121,78 +127,183 @@ class CoreMLWoundDetectionService: WoundDetectionServiceProtocol {
             model: visionModel
         )
         
-        let segmentationMask = segmentationOutput.mask
+        var segmentationMask = segmentationOutput.mask
         let maskHeight = segmentationMask.count
         let maskWidth = segmentationMask.isEmpty ? 0 : segmentationMask[0].count
         print("🔍 Segmentation mask size: \(maskWidth)x\(maskHeight)")
         
         // Extract contours from segmentation mask using Moore-Neighbor boundary tracing
-        let allContours = extractContours(from: segmentationMask)
-        guard !allContours.isEmpty else {
-            throw WoundDetectionError.noContoursFound
-        }
-        
-        print("📍 Found \(allContours.count) raw contour(s)")
+        var rawContours = extractContours(from: segmentationMask)
         
         // CLINICAL SAFETY GUARDRAIL:
-        // A wound crater in diabetic foot photography occupies between 0.1% and 35% of the total frame.
-        // Contours covering the whole foot or background (> 35% of the image) are NEVER wounds.
+        // A wound crater in diabetic foot photography occupies between 0.05% and 35% of the total frame.
+        // Contours covering the whole foot or background (> 35% of the image) are discarded.
         let totalMaskArea = CGFloat(maskWidth * maskHeight)
-        let woundContours = allContours.filter { contour in
+        var validContours = rawContours.filter { contour in
             let box = calculateBoundingBox(for: contour)
             let boxArea = box.width * box.height
             let areaRatio = boxArea / max(1.0, totalMaskArea)
-            return areaRatio >= 0.001 && areaRatio <= 0.35
+            return areaRatio >= 0.0005 && areaRatio <= 0.35 && contour.count >= 6
         }
         
-        let candidates = woundContours.isEmpty ? allContours : woundContours
+        // AUTODETECTION IMPROVEMENT: Chromaticity & Erythema Lesion Discovery
+        // In multi-ulcer diabetic foot presentations (e.g. 1st MTH + 4th/5th MTH / toe lesions),
+        // we supplement CoreML contours with color-contrast saliency for secondary lesions.
+        let chromaticContours = detectChromaticUlcerCandidates(
+            in: resizedCGImage,
+            maskWidth: maskWidth,
+            maskHeight: maskHeight,
+            existingContours: validContours
+        )
+        if !chromaticContours.isEmpty {
+            print("🩺 Detected \(chromaticContours.count) additional ulcer candidate(s) via erythema contrast")
+            validContours.append(contentsOf: chromaticContours)
+        }
         
-        // Select the largest plausible wound contour
-        guard let largestContour = candidates.max(by: { $0.count < $1.count }) else {
+        let candidates = validContours.isEmpty ? rawContours : validContours
+        guard !candidates.isEmpty else {
             throw WoundDetectionError.noContoursFound
         }
         
-        print("🎯 Selected wound contour with \(largestContour.count) points")
+        // Sort contours by polygon area descending (largest ulcer first, then secondary ulcers)
+        let sortedCandidates = candidates.sorted { c1, c2 in
+            calculatePolygonArea(points: c1) > calculatePolygonArea(points: c2)
+        }
         
-        // Simplify contour with Douglas-Peucker to remove pixel grid discretization while preserving organic curvature
-        let simplifiedContour = douglasPeucker(points: largestContour, tolerance: simplificationTolerance)
-        
-        print("✂️ Simplified to \(simplifiedContour.count) points")
-        
-        // Scale points from mask coordinates to original image coordinates
+        var boundaries: [WoundBoundary] = []
         let maskSize = CGSize(width: maskWidth, height: maskHeight)
-        let scaledContour = scalePoints(
-            simplifiedContour,
-            from: maskSize,
-            to: image.size
-        )
         
-        // Calculate realistic clinical confidence score
-        let confidence = calculateConfidence(
-            peakProbability: segmentationOutput.peakProbability,
-            meanProbability: segmentationOutput.meanProbability,
-            contour: scaledContour,
-            imageSize: image.size
-        )
+        for (index, contour) in sortedCandidates.enumerated() {
+            guard contour.count >= 4 else { continue }
+            
+            // Simplify contour with Douglas-Peucker to remove pixel grid discretization while preserving organic curvature
+            let simplifiedContour = douglasPeucker(points: contour, tolerance: simplificationTolerance)
+            guard simplifiedContour.count >= 3 else { continue }
+            
+            // Scale points from mask coordinates to original image coordinates
+            let scaledContour = scalePoints(
+                simplifiedContour,
+                from: maskSize,
+                to: image.size
+            )
+            
+            // Calculate realistic clinical confidence score
+            let confidence = calculateConfidence(
+                peakProbability: segmentationOutput.peakProbability,
+                meanProbability: segmentationOutput.meanProbability,
+                contour: scaledContour,
+                imageSize: image.size
+            )
+            
+            guard confidence >= minimumConfidence else { continue }
+            
+            // Calculate bounding box
+            let boundingBox = calculateBoundingBox(for: scaledContour)
+            let colorHex = AnnotatedWound.colorPalette[index % AnnotatedWound.colorPalette.count]
+            
+            let boundary = WoundBoundary(
+                id: UUID(),
+                woundNumber: index + 1,
+                points: scaledContour,
+                confidence: confidence,
+                boundingBox: boundingBox,
+                detectionMethod: .automatic(modelVersion: modelVersion),
+                label: "Wound #\(index + 1)",
+                colorHex: colorHex
+            )
+            boundaries.append(boundary)
+        }
         
-        guard confidence >= minimumConfidence else {
+        guard !boundaries.isEmpty else {
             throw WoundDetectionError.lowConfidence
         }
         
-        // Calculate bounding box
-        let boundingBox = calculateBoundingBox(for: scaledContour)
+        print("✅ CoreML multi-wound detection complete: found \(boundaries.count) wound(s)")
+        return boundaries
+    }
+    
+    /// Detects secondary ulcer candidates in the image using erythema/granulation contrast against intact foot skin
+    private func detectChromaticUlcerCandidates(
+        in cgImage: CGImage,
+        maskWidth: Int,
+        maskHeight: Int,
+        existingContours: [[CGPoint]]
+    ) -> [[CGPoint]] {
+        guard maskWidth > 0 && maskHeight > 0 else { return [] }
         
-        print("✅ CoreML wound detection complete:")
-        print("   Points detected: \(scaledContour.count)")
-        print("   Confidence: \(String(format: "%.1f", confidence * 100))%")
-        print("   Bounding box: \(boundingBox)")
+        // Render resized CGImage to a small RGBA buffer matching mask dimensions
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        var pixelData = [UInt8](repeating: 0, count: maskWidth * maskHeight * 4)
+        guard let context = CGContext(
+            data: &pixelData,
+            width: maskWidth,
+            height: maskHeight,
+            bitsPerComponent: 8,
+            bytesPerRow: maskWidth * 4,
+            space: colorSpace,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else { return [] }
         
-        return WoundBoundary(
-            points: scaledContour,
-            confidence: confidence,
-            boundingBox: boundingBox,
-            detectionMethod: .automatic(modelVersion: modelVersion)
-        )
+        context.draw(cgImage, in: CGRect(x: 0, y: 0, width: maskWidth, height: maskHeight))
+        
+        // Scan for high erythema (granulation ulcer bed) or dark necrotic crater
+        var ulcerMask = Array(repeating: Array(repeating: false, count: maskWidth), count: maskHeight)
+        
+        // Compute bounding boxes of existing contours to avoid duplicating CoreML results
+        let existingBoxes = existingContours.map { calculateBoundingBox(for: $0) }
+        
+        for y in 2..<(maskHeight - 2) {
+            for x in 2..<(maskWidth - 2) {
+                // Skip if point falls inside an existing CoreML contour's bounding box
+                let pt = CGPoint(x: x, y: y)
+                if existingBoxes.contains(where: { $0.insetBy(dx: -5, dy: -5).contains(pt) }) {
+                    continue
+                }
+                
+                let offset = (y * maskWidth + x) * 4
+                let r = Float(pixelData[offset])
+                let g = Float(pixelData[offset + 1])
+                let b = Float(pixelData[offset + 2])
+                
+                // Erythema index: Redness prominence relative to green and blue
+                let erythema = r - (g + b) / 2.0
+                let brightness = (r + g + b) / 3.0
+                
+                // Diabetic ulcer bed characteristics:
+                // 1) High granulation redness with distinct contrast (erythema > 28, brightness between 40 and 210)
+                // 2) Or dark necrotic eschar (brightness < 35, r > b)
+                let isErythematousUlcer = erythema > 28.0 && brightness > 40 && brightness < 210
+                let isNecroticCrater = brightness < 35 && r > (b * 0.9)
+                
+                if isErythematousUlcer || isNecroticCrater {
+                    ulcerMask[y][x] = true
+                }
+            }
+        }
+        
+        // Morphological close to bridge internal ulcer gaps
+        let closedMask = morphologicalClose(mask: ulcerMask, radius: 2)
+        let candidateContours = extractContours(from: closedMask)
+        
+        // Filter candidate contours by plausible ulcer size (between 0.05% and 15% of frame)
+        let totalArea = CGFloat(maskWidth * maskHeight)
+        return candidateContours.filter { contour in
+            let box = calculateBoundingBox(for: contour)
+            let boxArea = box.width * box.height
+            let ratio = boxArea / max(1.0, totalArea)
+            return ratio >= 0.0008 && ratio <= 0.18 && contour.count >= 8
+        }
+    }
+    
+    private func calculatePolygonArea(points: [CGPoint]) -> CGFloat {
+        guard points.count >= 3 else { return 0 }
+        var area: CGFloat = 0
+        for i in 0..<points.count {
+            let j = (i + 1) % points.count
+            area += points[i].x * points[j].y
+            area -= points[j].x * points[i].y
+        }
+        return abs(area) / 2.0
     }
     
     /// Performs Vision CoreML request
@@ -482,14 +593,12 @@ class CoreMLWoundDetectionService: WoundDetectionServiceProtocol {
         var contours: [[CGPoint]] = []
         
         // Direction vectors for 8-neighborhood (clockwise starting from North)
-        // 0: N, 1: NE, 2: E, 3: SE, 4: S, 5: SW, 6: W, 7: NW
         let dx = [ 0,  1,  1,  1,  0, -1, -1, -1]
         let dy = [-1, -1,  0,  1,  1,  1,  0, -1]
         
         for y in 0..<height {
             for x in 0..<width {
                 if mask[y][x] && !visited[y][x] {
-                    // Check if adjacent to background or image border
                     var isBorder = false
                     for d in 0..<8 {
                         let nx = x + dx[d]
@@ -502,13 +611,12 @@ class CoreMLWoundDetectionService: WoundDetectionServiceProtocol {
                     
                     guard isBorder else { continue }
                     
-                    // Trace outer boundary using Moore-Neighbor algorithm
                     var contour: [CGPoint] = []
                     let startX = x
                     let startY = y
                     var currX = startX
                     var currY = startY
-                    var backtrackDir = 6 // Entering from West
+                    var backtrackDir = 6
                     
                     let maxSteps = width * height
                     var steps = 0
@@ -520,7 +628,6 @@ class CoreMLWoundDetectionService: WoundDetectionServiceProtocol {
                         steps += 1
                         var foundNext = false
                         
-                        // Search 8-neighborhood clockwise starting from backtrackDir + 1
                         for i in 0..<8 {
                             let dir = (backtrackDir + 1 + i) % 8
                             let nx = currX + dx[dir]
@@ -531,7 +638,6 @@ class CoreMLWoundDetectionService: WoundDetectionServiceProtocol {
                                 currY = ny
                                 contour.append(CGPoint(x: currX, y: currY))
                                 visited[currY][currX] = true
-                                // Update backtrack direction: opposite of incoming
                                 backtrackDir = (dir + 4) % 8
                                 foundNext = true
                                 break
@@ -539,10 +645,9 @@ class CoreMLWoundDetectionService: WoundDetectionServiceProtocol {
                         }
                         
                         if !foundNext {
-                            break // Isolated pixel
+                            break
                         }
                         
-                        // Return to start point after traversing the perimeter
                         if currX == startX && currY == startY && contour.count > 3 {
                             break
                         }
@@ -612,24 +717,20 @@ class CoreMLWoundDetectionService: WoundDetectionServiceProtocol {
         contour: [CGPoint],
         imageSize: CGSize
     ) -> Float {
-        guard contour.count >= 6 else { return 0.0 }
+        guard contour.count >= 4 else { return 0.0 }
         
         let boundingBox = calculateBoundingBox(for: contour)
         let areaRatio = (boundingBox.width * boundingBox.height) / max(1.0, imageSize.width * imageSize.height)
         
-        // Plausible ulcer size in clinical photography: 0.5% to 35% of image area
-        let plausibleSize: Float = (areaRatio >= 0.005 && areaRatio <= 0.35) ? 1.0 : (areaRatio < 0.60 ? 0.75 : 0.50)
-        
-        // Base confidence from model prediction
+        let plausibleSize: Float = (areaRatio >= 0.0005 && areaRatio <= 0.35) ? 1.0 : (areaRatio < 0.60 ? 0.75 : 0.50)
         let modelScore: Float = peakProbability > 0 ? min(max(peakProbability * 0.4 + meanProbability * 0.6, 0.4), 0.95) : 0.80
         
-        // Circularity / compactness score of the contour
         var perimeter: CGFloat = 0
         for i in 0..<contour.count {
             let nextIndex = (i + 1) % contour.count
             perimeter += distance(from: contour[i], to: contour[nextIndex])
         }
-        let approxArea = boundingBox.width * boundingBox.height * 0.785 // Ellipse approximation
+        let approxArea = boundingBox.width * boundingBox.height * 0.785
         let isoperimetricQuotient = perimeter > 0 ? Float(4.0 * .pi * approxArea / (perimeter * perimeter)) : 0.5
         let compactnessScore = min(max(isoperimetricQuotient, 0.4), 1.0)
         
@@ -652,13 +753,11 @@ class CoreMLWoundDetectionService: WoundDetectionServiceProtocol {
             maxY = max(maxY, point.y)
         }
         
-        let epsilon: CGFloat = 0.001
-        
         return CGRect(
             x: minX,
             y: minY,
-            width: (maxX - minX) + epsilon,
-            height: (maxY - minY) + epsilon
+            width: max(1.0, maxX - minX),
+            height: max(1.0, maxY - minY)
         )
     }
 }

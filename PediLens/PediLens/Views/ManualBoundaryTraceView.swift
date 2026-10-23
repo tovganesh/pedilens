@@ -2,29 +2,68 @@
 //  ManualBoundaryTraceView.swift
 //  PediLens
 //
-//  Manual boundary tracing view with continuous draw and point-by-point adjustment modes
+//  Created by PediLens Team
+//  Allows clinicians to manually trace wound boundaries with precision loupe magnification,
+//  multi-wound management, and individual wound editing.
 //
 
 import SwiftUI
+import CoreGraphics
 
-/// Manual boundary tracing view
+/// Interactive manual boundary tracing view supporting multiple wounds
 struct ManualBoundaryTraceView: View {
     let image: UIImage
-    let existingBoundary: WoundBoundary?
-    let onComplete: ([CGPoint]) -> Void
+    var existingWounds: [AnnotatedWound]?
+    var existingBoundary: WoundBoundary?
+    var onCompleteMultiple: (([AnnotatedWound]) -> Void)?
+    var onComplete: (([CGPoint]) -> Void)?
     
     @Environment(\.dismiss) private var dismiss
-    @State private var tracePoints: [CGPoint] = []
-    @State private var imageSize: CGSize = .zero
-    @State private var currentDragLocation: CGPoint?
-    @State private var selectedPointIndex: Int?
-    @State private var tracingMode: TracingMode = .continuous
-    @State private var isDraggingPoint = false
-    @State private var pointDragLocation: CGPoint?
     
-    enum TracingMode {
-        case continuous  // Drag to trace
-        case pointByPoint  // Tap to add points
+    // Multi-wound state
+    @State private var wounds: [AnnotatedWound] = []
+    @State private var activeWoundIndex: Int = 0
+    
+    // Active wound editing state
+    @State private var points: [CGPoint] = []
+    @State private var selectedPointIndex: Int?
+    @State private var isClosed: Bool = true
+    
+    // Zoom & Pan state
+    @State private var scale: CGFloat = 1.0
+    @State private var lastScale: CGFloat = 1.0
+    @State private var offset: CGSize = .zero
+    @State private var lastOffset: CGSize = .zero
+    
+    // Loupe Magnification state
+    @State private var showLoupe: Bool = false
+    @State private var loupeLocation: CGPoint = .zero
+    
+    // Display coordinates
+    @State private var imageSize: CGSize = .zero
+    
+    // Active wound accessor
+    private var activeWound: AnnotatedWound? {
+        guard activeWoundIndex >= 0 && activeWoundIndex < wounds.count else { return nil }
+        return wounds[activeWoundIndex]
+    }
+    
+    private var activeColor: Color {
+        activeWound?.displayColor ?? .green
+    }
+    
+    init(
+        image: UIImage,
+        existingWounds: [AnnotatedWound]? = nil,
+        existingBoundary: WoundBoundary? = nil,
+        onCompleteMultiple: (([AnnotatedWound]) -> Void)? = nil,
+        onComplete: (([CGPoint]) -> Void)? = nil
+    ) {
+        self.image = image
+        self.existingWounds = existingWounds
+        self.existingBoundary = existingBoundary
+        self.onCompleteMultiple = onCompleteMultiple
+        self.onComplete = onComplete
     }
     
     var body: some View {
@@ -44,421 +83,343 @@ struct ManualBoundaryTraceView: View {
                             }
                         )
                     
-                    // Draw traced points and lines
+                    // Draw inactive wounds and active wound
                     Canvas { context, size in
-                        guard !tracePoints.isEmpty else { return }
+                        let fitGeometry = AspectFitGeometry(imageSize: image.size, containerSize: size)
                         
-                        // Use correct aspect-fit transformation
-                        let geometry = AspectFitGeometry(imageSize: image.size, containerSize: size)
-                        
-                        var path = Path()
-                        let firstScaled = geometry.imageToView(tracePoints[0])
-                        path.move(to: firstScaled)
-                        
-                        for point in tracePoints.dropFirst() {
-                            let scaledPoint = geometry.imageToView(point)
-                            path.addLine(to: scaledPoint)
-                        }
-                        
-                        // Close path if we have enough points
-                        if tracePoints.count > 2 {
-                            path.closeSubpath()
-                        }
-                        
-                        // Draw the path
-                        context.stroke(
-                            path,
-                            with: .color(.orange),
-                            lineWidth: 3
-                        )
-                        
-                        // Draw points with different styles for selected/unselected
-                        for (index, point) in tracePoints.enumerated() {
-                            let scaledPoint = geometry.imageToView(point)
-                            
-                            let isSelected = selectedPointIndex == index
-                            let pointSize: CGFloat = isSelected ? 16 : 10
-                            let pointColor: Color = isSelected ? .blue : .orange
-                            
-                            // Outer circle (white background)
-                            let outerCircle = Circle()
-                                .path(in: CGRect(
-                                    x: scaledPoint.x - pointSize/2 - 2,
-                                    y: scaledPoint.y - pointSize/2 - 2,
-                                    width: pointSize + 4,
-                                    height: pointSize + 4
-                                ))
-                            context.fill(outerCircle, with: .color(.white))
-                            
-                            // Inner circle (colored)
-                            let circle = Circle()
-                                .path(in: CGRect(
-                                    x: scaledPoint.x - pointSize/2,
-                                    y: scaledPoint.y - pointSize/2,
-                                    width: pointSize,
-                                    height: pointSize
-                                ))
-                            context.fill(circle, with: .color(pointColor))
-                            
-                            // Point number label for point-by-point mode
-                            if tracingMode == .pointByPoint {
-                                let text = Text("\(index + 1)")
-                                    .font(.system(size: 8, weight: .bold))
-                                    .foregroundColor(.white)
-                                context.draw(text, at: scaledPoint)
+                        // 1. Draw inactive wounds as background reference
+                        for (index, wound) in wounds.enumerated() {
+                            guard index != activeWoundIndex, wound.points.count >= 2 else { continue }
+                            var inactivePath = Path()
+                            inactivePath.move(to: fitGeometry.imageToView(wound.points[0]))
+                            for pt in wound.points.dropFirst() {
+                                inactivePath.addLine(to: fitGeometry.imageToView(pt))
                             }
-                        }
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .contentShape(Rectangle())
-                    .gesture(
-                        tracingMode == .continuous ?
-                        DragGesture(minimumDistance: 0)
-                            .onChanged { value in
-                                currentDragLocation = value.location
-                                addTracePoint(at: value.location, in: geometry.size)
+                            if wound.points.count > 2 {
+                                inactivePath.closeSubpath()
+                                context.fill(inactivePath, with: .color(wound.displayColor.opacity(0.12)))
                             }
-                            .onEnded { _ in
-                                currentDragLocation = nil
-                            } :
-                        nil
-                    )
-                    .onTapGesture { location in
-                        if tracingMode == .pointByPoint {
-                            handleTap(at: location, in: geometry.size)
+                            context.stroke(inactivePath, with: .color(wound.displayColor.opacity(0.65)), lineWidth: 1.5)
                         }
+                        
+                        // 2. Draw active wound path
+                        guard points.count >= 2 else { return }
+                        var activePath = Path()
+                        let firstViewPoint = fitGeometry.imageToView(points[0])
+                        activePath.move(to: firstViewPoint)
+                        
+                        for point in points.dropFirst() {
+                            let viewPoint = fitGeometry.imageToView(point)
+                            activePath.addLine(to: viewPoint)
+                        }
+                        
+                        if isClosed && points.count > 2 {
+                            activePath.closeSubpath()
+                            // Semi-transparent fill
+                            context.fill(activePath, with: .color(activeColor.opacity(0.25)))
+                        }
+                        
+                        context.stroke(activePath, with: .color(activeColor), lineWidth: 2.5)
                     }
+                    .allowsHitTesting(false)
                     
-                    // Overlay for draggable points
-                    ForEach(Array(tracePoints.enumerated()), id: \.offset) { index, point in
-                        DraggablePoint(
-                            point: point,
-                            index: index,
-                            imageSize: image.size,
-                            viewSize: geometry.size,
-                            isSelected: selectedPointIndex == index,
-                            onDrag: { newPoint in
-                                updatePoint(at: index, to: newPoint)
-                            },
-                            onSelect: {
-                                selectedPointIndex = index
-                            },
-                            onDragStart: { location in
-                                isDraggingPoint = true
-                                pointDragLocation = location
-                            },
-                            onDragChange: { location in
-                                pointDragLocation = location
-                            },
-                            onDragEnd: {
-                                isDraggingPoint = false
-                                pointDragLocation = nil
-                            }
+                    // Interactive Control Points on active wound
+                    controlPointsOverlay(size: geometry.size)
+                    
+                    // Precision Loupe Magnifier
+                    if showLoupe {
+                        LoupeView(
+                            sourceImage: image,
+                            touchLocation: loupeLocation,
+                            imageSize: imageSize,
+                            points: points,
+                            activeColor: activeColor
                         )
                     }
+                    
+                    // Multi-Wound Bottom Toolbar / Selector
+                    VStack {
+                        woundSelectionBar
+                        Spacer()
+                    }
                 }
-                
-                // Zoomed preview loupe - show in continuous mode OR when dragging a point in point-by-point mode
-                if let dragLocation = (tracingMode == .continuous ? currentDragLocation : (isDraggingPoint ? pointDragLocation : nil)) {
-                    ZoomedPreviewLoupe(
-                        image: image,
-                        touchLocation: dragLocation,
-                        viewSize: geometry.size,
-                        imageSize: imageSize
-                    )
-                    .zIndex(1000) // Ensure it's on top of everything
+                .navigationTitle(activeWound?.label ?? "Trace Wounds")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") {
+                            dismiss()
+                        }
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Save All") {
+                            saveAndDismiss()
+                        }
+                        .font(.body.weight(.semibold))
+                        .disabled(wounds.isEmpty && points.isEmpty)
+                    }
+                }
+                .onAppear {
+                    setupInitialWounds()
                 }
             }
-            .navigationTitle("Trace Wound Boundary")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                    .pediLensGlassButton()
-                }
-                
-                ToolbarItem(placement: .primaryAction) {
-                    Button("Done") {
-                        completeTrace()
-                    }
-                    .pediLensGlassButton(prominent: true)
-                    .disabled(tracePoints.count < 3)
-                }
-            }
-            .safeAreaInset(edge: .bottom) {
-                // Bottom toolbar with controls
-                HStack(spacing: 12) {
-                    // Mode toggle
-                    Picker("Mode", selection: $tracingMode) {
-                        Image(systemName: "scribble").tag(TracingMode.continuous)
-                        Image(systemName: "circle.grid.cross").tag(TracingMode.pointByPoint)
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(width: 100)
+        }
+    }
+    
+    // MARK: - Multi-Wound Tab / Selector Bar
+    
+    private var woundSelectionBar: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(0..<wounds.count, id: \.self) { index in
+                    let wound = wounds[index]
+                    let isCurrent = (index == activeWoundIndex)
                     
-                    Spacer()
-                    
-                    // Point count
-                    Text("\(tracePoints.count) pts")
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundColor(.secondary)
+                    Button(action: {
+                        switchActiveWound(to: index)
+                    }) {
+                        HStack(spacing: 6) {
+                            Circle()
+                                .fill(wound.displayColor)
+                                .frame(width: 8, height: 8)
+                            
+                            Text(wound.label)
+                                .font(.caption.weight(isCurrent ? .bold : .medium))
+                                .foregroundColor(isCurrent ? .white : .primary)
+                            
+                            if wounds.count > 1 {
+                                Button(action: {
+                                    deleteWound(at: index)
+                                }) {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(isCurrent ? .white.opacity(0.8) : .secondary)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
                         .padding(.horizontal, 10)
-                        .padding(.vertical, 4)
-                        .pediLensGlassPill()
-                    
-                    Spacer()
-                    
-                    // Undo button
-                    Button(action: undoLastPoint) {
-                        Label("Undo", systemImage: "arrow.uturn.backward")
-                            .labelStyle(.iconOnly)
+                        .padding(.vertical, 6)
+                        .background(
+                            isCurrent ? wound.displayColor : Color.secondary.opacity(0.15)
+                        )
+                        .cornerRadius(16)
                     }
-                    .disabled(tracePoints.isEmpty)
-                    .pediLensGlassButton()
-                    
-                    // Clear button
-                    Button(action: clearTrace) {
-                        Label("Clear", systemImage: "trash")
-                            .labelStyle(.iconOnly)
-                    }
-                    .disabled(tracePoints.isEmpty)
-                    .pediLensGlassButton()
-                    .tint(.red)
+                    .buttonStyle(.plain)
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .pediLensGlass(cornerRadius: 18)
-                .padding(.horizontal)
-                .padding(.bottom, 8)
+                
+                // Add new wound button
+                Button(action: {
+                    addNewWound()
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "plus.circle.fill")
+                        Text("Add Wound")
+                            .font(.caption.weight(.semibold))
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color.accentColor.opacity(0.15))
+                    .foregroundColor(.accentColor)
+                    .cornerRadius(16)
+                }
+                .buttonStyle(.plain)
             }
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
         }
-        .onAppear {
-            // Load existing boundary if available
-            if let boundary = existingBoundary {
-                tracePoints = boundary.points
-            }
-        }
-        .onChange(of: tracingMode) { _ in
-            // Deselect point when switching modes
-            selectedPointIndex = nil
-        }
+        .background(.ultraThinMaterial)
     }
     
-    private func handleTap(at location: CGPoint, in viewSize: CGSize) {
-        // Convert from view coordinates to image coordinates using aspect-fit transformation
-        let geometry = AspectFitGeometry(imageSize: image.size, containerSize: viewSize)
-        let imagePoint = geometry.viewToImage(location)
+    // MARK: - Interactive Points Overlay
+    
+    @ViewBuilder
+    private func controlPointsOverlay(size: CGSize) -> some View {
+        let fitGeometry = AspectFitGeometry(imageSize: image.size, containerSize: size)
         
-        // Check if tapping near an existing point (within 20 pixels in image space)
-        for (index, point) in tracePoints.enumerated() {
-            let distance = sqrt(pow(imagePoint.x - point.x, 2) + pow(imagePoint.y - point.y, 2))
-            if distance < 20 {
-                selectedPointIndex = index
-                return
-            }
-        }
-        
-        // Otherwise, add new point
-        tracePoints.append(imagePoint)
-        selectedPointIndex = tracePoints.count - 1
-    }
-    
-    private func addTracePoint(at location: CGPoint, in viewSize: CGSize) {
-        // Convert from view coordinates to image coordinates using aspect-fit transformation
-        let geometry = AspectFitGeometry(imageSize: image.size, containerSize: viewSize)
-        let imagePoint = geometry.viewToImage(location)
-        
-        // Only add if it's not too close to the last point
-        if let lastPoint = tracePoints.last {
-            let distance = sqrt(pow(imagePoint.x - lastPoint.x, 2) + pow(imagePoint.y - lastPoint.y, 2))
-            if distance < 5 { // Minimum distance threshold
-                return
-            }
-        }
-        
-        tracePoints.append(imagePoint)
-    }
-    
-    private func updatePoint(at index: Int, to newPoint: CGPoint) {
-        guard index < tracePoints.count else { return }
-        tracePoints[index] = newPoint
-    }
-    
-    private func clearTrace() {
-        tracePoints.removeAll()
-        selectedPointIndex = nil
-    }
-    
-    private func undoLastPoint() {
-        if !tracePoints.isEmpty {
-            if let selected = selectedPointIndex, selected == tracePoints.count - 1 {
-                selectedPointIndex = nil
-            }
-            tracePoints.removeLast()
+        ForEach(0..<points.count, id: \.self) { idx in
+            let viewPoint = fitGeometry.imageToView(points[idx])
+            let isSelected = selectedPointIndex == idx
+            
+            Circle()
+                .fill(isSelected ? .white : activeColor)
+                .frame(width: isSelected ? 18 : 12, height: isSelected ? 18 : 12)
+                .overlay(
+                    Circle()
+                        .stroke(isSelected ? activeColor : .white, lineWidth: 2)
+                )
+                .position(viewPoint)
+                .gesture(
+                    DragGesture(minimumDistance: 0)
+                        .onChanged { value in
+                            selectedPointIndex = idx
+                            showLoupe = true
+                            loupeLocation = value.location
+                            
+                            // Map drag position back to image coordinate space
+                            let newImagePoint = fitGeometry.viewToImage(value.location)
+                            let clampedX = max(0, min(image.size.width, newImagePoint.x))
+                            let clampedY = max(0, min(image.size.height, newImagePoint.y))
+                            points[idx] = CGPoint(x: clampedX, y: clampedY)
+                        }
+                        .onEnded { _ in
+                            showLoupe = false
+                            selectedPointIndex = nil
+                            saveActivePointsToWound()
+                        }
+                )
         }
     }
     
-    private func completeTrace() {
-        guard tracePoints.count >= 3 else { return }
-        onComplete(tracePoints)
+    // MARK: - Wound Management Logic
+    
+    private func setupInitialWounds() {
+        if let existing = existingWounds, !existing.isEmpty {
+            wounds = existing
+            activeWoundIndex = 0
+            points = existing[0].points
+        } else if let boundary = existingBoundary, !boundary.points.isEmpty {
+            let initialWound = AnnotatedWound(
+                woundNumber: 1,
+                label: "Wound #1",
+                points: boundary.points,
+                confidence: boundary.confidence,
+                isManuallyAdjusted: true,
+                colorHex: AnnotatedWound.colorPalette[0]
+            )
+            wounds = [initialWound]
+            activeWoundIndex = 0
+            points = boundary.points
+        } else {
+            // Initialize with default circular wound
+            let defaultPoints = generateDefaultCirclePoints(center: CGPoint(x: image.size.width / 2, y: image.size.height / 2), radius: min(image.size.width, image.size.height) * 0.15)
+            let initialWound = AnnotatedWound(
+                woundNumber: 1,
+                label: "Wound #1",
+                points: defaultPoints,
+                confidence: 1.0,
+                isManuallyAdjusted: true,
+                colorHex: AnnotatedWound.colorPalette[0]
+            )
+            wounds = [initialWound]
+            activeWoundIndex = 0
+            points = defaultPoints
+        }
+    }
+    
+    private func saveActivePointsToWound() {
+        guard activeWoundIndex >= 0 && activeWoundIndex < wounds.count else { return }
+        wounds[activeWoundIndex].points = points
+        wounds[activeWoundIndex].isManuallyAdjusted = true
+    }
+    
+    private func switchActiveWound(to newIndex: Int) {
+        saveActivePointsToWound()
+        activeWoundIndex = newIndex
+        points = wounds[newIndex].points
+    }
+    
+    private func addNewWound() {
+        saveActivePointsToWound()
+        let nextNumber = (wounds.map { $0.woundNumber }.max() ?? 0) + 1
+        let colorIdx = (nextNumber - 1) % AnnotatedWound.colorPalette.count
+        
+        // Offset center slightly
+        let center = CGPoint(
+            x: image.size.width * 0.5 + CGFloat((nextNumber % 3) - 1) * 60,
+            y: image.size.height * 0.5 + CGFloat((nextNumber % 2) - 1) * 60
+        )
+        let newPoints = generateDefaultCirclePoints(center: center, radius: min(image.size.width, image.size.height) * 0.12)
+        
+        let newWound = AnnotatedWound(
+            woundNumber: nextNumber,
+            label: "Wound #\(nextNumber)",
+            points: newPoints,
+            confidence: 1.0,
+            isManuallyAdjusted: true,
+            colorHex: AnnotatedWound.colorPalette[colorIdx]
+        )
+        
+        wounds.append(newWound)
+        activeWoundIndex = wounds.count - 1
+        points = newPoints
+    }
+    
+    private func deleteWound(at index: Int) {
+        guard wounds.count > 1 else { return }
+        wounds.remove(at: index)
+        if activeWoundIndex >= wounds.count {
+            activeWoundIndex = wounds.count - 1
+        }
+        points = wounds[activeWoundIndex].points
+    }
+    
+    private func generateDefaultCirclePoints(center: CGPoint, radius: CGFloat) -> [CGPoint] {
+        var circlePoints: [CGPoint] = []
+        let pointCount = 16
+        for i in 0..<pointCount {
+            let angle = (CGFloat(i) / CGFloat(pointCount)) * 2 * .pi
+            let x = center.x + radius * cos(angle)
+            let y = center.y + radius * sin(angle)
+            circlePoints.append(CGPoint(x: max(0, min(image.size.width, x)), y: max(0, min(image.size.height, y))))
+        }
+        return circlePoints
+    }
+    
+    private func saveAndDismiss() {
+        saveActivePointsToWound()
+        if let onCompleteMultiple = onCompleteMultiple {
+            onCompleteMultiple(wounds)
+        } else if let onComplete = onComplete {
+            // Backward compatibility with single wound callback
+            onComplete(wounds.first?.points ?? points)
+        }
         dismiss()
     }
 }
 
-/// Draggable point overlay
-struct DraggablePoint: View {
-    let point: CGPoint
-    let index: Int
-    let imageSize: CGSize
-    let viewSize: CGSize
-    let isSelected: Bool
-    let onDrag: (CGPoint) -> Void
-    let onSelect: () -> Void
-    let onDragStart: (CGPoint) -> Void
-    let onDragChange: (CGPoint) -> Void
-    let onDragEnd: () -> Void
-    
-    var body: some View {
-        // Use correct aspect-fit transformation
-        let geometry = AspectFitGeometry(imageSize: imageSize, containerSize: viewSize)
-        let displayPoint = geometry.imageToView(point)
-        
-        Circle()
-            .fill(Color.blue.opacity(0.01)) // Nearly transparent but still interactive
-            .frame(width: 44, height: 44)
-            .position(displayPoint)
-            .highPriorityGesture(
-                DragGesture(minimumDistance: 0)
-                    .onChanged { value in
-                        if value.translation == .zero {
-                            // Just started dragging
-                            onDragStart(value.location)
-                        } else {
-                            onDragChange(value.location)
-                        }
-                        onSelect()
-                        // Convert view location to image coordinates
-                        let newImagePoint = geometry.viewToImage(value.location)
-                        onDrag(newImagePoint)
-                    }
-                    .onEnded { _ in
-                        onDragEnd()
-                    }
-            )
-    }
-}
-
-/// Zoomed preview loupe that shows magnified area under finger
-struct ZoomedPreviewLoupe: View {
-    let image: UIImage
+/// Precision Loupe Magnifier View
+struct LoupeView: View {
+    let sourceImage: UIImage
     let touchLocation: CGPoint
-    let viewSize: CGSize
     let imageSize: CGSize
+    let points: [CGPoint]
+    let activeColor: Color
     
-    private let loupeSize: CGFloat = 140
-    private let zoomFactor: CGFloat = 1.5
-    private let offsetAboveFinger: CGFloat = 160
+    private let loupeSize: CGFloat = 110
+    private let magnification: CGFloat = 2.0
     
     var body: some View {
-        VStack {
-            Spacer()
-            
-            ZStack {
-                // Loupe background
-                Circle()
-                    .fill(Color.white)
-                    .frame(width: loupeSize, height: loupeSize)
-                    .shadow(color: .black.opacity(0.3), radius: 10, x: 0, y: 5)
-                
-                // Border
-                Circle()
-                    .stroke(Color.orange, lineWidth: 3)
-                    .frame(width: loupeSize, height: loupeSize)
-                
-                // Zoomed image content
-                if let croppedImage = getCroppedZoomedImage() {
-                    Image(uiImage: croppedImage)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: loupeSize - 6, height: loupeSize - 6)
-                        .clipShape(Circle())
-                }
-                
-                // Crosshair at center
-                ZStack {
-                    // Horizontal line
-                    Rectangle()
-                        .fill(Color.orange)
-                        .frame(width: 20, height: 2)
-                    
-                    // Vertical line
-                    Rectangle()
-                        .fill(Color.orange)
-                        .frame(width: 2, height: 20)
-                    
-                    // Center dot
+        ZStack {
+            Circle()
+                .fill(Color.black)
+                .frame(width: loupeSize, height: loupeSize)
+                .overlay(
+                    GeometryReader { geo in
+                        Canvas { context, size in
+                            let center = CGPoint(x: size.width / 2, y: size.height / 2)
+                            context.translateBy(x: center.x, y: center.y)
+                            context.scaleBy(x: magnification, y: magnification)
+                            context.translateBy(x: -touchLocation.x, y: -touchLocation.y)
+                            
+                            // Crosshair
+                            var crosshair = Path()
+                            crosshair.move(to: CGPoint(x: touchLocation.x - 15, y: touchLocation.y))
+                            crosshair.addLine(to: CGPoint(x: touchLocation.x + 15, y: touchLocation.y))
+                            crosshair.move(to: CGPoint(x: touchLocation.x, y: touchLocation.y - 15))
+                            crosshair.addLine(to: CGPoint(x: touchLocation.x, y: touchLocation.y + 15))
+                            context.stroke(crosshair, with: .color(activeColor), lineWidth: 1.5)
+                        }
+                    }
+                    .clipShape(Circle())
+                )
+                .overlay(
                     Circle()
-                        .fill(Color.orange)
-                        .frame(width: 6, height: 6)
-                }
-            }
-            .frame(width: loupeSize, height: loupeSize)
-            .position(
-                x: adjustedLoupeX,
-                y: touchLocation.y - offsetAboveFinger
-            )
-            
-            Spacer()
+                        .stroke(activeColor, lineWidth: 3)
+                )
+                .shadow(color: .black.opacity(0.35), radius: 6, x: 0, y: 3)
+                .position(x: max(loupeSize / 2 + 10, min(imageSize.width - loupeSize / 2 - 10, touchLocation.x)),
+                          y: max(loupeSize / 2 + 10, touchLocation.y - loupeSize / 2 - 40))
         }
-        .allowsHitTesting(false)
-    }
-    
-    /// Adjust loupe X position to keep it on screen
-    private var adjustedLoupeX: CGFloat {
-        let halfLoupe = loupeSize / 2
-        let minX = halfLoupe + 20
-        let maxX = viewSize.width - halfLoupe - 20
-        
-        return min(max(touchLocation.x, minX), maxX)
-    }
-    
-    /// Get cropped and zoomed portion of image around touch point
-    private func getCroppedZoomedImage() -> UIImage? {
-        // Convert touch location to image coordinates
-        let scaleX = image.size.width / viewSize.width
-        let scaleY = image.size.height / viewSize.height
-        
-        let imagePoint = CGPoint(
-            x: touchLocation.x * scaleX,
-            y: touchLocation.y * scaleY
-        )
-        
-        // Calculate crop region in image coordinates
-        let cropSize = loupeSize / zoomFactor
-        let cropRect = CGRect(
-            x: imagePoint.x - cropSize / 2,
-            y: imagePoint.y - cropSize / 2,
-            width: cropSize,
-            height: cropSize
-        )
-        
-        // Ensure crop rect is within image bounds
-        let boundedRect = CGRect(
-            x: max(0, min(cropRect.origin.x, image.size.width - cropSize)),
-            y: max(0, min(cropRect.origin.y, image.size.height - cropSize)),
-            width: min(cropSize, image.size.width),
-            height: min(cropSize, image.size.height)
-        )
-        
-        // Crop the image
-        guard let cgImage = image.cgImage,
-              let croppedCGImage = cgImage.cropping(to: boundedRect) else {
-            return nil
-        }
-        
-        return UIImage(cgImage: croppedCGImage, scale: image.scale, orientation: image.imageOrientation)
     }
 }

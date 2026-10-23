@@ -21,6 +21,9 @@ class PerformanceOptimizer {
     /// Cache for detection results
     private var detectionCache = NSCache<NSString, CachedDetectionResult>()
     
+    /// Cache for multi-wound detection results
+    private var multiDetectionCache = NSCache<NSString, CachedMultiDetectionResult>()
+    
     /// Background queue for image processing
     private let imageProcessingQueue = DispatchQueue(label: "com.pedilens.imageProcessing", qos: .userInitiated)
     
@@ -33,6 +36,9 @@ class PerformanceOptimizer {
         // Configure cache limits
         detectionCache.countLimit = 50 // Cache up to 50 detection results
         detectionCache.totalCostLimit = 100 * 1024 * 1024 // 100 MB
+        
+        multiDetectionCache.countLimit = 50
+        multiDetectionCache.totalCostLimit = 100 * 1024 * 1024
     }
     
     // MARK: - Image Resizing for ML Inference
@@ -99,9 +105,21 @@ class PerformanceOptimizer {
         detectionCache.setObject(cached, forKey: imageIdentifier as NSString)
     }
     
+    /// Retrieves cached multi-wound detection results for an image
+    func getCachedMultipleDetections(for imageIdentifier: String) -> [WoundBoundary]? {
+        return multiDetectionCache.object(forKey: imageIdentifier as NSString)?.boundaries
+    }
+    
+    /// Caches multi-wound detection results
+    func cacheMultipleDetections(_ boundaries: [WoundBoundary], for imageIdentifier: String) {
+        let cached = CachedMultiDetectionResult(boundaries: boundaries)
+        multiDetectionCache.setObject(cached, forKey: imageIdentifier as NSString)
+    }
+    
     /// Clears the detection cache
     func clearDetectionCache() {
         detectionCache.removeAllObjects()
+        multiDetectionCache.removeAllObjects()
     }
     
     // MARK: - Background Processing
@@ -197,6 +215,17 @@ private class CachedDetectionResult {
     }
 }
 
+/// Wrapper for cached multi-wound detection results
+private class CachedMultiDetectionResult {
+    let boundaries: [WoundBoundary]
+    let timestamp: Date
+    
+    init(boundaries: [WoundBoundary]) {
+        self.boundaries = boundaries
+        self.timestamp = Date()
+    }
+}
+
 // MARK: - Lazy Loading Support
 
 /// Protocol for lazy-loadable content
@@ -227,15 +256,5 @@ class LazyLoader<T> {
         let currentPage = items.count / pageSize
         let newItems = try await loadPage(currentPage)
         items.append(contentsOf: newItems)
-    }
-    
-    /// Returns all currently loaded items
-    func getItems() -> [T] {
-        return items
-    }
-    
-    /// Checks if more items should be loaded based on current index
-    func shouldLoadMore(currentIndex: Int) -> Bool {
-        return currentIndex >= items.count - (pageSize / 2) && !isLoading
     }
 }

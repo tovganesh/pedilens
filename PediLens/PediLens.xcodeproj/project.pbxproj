@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1F5DAEC830782001005CB1DB /* MultiWoundAnnotationAndComparisonTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5DAEC730782001005CB1DB /* MultiWoundAnnotationAndComparisonTests.swift */; };
+		1F5DAEC230782001005CB1DB /* AnnotatedWound.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5DAEC130782001005CB1DB /* AnnotatedWound.swift */; };
+		1F5DAEC430782001005CB1DB /* WoundAnnotationEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5DAEC330782001005CB1DB /* WoundAnnotationEditorView.swift */; };
+		1F5DAEC630782001005CB1DB /* VisitComparisonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5DAEC530782001005CB1DB /* VisitComparisonView.swift */; };
 		0238DAAB3C0EFBA6A120277E /* WoundRecord+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E007CE4B8A46FEABCF85AE0 /* WoundRecord+Extensions.swift */; };
 		0E0B4A325DD22D2A0681CD1F /* WoundBoundary.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FB5BF9E4627CB7BE8CDED55 /* WoundBoundary.swift */; };
 		0EE5C78D8E4792174C55BA65 /* PatientCaptureManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4D7F6C191BDA8A68917FD09 /* PatientCaptureManager.swift */; };
@@ -145,6 +149,10 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		1F5DAEC730782001005CB1DB /* MultiWoundAnnotationAndComparisonTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultiWoundAnnotationAndComparisonTests.swift; sourceTree = "<group>"; };
+		1F5DAEC130782001005CB1DB /* AnnotatedWound.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnnotatedWound.swift; sourceTree = "<group>"; };
+		1F5DAEC330782001005CB1DB /* WoundAnnotationEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WoundAnnotationEditorView.swift; sourceTree = "<group>"; };
+		1F5DAEC530782001005CB1DB /* VisitComparisonView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisitComparisonView.swift; sourceTree = "<group>"; };
 		06B145390FEF159F05FB3CC1 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		0756970C673F50C51296B75F /* CaptureSession+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CaptureSession+Extensions.swift"; sourceTree = "<group>"; };
 		0B155D545FB6B46DAE41EEBC /* UncalibratedMeasurementWarningPropertyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UncalibratedMeasurementWarningPropertyTests.swift; sourceTree = "<group>"; };
@@ -470,6 +478,7 @@
 				9AAFBDA137DEA3DD4B572623 /* WoundRecordDeletionPropertyTests.swift */,
 				8185F25801E92CEFD8652499 /* WoundSizeChangePropertyTests.swift */,
 				1F5DAE8B3078174B005CB1DB /* ScaleDetectionServiceTests.swift */,
+				1F5DAEC730782001005CB1DB /* MultiWoundAnnotationAndComparisonTests.swift */,
 				1F5DAEA530782001005CB1DB /* ManualScaleCalibrationTests.swift */,
 				1F5DAEA930782001005CB1DB /* DuoLayoutHelperTests.swift */,
 				1F5DAE9130781A29005CB1DB /* ARMeasurementManagerTests.swift */,
@@ -492,6 +501,7 @@
 				A2B93176449139EFA1D1AC3F /* User+Extensions.swift */,
 				38C24940654E5BBECA53AD4A /* UserRole.swift */,
 				4FB5BF9E4627CB7BE8CDED55 /* WoundBoundary.swift */,
+				1F5DAEC130782001005CB1DB /* AnnotatedWound.swift */,
 				2E007CE4B8A46FEABCF85AE0 /* WoundRecord+Extensions.swift */,
 			);
 			path = Models;
@@ -530,6 +540,8 @@
 				1F5DAE9F30782001005CB1DB /* WoundListView.swift */,
 				1F5DAEA130782001005CB1DB /* ManualScaleCalibrationView.swift */,
 				1F5DAEA330782001005CB1DB /* DoctorBiometricLockView.swift */,
+				1F5DAEC330782001005CB1DB /* WoundAnnotationEditorView.swift */,
+				1F5DAEC530782001005CB1DB /* VisitComparisonView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -685,6 +697,9 @@
 				1F5DAEA030782001005CB1DB /* WoundListView.swift in Sources */,
 				1F5DAEA230782001005CB1DB /* ManualScaleCalibrationView.swift in Sources */,
 				1F5DAEA430782001005CB1DB /* DoctorBiometricLockView.swift in Sources */,
+				1F5DAEC230782001005CB1DB /* AnnotatedWound.swift in Sources */,
+				1F5DAEC430782001005CB1DB /* WoundAnnotationEditorView.swift in Sources */,
+				1F5DAEC630782001005CB1DB /* VisitComparisonView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -722,6 +737,7 @@
 				7E3934903DA0A36D9C2BAEE9 /* PatientManagerTests.swift in Sources */,
 				1E8C436BA2267A59A885D3B7 /* PatientRecordDisplayPropertyTests.swift in Sources */,
 				1F5DAE8C3078174B005CB1DB /* ScaleDetectionServiceTests.swift in Sources */,
+				1F5DAEC830782001005CB1DB /* MultiWoundAnnotationAndComparisonTests.swift in Sources */,
 				1F5DAEA630782001005CB1DB /* ManualScaleCalibrationTests.swift in Sources */,
 				1F5DAEAA30782001005CB1DB /* DuoLayoutHelperTests.swift in Sources */,
 				748969EB247735E0BF540F14 /* PatientRecordFilteringPropertyTests.swift in Sources */,
