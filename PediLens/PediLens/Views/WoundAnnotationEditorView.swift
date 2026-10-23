@@ -13,13 +13,20 @@ struct WoundAnnotationEditorView: View {
     
     @State private var wound: AnnotatedWound
     let onSave: (AnnotatedWound) -> Void
+    var onDelete: ((AnnotatedWound) -> Void)? = nil
     
     @State private var customLocation: String = ""
     @State private var isCustomLocation: Bool = false
+    @State private var showingDeleteConfirmation = false
     
-    init(wound: AnnotatedWound, onSave: @escaping (AnnotatedWound) -> Void) {
+    init(
+        wound: AnnotatedWound,
+        onSave: @escaping (AnnotatedWound) -> Void,
+        onDelete: ((AnnotatedWound) -> Void)? = nil
+    ) {
         self._wound = State(initialValue: wound)
         self.onSave = onSave
+        self.onDelete = onDelete
         let matchesPreset = ClinicalAnnotationPresets.anatomicalLocations.contains(wound.anatomicalLocation)
         self._isCustomLocation = State(initialValue: !matchesPreset && !wound.anatomicalLocation.isEmpty)
         self._customLocation = State(initialValue: matchesPreset ? "" : wound.anatomicalLocation)
@@ -155,6 +162,23 @@ struct WoundAnnotationEditorView: View {
                     TextEditor(text: $wound.notes)
                         .frame(minHeight: 80)
                 }
+                
+                // Section 5: Delete Wound Action
+                if onDelete != nil {
+                    Section {
+                        Button(role: .destructive, action: {
+                            showingDeleteConfirmation = true
+                        }) {
+                            HStack {
+                                Spacer()
+                                Label("Delete This Wound", systemImage: "trash.fill")
+                                    .foregroundColor(.red)
+                                    .fontWeight(.semibold)
+                                Spacer()
+                            }
+                        }
+                    }
+                }
             }
             .navigationTitle("Annotate Wound #\(wound.woundNumber)")
             .navigationBarTitleDisplayMode(.inline)
@@ -174,6 +198,15 @@ struct WoundAnnotationEditorView: View {
                     }
                     .font(.body.weight(.semibold))
                 }
+            }
+            .alert("Delete \(wound.label)?", isPresented: $showingDeleteConfirmation) {
+                Button("Delete", role: .destructive) {
+                    onDelete?(wound)
+                    dismiss()
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("Are you sure you want to remove this detected wound? Cumulative area and measurements will be updated.")
             }
         }
     }

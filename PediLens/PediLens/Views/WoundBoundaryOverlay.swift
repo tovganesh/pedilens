@@ -2,21 +2,25 @@
 //  WoundBoundaryOverlay.swift
 //  PediLens
 //
-//  Visual overlay for wound boundary rendering on captured images
-//  Enhanced to support multiple wounds, selection focus, and clinical centroid tags
+//  Created by PediLens Team
+//  Canvas-based overlay for displaying detected or traced wound boundaries.
+//  Enhanced to support multiple distinct wounds with color coding,
+//  numbered centroid badges, interactive selection, and delete actions.
 //
 
 import SwiftUI
+import CoreGraphics
 
-/// Wound boundary overlay view supporting single and multiple wounds
+/// View that overlays wound boundaries on an image with aspect-fit coordinates
 struct WoundBoundaryOverlay: View {
     let wounds: [AnnotatedWound]
     let selectedWoundID: UUID?
     let imageSize: CGSize
     let displaySize: CGSize
-    let onSelectWound: ((UUID) -> Void)?
+    var onSelectWound: ((UUID) -> Void)? = nil
+    var onDeleteWound: ((AnnotatedWound) -> Void)? = nil
     
-    // Convenience init for backward compatibility with single WoundBoundary
+    // Backward compatibility initializer for single boundary
     init(
         boundary: WoundBoundary,
         imageSize: CGSize,
@@ -35,6 +39,7 @@ struct WoundBoundaryOverlay: View {
         self.imageSize = imageSize
         self.displaySize = displaySize
         self.onSelectWound = nil
+        self.onDeleteWound = nil
     }
     
     init(
@@ -42,13 +47,15 @@ struct WoundBoundaryOverlay: View {
         selectedWoundID: UUID? = nil,
         imageSize: CGSize,
         displaySize: CGSize,
-        onSelectWound: ((UUID) -> Void)? = nil
+        onSelectWound: ((UUID) -> Void)? = nil,
+        onDeleteWound: ((AnnotatedWound) -> Void)? = nil
     ) {
         self.wounds = wounds
         self.selectedWoundID = selectedWoundID
         self.imageSize = imageSize
         self.displaySize = displaySize
         self.onSelectWound = onSelectWound
+        self.onDeleteWound = onDeleteWound
     }
     
     var body: some View {
@@ -73,8 +80,9 @@ struct WoundBoundaryOverlay: View {
                         
                         if wound.points.count > 2 {
                             path.closeSubpath()
-                            // Semi-transparent fill
-                            context.fill(path, with: .color(color.opacity(isSelected ? 0.32 : 0.18)))
+                            // Shaded interior
+                            let fillOpacity = isSelected ? 0.28 : 0.14
+                            context.fill(path, with: .color(color.opacity(fillOpacity)))
                         }
                         
                         if isSelected {
@@ -88,41 +96,58 @@ struct WoundBoundaryOverlay: View {
                 }
                 .allowsHitTesting(false)
                 
-                // 2. Centroid Label Badges
+                // 2. Centroid Label Badges & Delete Buttons
                 ForEach(wounds) { wound in
                     if wound.points.count >= 3 {
                         let centroidView = fitGeometry.imageToView(wound.centroid)
                         let isSelected = selectedWoundID == wound.id
                         
-                        Button(action: {
-                            onSelectWound?(wound.id)
-                        }) {
-                            HStack(spacing: 4) {
-                                Circle()
-                                    .fill(wound.displayColor)
-                                    .frame(width: 8, height: 8)
-                                
-                                Text("#\(wound.woundNumber)")
-                                    .font(.caption2.weight(.bold))
-                                
-                                if wound.areaMM2 > 0 {
-                                    Text(String(format: "%.1f cm²", wound.areaCM2))
-                                        .font(.system(size: 9, weight: .semibold))
+                        HStack(spacing: 5) {
+                            Button(action: {
+                                onSelectWound?(wound.id)
+                            }) {
+                                HStack(spacing: 4) {
+                                    Circle()
+                                        .fill(wound.displayColor)
+                                        .frame(width: 8, height: 8)
+                                    
+                                    Text("#\(wound.woundNumber)")
+                                        .font(.caption2.weight(.bold))
+                                    
+                                    if wound.areaMM2 > 0 {
+                                        Text(String(format: "%.1f cm²", wound.areaCM2))
+                                            .font(.system(size: 9, weight: .semibold))
+                                    }
                                 }
                             }
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 3.5)
-                            .background(
-                                Material.ultraThinMaterial,
-                                in: Capsule()
-                            )
-                            .overlay(
-                                Capsule()
-                                    .stroke(isSelected ? wound.displayColor : Color.white.opacity(0.6), lineWidth: isSelected ? 2 : 1)
-                            )
-                            .shadow(color: .black.opacity(0.25), radius: 3, x: 0, y: 1.5)
+                            .buttonStyle(.plain)
+                            
+                            // Delete action appears on the badge when selected
+                            if isSelected, let onDelete = onDeleteWound {
+                                Button(action: {
+                                    onDelete(wound)
+                                }) {
+                                    Image(systemName: "trash.fill")
+                                        .font(.system(size: 9, weight: .bold))
+                                        .foregroundColor(.white)
+                                        .padding(4)
+                                        .background(Circle().fill(Color.red))
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel("Delete wound #\(wound.woundNumber)")
+                            }
                         }
-                        .buttonStyle(.plain)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3.5)
+                        .background(
+                            Material.ultraThinMaterial,
+                            in: Capsule()
+                        )
+                        .overlay(
+                            Capsule()
+                                .stroke(isSelected ? wound.displayColor : Color.white.opacity(0.6), lineWidth: isSelected ? 2 : 1)
+                        )
+                        .shadow(color: .black.opacity(0.25), radius: 3, x: 0, y: 1.5)
                         .position(centroidView)
                     }
                 }

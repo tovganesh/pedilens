@@ -248,4 +248,75 @@ final class MultiWoundAnnotationAndComparisonTests: XCTestCase {
         XCTAssertEqual(maxDepthMM, 2.0, accuracy: 0.001)
         XCTAssertEqual(totalVolumeMM3, 420.0, accuracy: 0.001)
     }
+    
+    // MARK: - Wound Deletion & Recalculation Tests
+    
+    func testDeleteSelectedWound_UpdatesRemainingListAndRecalculatesMetrics() {
+        // Given: 3 detected wounds with false positive border artifact (e.g. bedsheet or coat fold)
+        let falsePositiveID = UUID()
+        let w1 = AnnotatedWound(
+            id: falsePositiveID,
+            woundNumber: 1,
+            label: "Border Artifact #1",
+            points: [CGPoint(x: 0, y: 0), CGPoint(x: 10, y: 0), CGPoint(x: 10, y: 10)],
+            lengthMM: 25.0,
+            widthMM: 15.0,
+            areaMM2: 375.0,
+            perimeterMM: 80.0,
+            depthMM: 0.0,
+            volumeMM3: 0.0
+        )
+        
+        let w2 = AnnotatedWound(
+            id: UUID(),
+            woundNumber: 2,
+            label: "Heel Ulcer",
+            points: [CGPoint(x: 50, y: 50), CGPoint(x: 80, y: 50), CGPoint(x: 80, y: 80)],
+            lengthMM: 18.0,
+            widthMM: 12.0,
+            areaMM2: 216.0,
+            perimeterMM: 60.0,
+            depthMM: 3.0,
+            volumeMM3: 648.0
+        )
+        
+        let w3 = AnnotatedWound(
+            id: UUID(),
+            woundNumber: 3,
+            label: "Metatarsal Ulcer",
+            points: [CGPoint(x: 120, y: 120), CGPoint(x: 140, y: 120), CGPoint(x: 140, y: 140)],
+            lengthMM: 10.0,
+            widthMM: 8.0,
+            areaMM2: 80.0,
+            perimeterMM: 36.0,
+            depthMM: 1.5,
+            volumeMM3: 120.0
+        )
+        
+        var detectedWounds = [w1, w2, w3]
+        XCTAssertEqual(detectedWounds.count, 3)
+        let initialTotalArea = detectedWounds.reduce(0.0) { $0 + $1.areaMM2 }
+        XCTAssertEqual(initialTotalArea, 671.0)
+        
+        // When: User selects and deletes the false-positive wound #1
+        guard let indexToRemove = detectedWounds.firstIndex(where: { $0.id == falsePositiveID }) else {
+            XCTFail("Should find target wound")
+            return
+        }
+        detectedWounds.remove(at: indexToRemove)
+        
+        // Then: Count drops to 2, cumulative area and max dimensions recalculate cleanly
+        XCTAssertEqual(detectedWounds.count, 2)
+        XCTAssertFalse(detectedWounds.contains(where: { $0.id == falsePositiveID }))
+        
+        let newTotalArea = detectedWounds.reduce(0.0) { $0 + $1.areaMM2 }
+        let newMaxLength = detectedWounds.map { $0.lengthMM }.max() ?? 0.0
+        let newTotalPerimeter = detectedWounds.reduce(0.0) { $0 + $1.perimeterMM }
+        let newTotalVolume = detectedWounds.reduce(0.0) { $0 + $1.volumeMM3 }
+        
+        XCTAssertEqual(newTotalArea, 296.0, accuracy: 0.001) // 216 + 80
+        XCTAssertEqual(newMaxLength, 18.0, accuracy: 0.001) // max of 18 and 10
+        XCTAssertEqual(newTotalPerimeter, 96.0, accuracy: 0.001) // 60 + 36
+        XCTAssertEqual(newTotalVolume, 768.0, accuracy: 0.001) // 648 + 120
+    }
 }

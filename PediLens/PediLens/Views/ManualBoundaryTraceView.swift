@@ -3,26 +3,30 @@
 //  PediLens
 //
 //  Created by PediLens Team
-//  Allows clinicians to manually trace wound boundaries with precision loupe magnification,
-//  multi-wound management, and individual wound editing.
+//  Interactive manual wound boundary tracing and editing tool.
+//  Upgraded to support multi-wound tracing, interactive vertex handles,
+//  per-wound color distinction, and floating precision loupe magnifier.
 //
 
 import SwiftUI
 import CoreGraphics
 
-/// Interactive manual boundary tracing view supporting multiple wounds
+/// View allowing manual tracing, vertex manipulation, and editing of multiple wound boundaries
 struct ManualBoundaryTraceView: View {
+    
     let image: UIImage
-    var existingWounds: [AnnotatedWound]?
-    var existingBoundary: WoundBoundary?
-    var onCompleteMultiple: (([AnnotatedWound]) -> Void)?
-    var onComplete: (([CGPoint]) -> Void)?
+    let existingWounds: [AnnotatedWound]?
+    let existingBoundary: WoundBoundary?
+    let onCompleteMultiple: (([AnnotatedWound]) -> Void)?
+    let onComplete: (([CGPoint]) -> Void)?
     
     @Environment(\.dismiss) private var dismiss
     
     // Multi-wound state
     @State private var wounds: [AnnotatedWound] = []
     @State private var activeWoundIndex: Int = 0
+    @State private var woundIndexToDelete: Int?
+    @State private var showingDeleteConfirmation: Bool = false
     
     // Active wound editing state
     @State private var points: [CGPoint] = []
@@ -70,11 +74,37 @@ struct ManualBoundaryTraceView: View {
         NavigationView {
             GeometryReader { geometry in
                 ZStack {
-                    // Display image
+                    Color.black.ignoresSafeArea()
+                    
+                    // Base Image with Aspect-Fit
                     Image(uiImage: image)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .scaleEffect(scale)
+                        .offset(offset)
+                        .gesture(
+                            SimultaneousGesture(
+                                MagnificationGesture()
+                                    .onChanged { value in
+                                        let delta = value / lastScale
+                                        lastScale = value
+                                        scale = min(max(scale * delta, 1.0), 5.0)
+                                    }
+                                    .onEnded { _ in
+                                        lastScale = 1.0
+                                    },
+                                DragGesture()
+                                    .onChanged { value in
+                                        offset = CGSize(
+                                            width: lastOffset.width + value.translation.width,
+                                            height: lastOffset.height + value.translation.height
+                                        )
+                                    }
+                                    .onEnded { _ in
+                                        lastOffset = offset
+                                    }
+                            )
+                        )
                         .background(
                             GeometryReader { imageGeometry in
                                 Color.clear.onAppear {
@@ -131,7 +161,7 @@ struct ManualBoundaryTraceView: View {
                         LoupeView(
                             sourceImage: image,
                             touchLocation: loupeLocation,
-                            imageSize: imageSize,
+                            imageSize: geometry.size,
                             points: points,
                             activeColor: activeColor
                         )
@@ -158,6 +188,19 @@ struct ManualBoundaryTraceView: View {
                         .font(.body.weight(.semibold))
                         .disabled(wounds.isEmpty && points.isEmpty)
                     }
+                }
+                .alert("Delete Wound?", isPresented: $showingDeleteConfirmation) {
+                    Button("Delete", role: .destructive) {
+                        if let idx = woundIndexToDelete {
+                            deleteWound(at: idx)
+                            woundIndexToDelete = nil
+                        }
+                    }
+                    Button("Cancel", role: .cancel) {
+                        woundIndexToDelete = nil
+                    }
+                } message: {
+                    Text("Are you sure you want to remove this traced wound boundary?")
                 }
                 .onAppear {
                     setupInitialWounds()
@@ -189,13 +232,15 @@ struct ManualBoundaryTraceView: View {
                             
                             if wounds.count > 1 {
                                 Button(action: {
-                                    deleteWound(at: index)
+                                    woundIndexToDelete = index
+                                    showingDeleteConfirmation = true
                                 }) {
                                     Image(systemName: "xmark.circle.fill")
                                         .font(.system(size: 12))
                                         .foregroundColor(isCurrent ? .white.opacity(0.8) : .secondary)
                                 }
                                 .buttonStyle(.plain)
+                                .accessibilityLabel("Delete \(wound.label)")
                             }
                         }
                         .padding(.horizontal, 10)
@@ -233,45 +278,47 @@ struct ManualBoundaryTraceView: View {
     
     // MARK: - Interactive Points Overlay
     
-    @ViewBuilder
     private func controlPointsOverlay(size: CGSize) -> some View {
         let fitGeometry = AspectFitGeometry(imageSize: image.size, containerSize: size)
         
-        ForEach(0..<points.count, id: \.self) { idx in
-            let viewPoint = fitGeometry.imageToView(points[idx])
-            let isSelected = selectedPointIndex == idx
-            
-            Circle()
-                .fill(isSelected ? .white : activeColor)
-                .frame(width: isSelected ? 18 : 12, height: isSelected ? 18 : 12)
-                .overlay(
-                    Circle()
-                        .stroke(isSelected ? activeColor : .white, lineWidth: 2)
-                )
-                .position(viewPoint)
-                .gesture(
-                    DragGesture(minimumDistance: 0)
-                        .onChanged { value in
-                            selectedPointIndex = idx
-                            showLoupe = true
-                            loupeLocation = value.location
-                            
-                            // Map drag position back to image coordinate space
-                            let newImagePoint = fitGeometry.viewToImage(value.location)
-                            let clampedX = max(0, min(image.size.width, newImagePoint.x))
-                            let clampedY = max(0, min(image.size.height, newImagePoint.y))
-                            points[idx] = CGPoint(x: clampedX, y: clampedY)
-                        }
-                        .onEnded { _ in
-                            showLoupe = false
-                            selectedPointIndex = nil
-                            saveActivePointsToWound()
-                        }
-                )
+        return ZStack {
+            ForEach(0..<points.count, id: \.self) { index in
+                let point = points[index]
+                let viewPoint = fitGeometry.imageToView(point)
+                let isSelected = (selectedPointIndex == index)
+                
+                Circle()
+                    .fill(isSelected ? .white : activeColor)
+                    .frame(width: isSelected ? 18 : 12, height: isSelected ? 18 : 12)
+                    .overlay(
+                        Circle()
+                            .stroke(Color.white, lineWidth: isSelected ? 3 : 1.5)
+                    )
+                    .shadow(color: .black.opacity(0.5), radius: 3)
+                    .position(viewPoint)
+                    .gesture(
+                        DragGesture(minimumDistance: 0)
+                            .onChanged { value in
+                                selectedPointIndex = index
+                                showLoupe = true
+                                loupeLocation = value.location
+                                
+                                let imagePoint = fitGeometry.viewToImage(value.location)
+                                points[index] = CGPoint(
+                                    x: max(0, min(image.size.width, imagePoint.x)),
+                                    y: max(0, min(image.size.height, imagePoint.y))
+                                )
+                            }
+                            .onEnded { _ in
+                                showLoupe = false
+                                saveActivePointsToWound()
+                            }
+                    )
+            }
         }
     }
     
-    // MARK: - Wound Management Logic
+    // MARK: - Multi-Wound State Handlers
     
     private func setupInitialWounds() {
         if let existing = existingWounds, !existing.isEmpty {
@@ -279,29 +326,27 @@ struct ManualBoundaryTraceView: View {
             activeWoundIndex = 0
             points = existing[0].points
         } else if let boundary = existingBoundary, !boundary.points.isEmpty {
-            let initialWound = AnnotatedWound(
+            let singleWound = AnnotatedWound(
                 woundNumber: 1,
                 label: "Wound #1",
                 points: boundary.points,
-                confidence: boundary.confidence,
                 isManuallyAdjusted: true,
                 colorHex: AnnotatedWound.colorPalette[0]
             )
-            wounds = [initialWound]
+            wounds = [singleWound]
             activeWoundIndex = 0
             points = boundary.points
         } else {
-            // Initialize with default circular wound
+            // Create default initial wound circle at image center
             let defaultPoints = generateDefaultCirclePoints(center: CGPoint(x: image.size.width / 2, y: image.size.height / 2), radius: min(image.size.width, image.size.height) * 0.15)
-            let initialWound = AnnotatedWound(
+            let defaultWound = AnnotatedWound(
                 woundNumber: 1,
                 label: "Wound #1",
                 points: defaultPoints,
-                confidence: 1.0,
                 isManuallyAdjusted: true,
                 colorHex: AnnotatedWound.colorPalette[0]
             )
-            wounds = [initialWound]
+            wounds = [defaultWound]
             activeWoundIndex = 0
             points = defaultPoints
         }
@@ -314,28 +359,31 @@ struct ManualBoundaryTraceView: View {
     }
     
     private func switchActiveWound(to newIndex: Int) {
+        guard newIndex >= 0 && newIndex < wounds.count, newIndex != activeWoundIndex else { return }
         saveActivePointsToWound()
         activeWoundIndex = newIndex
         points = wounds[newIndex].points
+        selectedPointIndex = nil
     }
     
     private func addNewWound() {
         saveActivePointsToWound()
-        let nextNumber = (wounds.map { $0.woundNumber }.max() ?? 0) + 1
-        let colorIdx = (nextNumber - 1) % AnnotatedWound.colorPalette.count
+        let newNumber = wounds.count + 1
+        let colorIdx = (newNumber - 1) % AnnotatedWound.colorPalette.count
         
-        // Offset center slightly
+        // Offset center slightly to not overlap existing wound completely
+        let offsetX = CGFloat((newNumber % 3) - 1) * (image.size.width * 0.15)
+        let offsetY = CGFloat((newNumber / 3) - 1) * (image.size.height * 0.15)
         let center = CGPoint(
-            x: image.size.width * 0.5 + CGFloat((nextNumber % 3) - 1) * 60,
-            y: image.size.height * 0.5 + CGFloat((nextNumber % 2) - 1) * 60
+            x: max(image.size.width * 0.2, min(image.size.width * 0.8, (image.size.width * 0.5) + offsetX)),
+            y: max(image.size.height * 0.2, min(image.size.height * 0.8, (image.size.height * 0.5) + offsetY))
         )
-        let newPoints = generateDefaultCirclePoints(center: center, radius: min(image.size.width, image.size.height) * 0.12)
         
+        let newPoints = generateDefaultCirclePoints(center: center, radius: min(image.size.width, image.size.height) * 0.12)
         let newWound = AnnotatedWound(
-            woundNumber: nextNumber,
-            label: "Wound #\(nextNumber)",
+            woundNumber: newNumber,
+            label: "Wound #\(newNumber)",
             points: newPoints,
-            confidence: 1.0,
             isManuallyAdjusted: true,
             colorHex: AnnotatedWound.colorPalette[colorIdx]
         )
@@ -398,28 +446,37 @@ struct LoupeView: View {
                     GeometryReader { geo in
                         Canvas { context, size in
                             let center = CGPoint(x: size.width / 2, y: size.height / 2)
+                            
+                            // Draw magnified portion of image
                             context.translateBy(x: center.x, y: center.y)
                             context.scaleBy(x: magnification, y: magnification)
                             context.translateBy(x: -touchLocation.x, y: -touchLocation.y)
                             
-                            // Crosshair
-                            var crosshair = Path()
-                            crosshair.move(to: CGPoint(x: touchLocation.x - 15, y: touchLocation.y))
-                            crosshair.addLine(to: CGPoint(x: touchLocation.x + 15, y: touchLocation.y))
-                            crosshair.move(to: CGPoint(x: touchLocation.x, y: touchLocation.y - 15))
-                            crosshair.addLine(to: CGPoint(x: touchLocation.x, y: touchLocation.y + 15))
-                            context.stroke(crosshair, with: .color(activeColor), lineWidth: 1.5)
+                            let fitGeometry = AspectFitGeometry(imageSize: sourceImage.size, containerSize: imageSize)
+                            let rect = CGRect(origin: fitGeometry.offset, size: fitGeometry.displayedSize)
+                            context.draw(Image(uiImage: sourceImage), in: rect)
                         }
                     }
-                    .clipShape(Circle())
                 )
+                .clipShape(Circle())
                 .overlay(
                     Circle()
                         .stroke(activeColor, lineWidth: 3)
                 )
-                .shadow(color: .black.opacity(0.35), radius: 6, x: 0, y: 3)
-                .position(x: max(loupeSize / 2 + 10, min(imageSize.width - loupeSize / 2 - 10, touchLocation.x)),
-                          y: max(loupeSize / 2 + 10, touchLocation.y - loupeSize / 2 - 40))
+                // Crosshair at center of loupe
+                .overlay(
+                    ZStack {
+                        Rectangle()
+                            .fill(Color.white.opacity(0.8))
+                            .frame(width: 1, height: 16)
+                        Rectangle()
+                            .fill(Color.white.opacity(0.8))
+                            .frame(width: 16, height: 1)
+                    }
+                )
+                .shadow(color: .black.opacity(0.4), radius: 6, x: 0, y: 3)
+                .position(x: touchLocation.x, y: max(loupeSize * 0.7, touchLocation.y - 80))
+                .allowsHitTesting(false)
         }
     }
 }

@@ -25,6 +25,8 @@ struct CaptureSessionDetailView: View {
     @State private var woundBoundary: WoundBoundary?
     @State private var annotatedWounds: [AnnotatedWound] = []
     @State private var selectedWoundID: UUID?
+    @State private var woundToDelete: AnnotatedWound?
+    @State private var showingDeleteWoundConfirmation = false
     @State private var measurements: WoundMeasurement?
     @State private var isAnalyzing = false
     @State private var errorMessage: String?
@@ -67,9 +69,15 @@ struct CaptureSessionDetailView: View {
                 manualTraceSheet
             }
             .sheet(item: $woundToAnnotate) { wound in
-                WoundAnnotationEditorView(wound: wound) { updated in
-                    saveWoundAnnotation(updated)
-                }
+                WoundAnnotationEditorView(
+                    wound: wound,
+                    onSave: { updated in
+                        saveWoundAnnotation(updated)
+                    },
+                    onDelete: { toDelete in
+                        deleteWound(toDelete)
+                    }
+                )
             }
             .sheet(isPresented: $showingComparisonView) {
                 comparisonSheet
@@ -99,6 +107,20 @@ struct CaptureSessionDetailView: View {
                 }
             } message: {
                 Text("Are you sure you want to permanently delete this photo and all associated wound measurements and notes? This action cannot be undone.")
+            }
+            .alert(
+                "Delete \(woundToDelete?.label ?? "Wound")?",
+                isPresented: $showingDeleteWoundConfirmation,
+                presenting: woundToDelete
+            ) { wound in
+                Button("Delete Wound", role: .destructive) {
+                    deleteWound(wound)
+                }
+                Button("Cancel", role: .cancel) {
+                    woundToDelete = nil
+                }
+            } message: { wound in
+                Text("Are you sure you want to remove \(wound.label)? Cumulative area and measurements will be updated.")
             }
             .alert("Error", isPresented: $showingError) {
                 Button("OK", role: .cancel) { }
@@ -149,53 +171,38 @@ struct CaptureSessionDetailView: View {
     
     private var singleColumnContent: some View {
         ScrollView {
-            VStack(spacing: duoGeometry.isCoverScreen ? 14 : 20) {
+            VStack(spacing: 16) {
                 photoDisplayView(isExpanded: false)
                 clinicalInspectorView
             }
-            .padding(duoGeometry.isCoverScreen ? 12 : 16)
+            .padding()
         }
-        .duoCoverScreenPadding()
     }
     
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .navigationBarLeading) {
-            Button("Done") {
-                dismiss()
-            }
-            .font(.body.weight(.semibold))
-        }
         ToolbarItem(placement: .navigationBarTrailing) {
-            HStack(spacing: 8) {
-                if hasHistoricalSessions {
-                    Button(action: { showingComparisonView = true }) {
-                        Image(systemName: "rectangle.split.2x1")
-                    }
-                    .pediLensGlassButton()
-                    .accessibilityLabel("Compare with previous visits")
+            Menu {
+                Button(action: { showingExportSheet = true }) {
+                    Label("Export Record", systemImage: "square.and.arrow.up")
                 }
                 
-                Menu {
-                    Button(action: { exportSession(format: .pdf) }) {
-                        Label("Export PDF Report", systemImage: "doc.text.fill")
-                    }
-                    Button(action: { exportSession(format: .images) }) {
-                        Label("Export Image Package", systemImage: "photo.stack")
-                    }
-                } label: {
-                    Image(systemName: "square.and.arrow.up")
-                }
-                .pediLensGlassButton()
-                .accessibilityLabel("Export session")
-                .disabled(session.woundRecord == nil || isExporting)
+                Divider()
                 
-                Button(role: .destructive, action: { showingDeleteConfirmation = true }) {
-                    Image(systemName: "trash")
-                        .foregroundColor(.red)
+                Button(action: { showingComparisonView = true }) {
+                    Label("Compare With Previous Visit", systemImage: "rectangle.split.2x1")
                 }
-                .pediLensGlassButton()
-                .accessibilityLabel("Delete photo session")
+                .disabled(!hasHistoricalSessions)
+                
+                Divider()
+                
+                Button(role: .destructive, action: {
+                    showingDeleteConfirmation = true
+                }) {
+                    Label("Delete Session", systemImage: "trash")
+                }
+            } label: {
+                Image(systemName: "ellipsis.circle")
             }
         }
     }
@@ -287,6 +294,10 @@ struct CaptureSessionDetailView: View {
                                 displaySize: geometry.size,
                                 onSelectWound: { id in
                                     selectedWoundID = id
+                                },
+                                onDeleteWound: { wound in
+                                    woundToDelete = wound
+                                    showingDeleteWoundConfirmation = true
                                 }
                             )
                         }
@@ -305,9 +316,9 @@ struct CaptureSessionDetailView: View {
                     }
                 }
                 
-                // Wound Detection Pill
+                // Wound Detection Summary & Selector Pills
                 if !annotatedWounds.isEmpty || woundBoundary != nil {
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 10) {
                         HStack {
                             Label("Wound Detection", systemImage: "viewfinder.circle.fill")
                                 .font(duoGeometry.isCoverScreen ? .subheadline : .headline)
@@ -333,37 +344,95 @@ struct CaptureSessionDetailView: View {
                         }
                         
                         // Multi-wound selection pills
-                        if annotatedWounds.count > 1 {
+                        if !annotatedWounds.isEmpty {
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 8) {
                                     ForEach(annotatedWounds) { wound in
-                                        Button(action: {
-                                            selectedWoundID = wound.id
-                                        }) {
-                                            HStack(spacing: 5) {
-                                                Circle()
-                                                    .fill(wound.displayColor)
-                                                    .frame(width: 8, height: 8)
-                                                Text(wound.label)
-                                                    .font(.caption.weight(selectedWoundID == wound.id ? .bold : .medium))
-                                                if wound.areaMM2 > 0 {
-                                                    Text(String(format: "%.1f cm²", wound.areaCM2))
-                                                        .font(.system(size: 9))
-                                                        .foregroundColor(.secondary)
+                                        let isSelected = (selectedWoundID == wound.id)
+                                        HStack(spacing: 4) {
+                                            Button(action: {
+                                                selectedWoundID = wound.id
+                                            }) {
+                                                HStack(spacing: 5) {
+                                                    Circle()
+                                                        .fill(wound.displayColor)
+                                                        .frame(width: 8, height: 8)
+                                                    Text(wound.label)
+                                                        .font(.caption.weight(isSelected ? .bold : .medium))
+                                                    if wound.areaMM2 > 0 {
+                                                        Text(String(format: "%.1f cm²", wound.areaCM2))
+                                                            .font(.system(size: 9))
+                                                            .foregroundColor(.secondary)
+                                                    }
                                                 }
                                             }
-                                            .padding(.horizontal, 10)
-                                            .padding(.vertical, 4)
-                                            .background(selectedWoundID == wound.id ? wound.displayColor.opacity(0.2) : Color.secondary.opacity(0.1))
-                                            .clipShape(Capsule())
-                                            .overlay(
-                                                Capsule()
-                                                    .stroke(selectedWoundID == wound.id ? wound.displayColor : Color.clear, lineWidth: 1.5)
-                                            )
+                                            .buttonStyle(.plain)
+                                            
+                                            if isSelected {
+                                                Button(action: {
+                                                    woundToDelete = wound
+                                                    showingDeleteWoundConfirmation = true
+                                                }) {
+                                                    Image(systemName: "trash.fill")
+                                                        .font(.system(size: 10))
+                                                        .foregroundColor(.red)
+                                                        .padding(3)
+                                                }
+                                                .buttonStyle(.plain)
+                                                .accessibilityLabel("Delete \(wound.label)")
+                                            }
                                         }
-                                        .buttonStyle(.plain)
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 4)
+                                        .background(isSelected ? wound.displayColor.opacity(0.2) : Color.secondary.opacity(0.1))
+                                        .clipShape(Capsule())
+                                        .overlay(
+                                            Capsule()
+                                                .stroke(isSelected ? wound.displayColor : Color.clear, lineWidth: 1.5)
+                                        )
                                     }
                                 }
+                            }
+                            
+                            // Active wound quick action strip
+                            if let selectedWound = annotatedWounds.first(where: { $0.id == selectedWoundID }) {
+                                HStack(spacing: 8) {
+                                    Circle()
+                                        .fill(selectedWound.displayColor)
+                                        .frame(width: 9, height: 9)
+                                    Text("Selected: \(selectedWound.label)")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundColor(.primary)
+                                    if selectedWound.areaMM2 > 0 {
+                                        Text(String(format: "(%.2f cm²)", selectedWound.areaCM2))
+                                            .font(.caption2)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    Button(action: {
+                                        woundToAnnotate = selectedWound
+                                    }) {
+                                        Label("Annotate", systemImage: "pencil")
+                                            .font(.caption2.weight(.semibold))
+                                    }
+                                    .pediLensGlassPill(tint: .accentColor)
+                                    
+                                    Button(role: .destructive, action: {
+                                        woundToDelete = selectedWound
+                                        showingDeleteWoundConfirmation = true
+                                    }) {
+                                        Label("Delete", systemImage: "trash")
+                                            .font(.caption2.weight(.semibold))
+                                            .foregroundColor(.red)
+                                    }
+                                    .pediLensGlassPill(tint: .red)
+                                }
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(selectedWound.displayColor.opacity(0.08))
+                                .cornerRadius(10)
                             }
                         }
                     }
@@ -419,181 +488,162 @@ struct CaptureSessionDetailView: View {
             VStack(alignment: .leading, spacing: 10) {
                 Label("Session Information", systemImage: "calendar.badge.clock")
                     .font(duoGeometry.isCoverScreen ? .subheadline : .headline)
-                    .foregroundColor(.primary)
-                
-                Divider().opacity(0.5)
                 
                 HStack {
-                    Text("Captured")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Captured")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Text(session.formattedDate)
+                            .font(.subheadline)
+                    }
+                    
                     Spacer()
-                    Text(session.timestamp ?? Date(), format: .dateTime)
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundColor(.primary)
+                    
+                    if session.locationAvailable {
+                        VStack(alignment: .trailing, spacing: 4) {
+                            Text("Location")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Text(String(format: "%.4f, %.4f", session.latitude, session.longitude))
+                                .font(.subheadline)
+                        }
+                    }
                 }
                 
-                if session.locationAvailable, let location = session.location {
-                    HStack {
-                        Text("Coordinates")
-                            .font(.subheadline)
+                if !session.notesArray.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Session Notes")
+                            .font(.caption)
                             .foregroundColor(.secondary)
-                        Spacer()
-                        Text("\(String(format: "%.4f", location.coordinate.latitude)), \(String(format: "%.4f", location.coordinate.longitude))")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                            .foregroundColor(.primary)
+                        ForEach(session.notesArray) { note in
+                            if let noteText = note.text, !noteText.isEmpty {
+                                Text(noteText)
+                                    .font(.subheadline)
+                            }
+                        }
                     }
                 }
             }
             .padding(duoGeometry.isCoverScreen ? 10 : 14)
             .pediLensGlass(cornerRadius: 14)
             
-            // Overall Measurements section
+            // Cumulative Measurements Section
             if let measurements = measurements {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack(alignment: .center) {
-                        Label("Cumulative Wound Burden", systemImage: "ruler.fill")
-                            .font(duoGeometry.isCoverScreen ? .subheadline : .headline)
-                            .foregroundColor(.primary)
-                        
-                        Spacer(minLength: 8)
-                        adjustScaleButton(measurements: measurements)
-                    }
-                    
-                    HStack(spacing: 8) {
-                        calibrationBadge(measurements: measurements)
-                        if measurements.calibrationUsed.isUserCalibrated {
-                            manualTag
-                        }
-                        Spacer()
-                        Text(String(format: "%.1f px/mm", measurements.calibrationUsed.pixelsPerMillimeter))
-                            .font(.caption)
-                            .fontWeight(.medium)
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    Divider().opacity(0.4)
-                    
-                    if measurements.needsCalibrationWarning {
-                        VStack(alignment: .leading, spacing: 8) {
-                            UncalibratedMeasurementWarning()
-                            Button(action: { showingScaleCalibration = true }) {
-                                Label("Calibrate Scale (Define Reference)", systemImage: "ruler.fill")
-                                    .font(.subheadline)
-                                    .fontWeight(.semibold)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 10)
-                            }
-                            .pediLensGlassButton(prominent: true)
-                        }
-                    }
-                    
-                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
-                        clinicalMetricCard(title: "Total Surface Area", value: measurements.area.formatted(), icon: "square.dashed")
-                        clinicalMetricCard(title: "Max Length", value: measurements.length.formatted(), icon: "arrow.left.and.right")
-                        clinicalMetricCard(title: "Max Width", value: measurements.width.formatted(), icon: "arrow.up.and.down")
-                        clinicalMetricCard(title: "Total Perimeter", value: measurements.perimeter.formatted(), icon: "circle.dashed")
-                        
-                        if let depth = measurements.depth {
-                            clinicalMetricCard(title: "Max Depth", value: depth.formatted(), icon: "arrow.down.to.line")
-                        }
-                        if let volume = measurements.volume {
-                            clinicalMetricCard(title: "Total Volume", value: volume.formatted(), icon: "cube")
-                        }
-                    }
-                }
-                .padding(duoGeometry.isCoverScreen ? 10 : 14)
-                .pediLensGlass(cornerRadius: 14)
-                
-                // Individual Wounds & Annotations Section
-                if !annotatedWounds.isEmpty {
-                    individualWoundsSection
-                }
-                
-                // Action buttons
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 12) {
-                        manualTraceButton
-                        reanalyzeButton
-                    }
-                    VStack(spacing: 10) {
-                        manualTraceButton
-                        reanalyzeButton
-                    }
-                }
-            } else if isAnalyzing {
-                VStack(spacing: 12) {
-                    ProgressView()
-                    Text("Analyzing wound(s)...")
-                        .foregroundColor(.secondary)
-                }
-                .padding()
-                .frame(maxWidth: .infinity)
-                .pediLensGlass(cornerRadius: 14)
-            } else if photoImage != nil {
-                VStack(spacing: 12) {
-                    HStack(alignment: .top, spacing: 8) {
-                        Image(systemName: "info.circle.fill")
-                            .foregroundColor(.accentColor)
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Analysis Options")
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                            Text("Automatic AI detects multiple wounds in frame. You can also manually trace and annotate each lesion individually.")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                    .padding(12)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.accentColor.opacity(0.08))
-                    .cornerRadius(10)
-                    
-                    Button(action: analyzeWound) {
-                        Label("Auto-Detect All Wounds", systemImage: "waveform.path.ecg")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                    }
-                    .pediLensGlassButton(prominent: true)
-                    
-                    Button(action: { showingManualTrace = true }) {
-                        Label("Manually Trace Wounds", systemImage: "hand.draw")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                    }
-                    .pediLensGlassButton()
-                    
-                    Button(action: { showingScaleCalibration = true }) {
-                        Label(customCalibration != nil ? "Scale Calibrated" : "Define Scale Reference", systemImage: "ruler")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                    }
-                    .pediLensGlassButton()
-                }
+                cumulativeMeasurementsSection(measurements: measurements)
             }
+            
+            // Individual Annotated Wounds Section
+            if !annotatedWounds.isEmpty {
+                individualWoundsSection
+            }
+            
+            // Action Buttons
+            HStack(spacing: 12) {
+                manualTraceButton
+                reanalyzeButton
+            }
+            .padding(.top, 4)
         }
     }
     
-    // MARK: - Individual Wounds & Clinical Annotations Section
+    // MARK: - Extracted Measurement & Wound Inspector Sections
     
-    private var individualWoundsSection: some View {
+    @ViewBuilder
+    private func cumulativeMeasurementsSection(measurements: WoundMeasurement) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Label("Individual Lesions (\(annotatedWounds.count))", systemImage: "circles.hexagonpath.fill")
-                    .font(duoGeometry.isCoverScreen ? .subheadline : .headline)
-                    .foregroundColor(.primary)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(annotatedWounds.count > 1 ? "Cumulative Wound Metrics" : "Wound Measurements")
+                        .font(duoGeometry.isCoverScreen ? .subheadline : .headline)
+                    if annotatedWounds.count > 1 {
+                        Text("Combined total across \(annotatedWounds.count) identified ulcer sites")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
                 
                 Spacer()
                 
-                Text("Tap card to annotate")
+                calibrationBadge(measurements: measurements)
+            }
+            
+            // Highlighted Total Area Card
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text(annotatedWounds.count > 1 ? "Total Surface Area" : "Surface Area")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.secondary)
+                        .textCase(.uppercase)
+                    Spacer()
+                    adjustScaleButton(measurements: measurements)
+                }
+                
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(measurements.formattedArea)
+                        .font(.system(size: duoGeometry.isCoverScreen ? 24 : 30, weight: .bold, design: .rounded))
+                        .foregroundColor(.primary)
+                    
+                    let areaMM2 = measurements.area.converted(to: .squareMillimeters).value
+                    Text(String(format: "(%.1f mm²)", areaMM2))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .padding(duoGeometry.isCoverScreen ? 10 : 14)
+            .background(Color.accentColor.opacity(0.08))
+            .cornerRadius(12)
+            
+            // Grid for dimensions
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                clinicalMetricCard(
+                    title: annotatedWounds.count > 1 ? "Max Length" : "Length",
+                    value: measurements.formattedLength,
+                    icon: "arrow.up.and.down"
+                )
+                
+                clinicalMetricCard(
+                    title: annotatedWounds.count > 1 ? "Max Width" : "Width",
+                    value: measurements.formattedWidth,
+                    icon: "arrow.left.and.right"
+                )
+                
+                clinicalMetricCard(
+                    title: "Total Perimeter",
+                    value: measurements.formattedPerimeter,
+                    icon: "circle.dashed"
+                )
+                
+                if let depth = measurements.formattedDepth {
+                    clinicalMetricCard(
+                        title: "Max Depth",
+                        value: depth,
+                        icon: "arrow.down.to.line"
+                    )
+                } else {
+                    clinicalMetricCard(
+                        title: "Status",
+                        value: "Superficial",
+                        icon: "shield"
+                    )
+                }
+            }
+        }
+        .padding(duoGeometry.isCoverScreen ? 10 : 14)
+        .pediLensGlass(cornerRadius: 14)
+    }
+    
+    @ViewBuilder
+    private var individualWoundsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Label("Individual Wounds (\(annotatedWounds.count))", systemImage: "cross.case.fill")
+                    .font(duoGeometry.isCoverScreen ? .subheadline : .headline)
+                
+                Spacer()
+                
+                Text("Tap to select")
                     .font(.caption2)
                     .foregroundColor(.secondary)
             }
@@ -603,22 +653,22 @@ struct CaptureSessionDetailView: View {
             ForEach(annotatedWounds) { wound in
                 let isSelected = selectedWoundID == wound.id
                 
-                Button(action: {
-                    selectedWoundID = wound.id
-                    woundToAnnotate = wound
-                }) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Circle()
-                                .fill(wound.displayColor)
-                                .frame(width: 12, height: 12)
-                            
-                            Text(wound.label)
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundColor(.primary)
-                            
-                            Spacer()
-                            
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Circle()
+                            .fill(wound.displayColor)
+                            .frame(width: 12, height: 12)
+                        
+                        Text(wound.label)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(.primary)
+                        
+                        Spacer()
+                        
+                        Button(action: {
+                            selectedWoundID = wound.id
+                            woundToAnnotate = wound
+                        }) {
                             Text("Edit")
                                 .font(.caption.weight(.bold))
                                 .foregroundColor(.accentColor)
@@ -627,70 +677,88 @@ struct CaptureSessionDetailView: View {
                                 .background(Color.accentColor.opacity(0.12))
                                 .clipShape(Capsule())
                         }
+                        .buttonStyle(.plain)
                         
-                        // Anatomical & Staging Tags
-                        HStack(spacing: 6) {
-                            Text(wound.anatomicalLocation)
-                                .font(.caption2.weight(.medium))
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(Color.secondary.opacity(0.12))
-                                .cornerRadius(4)
-                            
-                            Text(wound.stageWagner)
-                                .font(.caption2.weight(.medium))
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(Color.orange.opacity(0.15))
-                                .foregroundColor(.orange)
-                                .cornerRadius(4)
+                        Button(role: .destructive, action: {
+                            woundToDelete = wound
+                            showingDeleteWoundConfirmation = true
+                        }) {
+                            Image(systemName: "trash")
+                                .font(.caption.weight(.bold))
+                                .foregroundColor(.red)
+                                .padding(5)
+                                .background(Color.red.opacity(0.12))
+                                .clipShape(Circle())
                         }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Delete \(wound.label)")
+                    }
+                    
+                    // Anatomical & Staging Tags
+                    HStack(spacing: 6) {
+                        Text(wound.anatomicalLocation)
+                            .font(.caption2.weight(.medium))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.secondary.opacity(0.12))
+                            .cornerRadius(4)
                         
-                        // Physical Metrics
-                        HStack(spacing: 12) {
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text("Area")
-                                    .font(.system(size: 10))
-                                    .foregroundColor(.secondary)
-                                Text(String(format: "%.2f cm²", wound.areaCM2))
-                                    .font(.caption.weight(.bold))
-                            }
-                            
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text("Dimensions")
-                                    .font(.system(size: 10))
-                                    .foregroundColor(.secondary)
-                                Text(String(format: "%.0f × %.0f mm", wound.lengthMM, wound.widthMM))
-                                    .font(.caption.weight(.semibold))
-                            }
-                            
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text("Tissue")
-                                    .font(.system(size: 10))
-                                    .foregroundColor(.secondary)
-                                Text(wound.tissueType)
-                                    .font(.caption.weight(.medium))
-                                    .lineLimit(1)
-                            }
-                        }
-                        
-                        if !wound.notes.trimmingCharacters(in: .whitespaces).isEmpty {
-                            Text(wound.notes)
-                                .font(.caption2)
-                                .italic()
+                        Text(wound.stageWagner)
+                            .font(.caption2.weight(.medium))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.orange.opacity(0.15))
+                            .foregroundColor(.orange)
+                            .cornerRadius(4)
+                    }
+                    
+                    // Physical Metrics
+                    HStack(spacing: 12) {
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text("Area")
+                                .font(.system(size: 10))
                                 .foregroundColor(.secondary)
-                                .lineLimit(2)
+                            Text(String(format: "%.2f cm²", wound.areaCM2))
+                                .font(.caption.weight(.bold))
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text("Dimensions")
+                                .font(.system(size: 10))
+                                .foregroundColor(.secondary)
+                            Text(String(format: "%.0f × %.0f mm", wound.lengthMM, wound.widthMM))
+                                .font(.caption.weight(.semibold))
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text("Tissue")
+                                .font(.system(size: 10))
+                                .foregroundColor(.secondary)
+                            Text(wound.tissueType)
+                                .font(.caption.weight(.medium))
+                                .lineLimit(1)
                         }
                     }
-                    .padding(12)
-                    .background(isSelected ? wound.displayColor.opacity(0.12) : Color.secondary.opacity(0.06))
-                    .cornerRadius(12)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(isSelected ? wound.displayColor : Color.clear, lineWidth: 1.5)
-                    )
+                    
+                    if !wound.notes.trimmingCharacters(in: .whitespaces).isEmpty {
+                        Text(wound.notes)
+                            .font(.caption2)
+                            .italic()
+                            .foregroundColor(.secondary)
+                            .lineLimit(2)
+                    }
                 }
-                .buttonStyle(.plain)
+                .padding(12)
+                .background(isSelected ? wound.displayColor.opacity(0.12) : Color.secondary.opacity(0.06))
+                .cornerRadius(12)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(isSelected ? wound.displayColor : Color.clear, lineWidth: 1.5)
+                )
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    selectedWoundID = wound.id
+                }
             }
         }
         .padding(duoGeometry.isCoverScreen ? 10 : 14)
@@ -827,14 +895,14 @@ struct CaptureSessionDetailView: View {
                     newAnnotatedWounds.append(annotated)
                 }
                 
-                // Compute cumulative summary metrics
+                // Cumulative multi-wound metrics
                 let totalAreaMM2 = newAnnotatedWounds.reduce(0.0) { $0 + $1.areaMM2 }
                 let maxLengthMM = newAnnotatedWounds.map { $0.lengthMM }.max() ?? 0.0
                 let maxWidthMM = newAnnotatedWounds.map { $0.widthMM }.max() ?? 0.0
                 let totalPerimeterMM = newAnnotatedWounds.reduce(0.0) { $0 + $1.perimeterMM }
                 let maxDepthMM = newAnnotatedWounds.map { $0.depthMM }.max() ?? 0.0
                 let totalVolumeMM3 = newAnnotatedWounds.reduce(0.0) { $0 + $1.volumeMM3 }
-                let avgConfidence = boundaries.reduce(0.0) { $0 + $1.confidence } / Float(max(1, boundaries.count))
+                let avgConfidence = newAnnotatedWounds.reduce(0.0) { $0 + $1.confidence } / Float(newAnnotatedWounds.count)
                 
                 let summaryMeasurements = WoundMeasurement(
                     length: Foundation.Measurement(value: maxLengthMM, unit: UnitLength.millimeters),
@@ -847,7 +915,6 @@ struct CaptureSessionDetailView: View {
                     calibrationUsed: calibration
                 )
                 
-                // Save or update CoreData Measurement
                 let measurement = session.measurement ?? Measurement(context: viewContext)
                 measurement.id = measurement.id ?? UUID()
                 measurement.lengthMM = maxLengthMM
@@ -860,7 +927,7 @@ struct CaptureSessionDetailView: View {
                 measurement.isManuallyAdjusted = false
                 measurement.captureSession = session
                 
-                // Encode multi-wound payload
+                // Save multi-wound JSON payload into boundaryPoints
                 measurement.boundaryPoints = MultiWoundPayload.encode(newAnnotatedWounds)
                 
                 if let calibrationData = try? JSONEncoder().encode(calibration) {
@@ -1012,6 +1079,84 @@ struct CaptureSessionDetailView: View {
         }
     }
     
+    private func deleteWound(_ wound: AnnotatedWound) {
+        guard let index = annotatedWounds.firstIndex(where: { $0.id == wound.id }) else { return }
+        
+        annotatedWounds.remove(at: index)
+        
+        if selectedWoundID == wound.id {
+            selectedWoundID = annotatedWounds.first?.id
+        }
+        
+        woundToDelete = nil
+        
+        if annotatedWounds.isEmpty {
+            woundBoundary = nil
+            measurements = nil
+            if let measurement = session.measurement {
+                measurement.boundaryPoints = nil
+                measurement.areaMM2 = 0
+                measurement.lengthMM = 0
+                measurement.widthMM = 0
+                measurement.perimeterMM = 0
+                measurement.depthMM = 0
+                measurement.volumeMM3 = 0
+                measurement.detectionConfidence = 0
+            }
+            try? viewContext.save()
+            return
+        }
+        
+        // Update primary boundary reference
+        if let primary = annotatedWounds.first {
+            woundBoundary = WoundBoundary(
+                id: primary.id,
+                woundNumber: primary.woundNumber,
+                points: primary.points,
+                confidence: primary.confidence,
+                boundingBox: primary.boundingBox,
+                detectionMethod: primary.isManuallyAdjusted ? .manual : .automatic(modelVersion: "1.0"),
+                label: primary.label,
+                colorHex: primary.colorHex
+            )
+        }
+        
+        // Recalculate cumulative metrics
+        let totalAreaMM2 = annotatedWounds.reduce(0.0) { $0 + $1.areaMM2 }
+        let maxLengthMM = annotatedWounds.map { $0.lengthMM }.max() ?? 0.0
+        let maxWidthMM = annotatedWounds.map { $0.widthMM }.max() ?? 0.0
+        let totalPerimeterMM = annotatedWounds.reduce(0.0) { $0 + $1.perimeterMM }
+        let maxDepthMM = annotatedWounds.map { $0.depthMM }.max() ?? 0.0
+        let totalVolumeMM3 = annotatedWounds.reduce(0.0) { $0 + $1.volumeMM3 }
+        let avgConfidence = annotatedWounds.reduce(0.0) { $0 + $1.confidence } / Float(annotatedWounds.count)
+        let calibration = customCalibration ?? measurements?.calibrationUsed ?? MeasurementCalibration.estimated()
+        
+        let updatedMeasurements = WoundMeasurement(
+            length: Foundation.Measurement(value: maxLengthMM, unit: UnitLength.millimeters),
+            width: Foundation.Measurement(value: maxWidthMM, unit: UnitLength.millimeters),
+            area: Foundation.Measurement(value: totalAreaMM2, unit: UnitArea.squareMillimeters),
+            depth: maxDepthMM > 0 ? Foundation.Measurement(value: maxDepthMM, unit: UnitLength.millimeters) : nil,
+            volume: totalVolumeMM3 > 0 ? Foundation.Measurement(value: totalVolumeMM3, unit: UnitVolume.cubicMillimeters) : nil,
+            perimeter: Foundation.Measurement(value: totalPerimeterMM, unit: UnitLength.millimeters),
+            timestamp: session.timestamp ?? Date(),
+            calibrationUsed: calibration
+        )
+        
+        if let measurement = session.measurement {
+            measurement.lengthMM = maxLengthMM
+            measurement.widthMM = maxWidthMM
+            measurement.areaMM2 = totalAreaMM2
+            measurement.perimeterMM = totalPerimeterMM
+            measurement.depthMM = maxDepthMM
+            measurement.volumeMM3 = totalVolumeMM3
+            measurement.detectionConfidence = avgConfidence
+            measurement.boundaryPoints = MultiWoundPayload.encode(annotatedWounds)
+            try? viewContext.save()
+        }
+        
+        self.measurements = updatedMeasurements
+    }
+    
     private func processManualBoundary(_ points: [CGPoint]) {
         let singleWound = AnnotatedWound(
             woundNumber: 1,
@@ -1069,7 +1214,7 @@ struct CaptureSessionDetailView: View {
         defer { CVPixelBufferUnlockBaseAddress(depthMap, []) }
         
         if let baseAddress = CVPixelBufferGetBaseAddress(depthMap) {
-            depthBytes.withUnsafeBytes { bytes in
+            _ = depthBytes.withUnsafeBytes { bytes in
                 memcpy(baseAddress, bytes.baseAddress!, min(depthBytes.count, bytesPerRow * height))
             }
         }

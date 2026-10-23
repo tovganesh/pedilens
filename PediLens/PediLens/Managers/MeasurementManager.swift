@@ -552,3 +552,39 @@ struct WoundMeasurement {
     /// Calibration data used for this measurement
     let calibrationUsed: MeasurementCalibration
 }
+
+
+extension WoundMeasurement {
+    var formattedArea: String {
+        let cm2 = area.converted(to: .squareCentimeters).value
+        return String(format: "%.2f cm²", cm2)
+    }
+    
+    var formattedLength: String {
+        let mm = length.converted(to: .millimeters).value
+        return String(format: "%.1f mm", mm)
+    }
+    
+    var formattedWidth: String {
+        let mm = width.converted(to: .millimeters).value
+        return String(format: "%.1f mm", mm)
+    }
+    
+    var formattedPerimeter: String {
+        let mm = perimeter.converted(to: .millimeters).value
+        return String(format: "%.1f mm", mm)
+    }
+    
+    var formattedDepth: String? {
+        guard let depth = depth else { return nil }
+        let mm = depth.converted(to: .millimeters).value
+        return String(format: "%.1f mm", mm)
+    }
+    
+    var formattedVolume: String? {
+        guard let volume = volume else { return nil }
+        let mm3 = volume.converted(to: .cubicMillimeters).value
+        let cm3 = mm3 / 1000.0
+        return String(format: "%.2f cm³", cm3)
+    }
+}
