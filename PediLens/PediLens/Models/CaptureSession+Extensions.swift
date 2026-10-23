@@ -212,6 +212,15 @@ extension CaptureSession {
     
     // MARK: - Computed Properties
     
+    /// Formatted date string for clinical display
+    var formattedDate: String {
+        guard let timestamp = timestamp else { return "Unknown date" }
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter.string(from: timestamp)
+    }
+    
     /// Get the location as a CLLocation object
     var location: CLLocation? {
         guard locationAvailable else { return nil }

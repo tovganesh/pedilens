@@ -24,6 +24,14 @@ protocol MeasurementManagerProtocol {
         depthData: DepthData?
     ) -> WoundMeasurement
     
+    /// Calculate individual annotated wound metrics from a wound boundary
+    func calculateAnnotatedWound(
+        boundary: WoundBoundary,
+        calibration: MeasurementCalibration,
+        depthData: DepthData?,
+        existing: AnnotatedWound?
+    ) -> AnnotatedWound
+    
     /// Create calibration data from a reference object
     /// - Parameters:
     ///   - referenceObject: Known reference object (ruler, coin, etc.)
@@ -92,6 +100,61 @@ class MeasurementManager: MeasurementManagerProtocol {
         )
     }
     
+    /// Calculates individual annotated wound metrics from a wound boundary
+    func calculateAnnotatedWound(
+        boundary: WoundBoundary,
+        calibration: MeasurementCalibration,
+        depthData: DepthData?,
+        existing: AnnotatedWound? = nil
+    ) -> AnnotatedWound {
+        let areaPixels = calculateAreaUsingShoelaceFormula(points: boundary.points)
+        let areaMM2 = areaPixels / (calibration.pixelsPerMillimeter * calibration.pixelsPerMillimeter)
+        
+        let (lengthPixels, widthPixels) = calculateMinimumBoundingRectangle(points: boundary.points)
+        let lengthMM = lengthPixels / calibration.pixelsPerMillimeter
+        let widthMM = widthPixels / calibration.pixelsPerMillimeter
+        
+        let perimeterPixels = calculatePerimeter(points: boundary.points)
+        let perimeterMM = perimeterPixels / calibration.pixelsPerMillimeter
+        
+        var depthMM: Double = 0.0
+        var volumeMM3: Double = 0.0
+        if let depthData = depthData {
+            let (calcDepth, calcVol) = calculateDepthAndVolume(
+                boundary: boundary,
+                calibration: calibration,
+                depthData: depthData,
+                areaMM2: areaMM2
+            )
+            depthMM = calcDepth ?? 0.0
+            volumeMM3 = calcVol ?? 0.0
+        }
+        
+        let isAdjusted = boundary.detectionMethod == .manual || (existing?.isManuallyAdjusted ?? false)
+        
+        return AnnotatedWound(
+            id: existing?.id ?? boundary.id,
+            woundNumber: boundary.woundNumber,
+            label: existing?.label ?? boundary.label ?? "Wound #\(boundary.woundNumber)",
+            anatomicalLocation: existing?.anatomicalLocation ?? "1st Metatarsal Head (Plantar)",
+            stageWagner: existing?.stageWagner ?? "Grade 1 - Superficial Ulcer",
+            tissueType: existing?.tissueType ?? "Granulation (Erythematous)",
+            exudate: existing?.exudate ?? "Scant / Minimal",
+            periwoundCondition: existing?.periwoundCondition ?? "Intact",
+            notes: existing?.notes ?? "",
+            points: boundary.points,
+            confidence: boundary.confidence,
+            isManuallyAdjusted: isAdjusted,
+            colorHex: existing?.colorHex ?? boundary.colorHex,
+            lengthMM: lengthMM,
+            widthMM: widthMM,
+            areaMM2: areaMM2,
+            perimeterMM: perimeterMM,
+            depthMM: depthMM,
+            volumeMM3: volumeMM3
+        )
+    }
+    
     /// Create calibration data from a reference object
     /// - Parameters:
     ///   - referenceObject: Known reference object (ruler, coin, etc.)
@@ -128,260 +191,130 @@ class MeasurementManager: MeasurementManagerProtocol {
     
     /// Calculate area using the Shoelace formula (Gauss's area formula)
     /// Formula: Area = 0.5 * |Σ(x_i * y_(i+1) - x_(i+1) * y_i)|
-    /// - Parameter points: Boundary polygon points
-    /// - Returns: Area in square pixels
     private func calculateAreaUsingShoelaceFormula(points: [CGPoint]) -> Double {
         guard points.count >= 3 else { return 0.0 }
         
         var sum: Double = 0.0
-        let n = points.count
+        let count = points.count
         
-        for i in 0..<n {
+        for i in 0..<count {
             let current = points[i]
-            let next = points[(i + 1) % n]
-            sum += Double(current.x * next.y - next.x * current.y)
+            let next = points[(i + 1) % count]
+            
+            sum += Double(current.x * next.y) - Double(next.x * current.y)
         }
         
         return abs(sum) / 2.0
     }
     
-    /// Calculate minimum bounding rectangle dimensions
-    /// Uses rotating calipers algorithm to find optimal bounding box orientation
-    /// - Parameter points: Boundary polygon points
-    /// - Returns: Tuple of (length, width) in pixels where length >= width
+    /// Calculate minimum bounding rectangle using rotating calipers algorithm
+    /// Returns: (length, width) where length >= width
     private func calculateMinimumBoundingRectangle(points: [CGPoint]) -> (length: Double, width: Double) {
-        guard points.count >= 2 else { return (0.0, 0.0) }
+        guard points.count >= 3 else { return (0.0, 0.0) }
         
-        // For simplicity, we'll use axis-aligned bounding box
-        // A full rotating calipers implementation would be more accurate but more complex
-        var minX = Double.infinity
-        var maxX = -Double.infinity
-        var minY = Double.infinity
-        var maxY = -Double.infinity
-        
-        for point in points {
-            minX = min(minX, Double(point.x))
-            maxX = max(maxX, Double(point.x))
-            minY = min(minY, Double(point.y))
-            maxY = max(maxY, Double(point.y))
+        // First compute convex hull to reduce search space
+        let hull = computeConvexHull(points: points)
+        guard hull.count >= 3 else {
+            // Fallback to axis-aligned bounding box
+            return calculateAxisAlignedBoundingBox(points: points)
         }
         
-        let width = maxX - minX
-        let height = maxY - minY
+        var minArea = Double.infinity
+        var bestLength: Double = 0.0
+        var bestWidth: Double = 0.0
         
-        // Return length as the longer dimension, width as the shorter
-        if width >= height {
-            return (length: width, width: height)
-        } else {
-            return (length: height, width: width)
-        }
-    }
-    
-    /// Calculate perimeter from boundary points
-    /// Sums the Euclidean distances between consecutive points
-    /// - Parameter points: Boundary polygon points
-    /// - Returns: Perimeter in pixels
-    private func calculatePerimeter(points: [CGPoint]) -> Double {
-        guard points.count >= 2 else { return 0.0 }
-        
-        var perimeter: Double = 0.0
-        let n = points.count
-        
-        for i in 0..<n {
-            let current = points[i]
-            let next = points[(i + 1) % n]
+        // Test each edge of the convex hull as an orientation
+        for i in 0..<hull.count {
+            let p1 = hull[i]
+            let p2 = hull[(i + 1) % hull.count]
             
-            let dx = Double(next.x - current.x)
-            let dy = Double(next.y - current.y)
-            let distance = sqrt(dx * dx + dy * dy)
+            // Calculate edge angle
+            let edgeVector = CGPoint(x: p2.x - p1.x, y: p2.y - p1.y)
+            let angle = atan2(edgeVector.y, edgeVector.x)
             
-            perimeter += distance
-        }
-        
-        return perimeter
-    }
-    
-    /// Calculate average depth within wound boundary
-    /// - Parameters:
-    ///   - depthData: Depth map data
-    ///   - boundary: Wound boundary
-    ///   - depthCalibration: Depth calibration data
-    /// - Returns: Average depth in millimeters
-    private func calculateAverageDepth(
-        depthData: DepthData,
-        boundary: WoundBoundary,
-        depthCalibration: DepthCalibration
-    ) -> Double {
-        // Extract depth values within the wound boundary
-        let depthValues = extractDepthValues(
-            from: depthData.depthMap,
-            within: boundary.points
-        )
-        
-        guard !depthValues.isEmpty else { return 0.0 }
-        
-        // Calculate baseline depth from surrounding tissue (outside boundary)
-        let baselineDepth = calculateBaselineDepth(
-            from: depthData.depthMap,
-            boundary: boundary
-        )
-        
-        // Filter outliers using median absolute deviation
-        let filteredValues = filterOutliers(depthValues)
-        
-        guard !filteredValues.isEmpty else { return 0.0 }
-        
-        // Calculate average depth relative to baseline
-        let averageRawDepth = Double(filteredValues.reduce(0.0, +)) / Double(filteredValues.count)
-        let relativeDepth = averageRawDepth - Double(baselineDepth)
-        
-        // Convert to millimeters using calibration
-        let depthMM = relativeDepth * Double(depthCalibration.depthScale) + Double(depthCalibration.depthOffset)
-        
-        return max(0.0, depthMM) // Ensure non-negative depth
-    }
-    
-    /// Calculate wound volume by integrating depth over area
-    /// - Parameters:
-    ///   - depthData: Depth map data
-    ///   - boundary: Wound boundary
-    ///   - calibration: Measurement calibration
-    ///   - depthCalibration: Depth calibration data
-    /// - Returns: Volume in cubic millimeters
-    private func calculateVolume(
-        depthData: DepthData,
-        boundary: WoundBoundary,
-        calibration: MeasurementCalibration,
-        depthCalibration: DepthCalibration
-    ) -> Double {
-        // Extract depth values within boundary
-        let depthValues = extractDepthValues(
-            from: depthData.depthMap,
-            within: boundary.points
-        )
-        
-        guard !depthValues.isEmpty else { return 0.0 }
-        
-        // Calculate baseline depth
-        let baselineDepth = calculateBaselineDepth(
-            from: depthData.depthMap,
-            boundary: boundary
-        )
-        
-        // Calculate pixel area in mm²
-        let pixelAreaMM2 = 1.0 / (calibration.pixelsPerMillimeter * calibration.pixelsPerMillimeter)
-        
-        // Integrate depth values over the area
-        var totalVolume: Double = 0.0
-        
-        for depthValue in depthValues {
-            let relativeDepth = depthValue - baselineDepth
-            if relativeDepth > 0 {
-                let depthMM = Double(relativeDepth * depthCalibration.depthScale + depthCalibration.depthOffset)
-                totalVolume += depthMM * pixelAreaMM2
-            }
-        }
-        
-        return max(0.0, totalVolume)
-    }
-    
-    /// Extract depth values from depth map within boundary polygon
-    /// - Parameters:
-    ///   - depthMap: CVPixelBuffer containing depth data
-    ///   - points: Boundary polygon points
-    /// - Returns: Array of depth values
-    private func extractDepthValues(from depthMap: CVPixelBuffer, within points: [CGPoint]) -> [Float] {
-        var depthValues: [Float] = []
-        
-        CVPixelBufferLockBaseAddress(depthMap, .readOnly)
-        defer { CVPixelBufferUnlockBaseAddress(depthMap, .readOnly) }
-        
-        let width = CVPixelBufferGetWidth(depthMap)
-        let height = CVPixelBufferGetHeight(depthMap)
-        let bytesPerRow = CVPixelBufferGetBytesPerRow(depthMap)
-        
-        guard let baseAddress = CVPixelBufferGetBaseAddress(depthMap) else {
-            return depthValues
-        }
-        
-        // Find bounding box of the polygon for efficiency
-        let boundingBox = calculateBoundingBox(points: points)
-        
-        let minX = max(0, Int(boundingBox.minX))
-        let maxX = min(width - 1, Int(boundingBox.maxX))
-        let minY = max(0, Int(boundingBox.minY))
-        let maxY = min(height - 1, Int(boundingBox.maxY))
-        
-        // Iterate through pixels in bounding box
-        for y in minY...maxY {
-            for x in minX...maxX {
-                let point = CGPoint(x: x, y: y)
+            // Project all hull points onto the rotated coordinate system
+            var minX = Double.infinity
+            var maxX = -Double.infinity
+            var minY = Double.infinity
+            var maxY = -Double.infinity
+            
+            let cosAngle = cos(-angle)
+            let sinAngle = sin(-angle)
+            
+            for point in hull {
+                // Rotate point
+                let rotatedX = Double(point.x) * Double(cosAngle) - Double(point.y) * Double(sinAngle)
+                let rotatedY = Double(point.x) * Double(sinAngle) + Double(point.y) * Double(cosAngle)
                 
-                // Check if point is inside polygon
-                if isPointInPolygon(point: point, polygon: points) {
-                    // Extract depth value (assuming Float32 format)
-                    let offset = y * bytesPerRow + x * MemoryLayout<Float32>.stride
-                    let depthPointer = baseAddress.advanced(by: offset).assumingMemoryBound(to: Float32.self)
-                    let depthValue = depthPointer.pointee
-                    
-                    if depthValue.isFinite && depthValue > 0 {
-                        depthValues.append(depthValue)
-                    }
-                }
+                minX = min(minX, rotatedX)
+                maxX = max(maxX, rotatedX)
+                minY = min(minY, rotatedY)
+                maxY = max(maxY, rotatedY)
+            }
+            
+            let width = maxX - minX
+            let height = maxY - minY
+            let area = width * height
+            
+            // Keep the bounding box with minimum area
+            if area < minArea {
+                minArea = area
+                // Convention: length is the larger dimension, width is smaller
+                bestLength = max(width, height)
+                bestWidth = min(width, height)
             }
         }
         
-        return depthValues
+        return (bestLength, bestWidth)
     }
     
-    /// Calculate baseline depth from surrounding tissue
-    /// - Parameters:
-    ///   - depthMap: CVPixelBuffer containing depth data
-    ///   - boundary: Wound boundary
-    /// - Returns: Baseline depth value
-    private func calculateBaselineDepth(from depthMap: CVPixelBuffer, boundary: WoundBoundary) -> Float {
-        // Sample depth values in a ring around the wound boundary
-        let expandedBoundary = expandPolygon(points: boundary.points, by: 10.0) // 10 pixel margin
-        let surroundingValues = extractDepthValues(from: depthMap, within: expandedBoundary)
-            .filter { value in
-                // Exclude values that are inside the original boundary
-                true // Simplified - in production, would check if outside original boundary
+    /// Compute 2D convex hull using Monotone Chain algorithm (Andrew's algorithm)
+    /// Time complexity: O(n log n)
+    private func computeConvexHull(points: [CGPoint]) -> [CGPoint] {
+        guard points.count > 3 else { return points }
+        
+        // Sort points lexicographically by x, then y
+        let sortedPoints = points.sorted { p1, p2 in
+            if p1.x != p2.x {
+                return p1.x < p2.x
             }
+            return p1.y < p2.y
+        }
         
-        guard !surroundingValues.isEmpty else { return 0.0 }
+        // Build lower hull
+        var lower: [CGPoint] = []
+        for point in sortedPoints {
+            while lower.count >= 2 && crossProduct(p1: lower[lower.count - 2], p2: lower[lower.count - 1], p3: point) <= 0 {
+                lower.removeLast()
+            }
+            lower.append(point)
+        }
         
-        // Use median as baseline to be robust to outliers
-        let sorted = surroundingValues.sorted()
-        let median = sorted[sorted.count / 2]
+        // Build upper hull
+        var upper: [CGPoint] = []
+        for point in sortedPoints.reversed() {
+            while upper.count >= 2 && crossProduct(p1: upper[upper.count - 2], p2: upper[upper.count - 1], p3: point) <= 0 {
+                upper.removeLast()
+            }
+            upper.append(point)
+        }
         
-        return median
+        // Remove last point of each half because it's repeated at the beginning of the other half
+        lower.removeLast()
+        upper.removeLast()
+        
+        return lower + upper
     }
     
-    /// Filter outliers using median absolute deviation
-    /// - Parameter values: Array of depth values
-    /// - Returns: Filtered array with outliers removed
-    private func filterOutliers(_ values: [Float]) -> [Float] {
-        guard values.count > 2 else { return values }
-        
-        // Calculate median
-        let sorted = values.sorted()
-        let median = sorted[sorted.count / 2]
-        
-        // Calculate median absolute deviation (MAD)
-        let absoluteDeviations = values.map { abs($0 - median) }
-        let sortedDeviations = absoluteDeviations.sorted()
-        let mad = sortedDeviations[sortedDeviations.count / 2]
-        
-        // Filter values within 3 MAD of median (robust outlier detection)
-        let threshold = 3.0 * mad
-        return values.filter { abs($0 - median) <= threshold }
+    /// 2D cross product of OA and OB vectors
+    /// Returns positive for counter-clockwise turn, negative for clockwise, 0 for collinear
+    private func crossProduct(p1: CGPoint, p2: CGPoint, p3: CGPoint) -> CGFloat {
+        return (p2.x - p1.x) * (p3.y - p1.y) - (p2.y - p1.y) * (p3.x - p1.x)
     }
     
-    /// Calculate bounding box for a set of points
-    /// - Parameter points: Array of points
-    /// - Returns: CGRect bounding box
-    private func calculateBoundingBox(points: [CGPoint]) -> CGRect {
-        guard !points.isEmpty else { return .zero }
+    /// Fallback: Calculate axis-aligned bounding box
+    private func calculateAxisAlignedBoundingBox(points: [CGPoint]) -> (length: Double, width: Double) {
+        guard !points.isEmpty else { return (0.0, 0.0) }
         
         var minX = points[0].x
         var maxX = points[0].x
@@ -395,27 +328,193 @@ class MeasurementManager: MeasurementManagerProtocol {
             maxY = max(maxY, point.y)
         }
         
-        return CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)
+        let width = Double(maxX - minX)
+        let height = Double(maxY - minY)
+        
+        return (max(width, height), min(width, height))
     }
     
-    /// Check if a point is inside a polygon using ray casting algorithm
+    /// Calculate perimeter from boundary polygon points
+    private func calculatePerimeter(points: [CGPoint]) -> Double {
+        guard points.count >= 2 else { return 0.0 }
+        
+        var perimeter: Double = 0.0
+        let count = points.count
+        
+        for i in 0..<count {
+            let current = points[i]
+            let next = points[(i + 1) % count]
+            
+            let dx = Double(next.x - current.x)
+            let dy = Double(next.y - current.y)
+            let segmentLength = sqrt(dx * dx + dy * dy)
+            
+            perimeter += segmentLength
+        }
+        
+        return perimeter
+    }
+    
+    /// Calculate depth and volume from depth data
     /// - Parameters:
-    ///   - point: Point to test
-    ///   - polygon: Polygon vertices
-    /// - Returns: True if point is inside polygon
+    ///   - boundary: Wound boundary polygon
+    ///   - calibration: Calibration data
+    ///   - depthData: Depth map from TrueDepth/LiDAR
+    ///   - areaMM2: Previously calculated surface area
+    /// - Returns: (maxDepthMM, volumeMM3)
+    private func calculateDepthAndVolume(
+        boundary: WoundBoundary,
+        calibration: MeasurementCalibration,
+        depthData: DepthData,
+        areaMM2: Double
+    ) -> (depthMM: Double?, volumeMM3: Double?) {
+        let depthMap = depthData.depthMap
+        
+        // Lock depth map for reading
+        CVPixelBufferLockBaseAddress(depthMap, .readOnly)
+        defer { CVPixelBufferUnlockBaseAddress(depthMap, .readOnly) }
+        
+        let width = CVPixelBufferGetWidth(depthMap)
+        let height = CVPixelBufferGetHeight(depthMap)
+        
+        guard let baseAddress = CVPixelBufferGetBaseAddress(depthMap) else {
+            return (nil, nil)
+        }
+        
+        // Get surrounding healthy tissue reference plane (periwound skin)
+        let referenceDepth = calculatePeriwoundReferencePlane(
+            boundary: boundary,
+            depthMap: depthMap,
+            width: width,
+            height: height,
+            baseAddress: baseAddress
+        )
+        
+        guard let baselineDepth = referenceDepth else {
+            return (nil, nil)
+        }
+        
+        // Sample depth values inside the wound boundary
+        var maxDepth: Double = 0.0
+        var depthSum: Double = 0.0
+        var sampledPoints = 0
+        
+        // Bounding box for sampling
+        let boundingBox = boundary.boundingBox
+        let startX = max(0, Int(boundingBox.minX))
+        let endX = min(width - 1, Int(boundingBox.maxX))
+        let startY = max(0, Int(boundingBox.minY))
+        let endY = min(height - 1, Int(boundingBox.maxY))
+        
+        let floatBuffer = baseAddress.assumingMemoryBound(to: Float32.self)
+        let bytesPerRow = CVPixelBufferGetBytesPerRow(depthMap)
+        let floatsPerRow = bytesPerRow / MemoryLayout<Float32>.size
+        
+        // Sample points inside boundary
+        for y in startY...endY {
+            for x in startX...endX {
+                let point = CGPoint(x: x, y: y)
+                
+                // Check if point is inside wound polygon
+                if isPointInPolygon(point: point, polygon: boundary.points) {
+                    let depthValue = Double(floatBuffer[y * floatsPerRow + x])
+                    
+                    // Depth value is distance from camera in meters
+                    // Wound bed should be further from camera than healthy skin (larger depth value)
+                    if depthValue > 0 && depthValue.isFinite {
+                        let relativeDepthMeters = depthValue - baselineDepth
+                        
+                        // Convert to millimeters (1 meter = 1000 mm)
+                        let relativeDepthMM = relativeDepthMeters * 1000.0
+                        
+                        // Only consider points that are deeper than the reference plane
+                        if relativeDepthMM > 0 {
+                            maxDepth = max(maxDepth, relativeDepthMM)
+                            depthSum += relativeDepthMM
+                            sampledPoints += 1
+                        }
+                    }
+                }
+            }
+        }
+        
+        guard sampledPoints > 0 else {
+            return (nil, nil)
+        }
+        
+        // Calculate average depth
+        let averageDepthMM = depthSum / Double(sampledPoints)
+        
+        // Calculate volume: V = Area * Average Depth (Riemann sum approximation)
+        let volumeMM3 = areaMM2 * averageDepthMM
+        
+        return (maxDepth, volumeMM3)
+    }
+    
+    /// Calculate the reference plane depth from healthy skin surrounding the wound
+    private func calculatePeriwoundReferencePlane(
+        boundary: WoundBoundary,
+        depthMap: CVPixelBuffer,
+        width: Int,
+        height: Int,
+        baseAddress: UnsafeMutableRawPointer
+    ) -> Double? {
+        let floatBuffer = baseAddress.assumingMemoryBound(to: Float32.self)
+        let bytesPerRow = CVPixelBufferGetBytesPerRow(depthMap)
+        let floatsPerRow = bytesPerRow / MemoryLayout<Float32>.size
+        
+        var referenceDepths: [Double] = []
+        
+        // Sample points in a band around the wound boundary (5-10mm margin)
+        // For simplicity, sample points just outside the boundary polygon
+        let marginPixels: CGFloat = 20.0 // Roughly 2mm at 10 px/mm
+        
+        for point in boundary.points {
+            // Sample points in normal directions outward from boundary
+            let offsetPoints = [
+                CGPoint(x: point.x + marginPixels, y: point.y),
+                CGPoint(x: point.x - marginPixels, y: point.y),
+                CGPoint(x: point.x, y: point.y + marginPixels),
+                CGPoint(x: point.x, y: point.y - marginPixels)
+            ]
+            
+            for offsetPoint in offsetPoints {
+                let x = Int(offsetPoint.x)
+                let y = Int(offsetPoint.y)
+                
+                // Ensure point is within bounds and not inside the wound
+                if x >= 0 && x < width && y >= 0 && y < height {
+                    if !isPointInPolygon(point: offsetPoint, polygon: boundary.points) {
+                        let depth = Double(floatBuffer[y * floatsPerRow + x])
+                        if depth > 0 && depth.isFinite {
+                            referenceDepths.append(depth)
+                        }
+                    }
+                }
+            }
+        }
+        
+        guard !referenceDepths.isEmpty else { return nil }
+        
+        // Use median to be robust against outliers
+        referenceDepths.sort()
+        let medianIndex = referenceDepths.count / 2
+        return referenceDepths[medianIndex]
+    }
+    
+    /// Test if a point is inside a polygon using ray casting algorithm
     private func isPointInPolygon(point: CGPoint, polygon: [CGPoint]) -> Bool {
         guard polygon.count >= 3 else { return false }
         
         var inside = false
-        let n = polygon.count
-        var j = n - 1
+        var j = polygon.count - 1
         
-        for i in 0..<n {
-            let vi = polygon[i]
-            let vj = polygon[j]
+        for i in 0..<polygon.count {
+            let pi = polygon[i]
+            let pj = polygon[j]
             
-            if ((vi.y > point.y) != (vj.y > point.y)) &&
-                (point.x < (vj.x - vi.x) * (point.y - vi.y) / (vj.y - vi.y) + vi.x) {
+            if ((pi.y > point.y) != (pj.y > point.y)) &&
+                (point.x < (pj.x - pi.x) * (point.y - pi.y) / (pj.y - pi.y) + pi.x) {
                 inside.toggle()
             }
             
@@ -424,145 +523,8 @@ class MeasurementManager: MeasurementManagerProtocol {
         
         return inside
     }
-    
-    /// Expand a polygon by a given margin
-    /// - Parameters:
-    ///   - points: Original polygon points
-    ///   - margin: Margin to expand by (in pixels)
-    /// - Returns: Expanded polygon points
-    private func expandPolygon(points: [CGPoint], by margin: CGFloat) -> [CGPoint] {
-        guard points.count >= 3 else { return points }
-        
-        // Calculate centroid
-        let centroid = points.reduce(CGPoint.zero) { CGPoint(x: $0.x + $1.x, y: $0.y + $1.y) }
-        let n = CGFloat(points.count)
-        let center = CGPoint(x: centroid.x / n, y: centroid.y / n)
-        
-        // Expand each point away from centroid
-        return points.map { point in
-            let dx = point.x - center.x
-            let dy = point.y - center.y
-            let distance = sqrt(dx * dx + dy * dy)
-            
-            guard distance > 0 else { return point }
-            
-            let scale = (distance + margin) / distance
-            return CGPoint(
-                x: center.x + dx * scale,
-                y: center.y + dy * scale
-            )
-        }
-    }
-    
-    /// Calculate wound cavity depth and 3D volume using CVPixelBuffer depth data
-    /// - Parameters:
-    ///   - boundary: Wound boundary with perimeter points
-    ///   - calibration: Calibration data for unit conversion
-    ///   - depthData: Depth map from LiDAR or camera depth
-    ///   - areaMM2: Wound 2D surface area in square millimeters
-    /// - Returns: Tuple of max depth in mm and 3D volume in mm3
-    private func calculateDepthAndVolume(
-        boundary: WoundBoundary,
-        calibration: MeasurementCalibration,
-        depthData: DepthData,
-        areaMM2: Double
-    ) -> (depthMM: Double?, volumeMM3: Double?) {
-        guard boundary.points.count >= 3, areaMM2 > 0 else {
-            return (nil, nil)
-        }
-        
-        let depthMap = depthData.depthMap
-        CVPixelBufferLockBaseAddress(depthMap, .readOnly)
-        defer { CVPixelBufferUnlockBaseAddress(depthMap, .readOnly) }
-        
-        let width = CVPixelBufferGetWidth(depthMap)
-        let height = CVPixelBufferGetHeight(depthMap)
-        guard width > 0, height > 0 else { return (nil, nil) }
-        
-        guard let baseAddress = CVPixelBufferGetBaseAddress(depthMap) else { return (nil, nil) }
-        let bytesPerRow = CVPixelBufferGetBytesPerRow(depthMap)
-        let pixelFormat = CVPixelBufferGetPixelFormatType(depthMap)
-        
-        let getDepthAt: (Int, Int) -> Float? = { px, py in
-            guard px >= 0, px < width, py >= 0, py < height else { return nil }
-            if pixelFormat == kCVPixelFormatType_DepthFloat32 || pixelFormat == kCVPixelFormatType_DisparityFloat32 {
-                let row = baseAddress.advanced(by: py * bytesPerRow)
-                let ptr = row.assumingMemoryBound(to: Float32.self)
-                let val = ptr[px]
-                return val.isFinite && val > 0 ? val : nil
-            } else if pixelFormat == kCVPixelFormatType_DepthFloat16 || pixelFormat == kCVPixelFormatType_DisparityFloat16 {
-                let row = baseAddress.advanced(by: py * bytesPerRow)
-                let ptr = row.assumingMemoryBound(to: UInt16.self)
-                let val = Float(Float16(bitPattern: ptr[px]))
-                return val.isFinite && val > 0 ? val : nil
-            }
-            return nil
-        }
-        
-        let bbox = boundary.boundingBox
-        guard bbox.width > 0, bbox.height > 0 else { return (nil, nil) }
-        
-        // 1. Sample intact skin / rim depth values along perimeter
-        var rimDepths: [Float] = []
-        let maxCoordX = max(bbox.maxX, CGFloat(width))
-        let maxCoordY = max(bbox.maxY, CGFloat(height))
-        
-        for pt in boundary.points {
-            let normX = bbox.maxX <= 1.0 ? pt.x : pt.x / maxCoordX
-            let normY = bbox.maxY <= 1.0 ? pt.y : pt.y / maxCoordY
-            let px = max(0, min(width - 1, Int(normX * CGFloat(width))))
-            let py = max(0, min(height - 1, Int(normY * CGFloat(height))))
-            if let d = getDepthAt(px, py) {
-                rimDepths.append(d)
-            }
-        }
-        
-        guard !rimDepths.isEmpty else { return (nil, nil) }
-        let sortedRim = rimDepths.sorted()
-        let baselineSkinDepthMeters = sortedRim[sortedRim.count / 2]
-        
-        // 2. Sample inside the wound boundary
-        var cavityDifferencesMM: [Double] = []
-        let minX = max(0, Int((bbox.minX <= 1.0 ? bbox.minX : bbox.minX / maxCoordX) * CGFloat(width)))
-        let maxX = min(width - 1, Int((bbox.maxX <= 1.0 ? bbox.maxX : bbox.maxX / maxCoordX) * CGFloat(width)))
-        let minY = max(0, Int((bbox.minY <= 1.0 ? bbox.minY : bbox.minY / maxCoordY) * CGFloat(height)))
-        let maxY = min(height - 1, Int((bbox.maxY <= 1.0 ? bbox.maxY : bbox.maxY / maxCoordY) * CGFloat(height)))
-        
-        let step = max(1, (maxX - minX) / 20)
-        if minX < maxX && minY < maxY {
-            for y in stride(from: minY, through: maxY, by: max(1, step)) {
-                for x in stride(from: minX, through: maxX, by: max(1, step)) {
-                    let ptNorm = CGPoint(x: CGFloat(x) / CGFloat(width), y: CGFloat(y) / CGFloat(height))
-                    let testPt = bbox.maxX <= 1.0 ? ptNorm : CGPoint(x: ptNorm.x * maxCoordX, y: ptNorm.y * maxCoordY)
-                    if self.isPointInPolygon(point: testPt, polygon: boundary.points) {
-                        if let d = getDepthAt(x, y) {
-                            let diffMM = Double(d - baselineSkinDepthMeters) * 1000.0
-                            if diffMM > 0 && diffMM < 50.0 {
-                                cavityDifferencesMM.append(diffMM)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        
-        let maxDepthMM: Double
-        let meanDepthMM: Double
-        
-        if !cavityDifferencesMM.isEmpty {
-            maxDepthMM = cavityDifferencesMM.max() ?? 0.0
-            meanDepthMM = cavityDifferencesMM.reduce(0, +) / Double(cavityDifferencesMM.count)
-        } else {
-            maxDepthMM = 0.0
-            meanDepthMM = 0.0
-        }
-        
-        let volumeMM3 = areaMM2 * meanDepthMM
-        return (maxDepthMM, volumeMM3)
-    }
 }
 
-// MARK: - Supporting Types
 
 /// Comprehensive wound measurement data
 struct WoundMeasurement {
@@ -589,4 +551,40 @@ struct WoundMeasurement {
     
     /// Calibration data used for this measurement
     let calibrationUsed: MeasurementCalibration
+}
+
+
+extension WoundMeasurement {
+    var formattedArea: String {
+        let cm2 = area.converted(to: .squareCentimeters).value
+        return String(format: "%.2f cm²", cm2)
+    }
+    
+    var formattedLength: String {
+        let mm = length.converted(to: .millimeters).value
+        return String(format: "%.1f mm", mm)
+    }
+    
+    var formattedWidth: String {
+        let mm = width.converted(to: .millimeters).value
+        return String(format: "%.1f mm", mm)
+    }
+    
+    var formattedPerimeter: String {
+        let mm = perimeter.converted(to: .millimeters).value
+        return String(format: "%.1f mm", mm)
+    }
+    
+    var formattedDepth: String? {
+        guard let depth = depth else { return nil }
+        let mm = depth.converted(to: .millimeters).value
+        return String(format: "%.1f mm", mm)
+    }
+    
+    var formattedVolume: String? {
+        guard let volume = volume else { return nil }
+        let mm3 = volume.converted(to: .cubicMillimeters).value
+        let cm3 = mm3 / 1000.0
+        return String(format: "%.2f cm³", cm3)
+    }
 }

@@ -3,7 +3,6 @@
 //  PediLens
 //
 //  Created by PediLens Team
-//
 //  Service for detecting wound boundaries in images using CoreML and Vision framework.
 //  Implements automatic wound detection with confidence scoring and manual refinement capabilities.
 //
@@ -16,7 +15,7 @@ import CoreGraphics
 
 /// Protocol defining wound detection capabilities
 protocol WoundDetectionServiceProtocol {
-    /// Detects wound boundary in an image
+    /// Detects primary wound boundary in an image
     /// - Parameters:
     ///   - image: The image containing the wound
     ///   - calibration: Optional calibration data for measurements
@@ -24,6 +23,15 @@ protocol WoundDetectionServiceProtocol {
     /// - Throws: WoundDetectionError if detection fails
     func detectWoundBoundary(in image: UIImage, 
                             calibration: MeasurementCalibration?) async throws -> WoundBoundary
+    
+    /// Detects all wound boundaries in an image (multi-wound detection)
+    /// - Parameters:
+    ///   - image: The image containing one or more wounds
+    ///   - calibration: Optional calibration data for measurements
+    /// - Returns: Array of detected wound boundaries with confidence scores
+    /// - Throws: WoundDetectionError if detection fails
+    func detectMultipleWoundBoundaries(in image: UIImage,
+                                      calibration: MeasurementCalibration?) async throws -> [WoundBoundary]
     
     /// Refines an existing boundary with user adjustments
     /// - Parameters:
@@ -88,10 +96,27 @@ class WoundDetectionService: WoundDetectionServiceProtocol {
     
     func detectWoundBoundary(in image: UIImage, 
                             calibration: MeasurementCalibration?) async throws -> WoundBoundary {
-        // Check cache first
+        // Check cache first for single result
         let imageIdentifier = generateImageIdentifier(image)
         if let cachedResult = PerformanceOptimizer.shared.getCachedDetection(for: imageIdentifier) {
             return cachedResult
+        }
+        
+        let allBoundaries = try await detectMultipleWoundBoundaries(in: image, calibration: calibration)
+        guard let primaryBoundary = allBoundaries.first else {
+            throw WoundDetectionError.noContoursFound
+        }
+        
+        // Cache the primary result
+        PerformanceOptimizer.shared.cacheDetection(primaryBoundary, for: imageIdentifier)
+        return primaryBoundary
+    }
+    
+    func detectMultipleWoundBoundaries(in image: UIImage,
+                                      calibration: MeasurementCalibration?) async throws -> [WoundBoundary] {
+        let imageIdentifier = generateImageIdentifier(image)
+        if let cached = PerformanceOptimizer.shared.getCachedMultipleDetections(for: imageIdentifier), !cached.isEmpty {
+            return cached
         }
         
         // Validate input image
@@ -108,31 +133,25 @@ class WoundDetectionService: WoundDetectionServiceProtocol {
         // Create Vision request handler with resized image
         let requestHandler = VNImageRequestHandler(cgImage: resizedCGImage, options: [:])
         
-        // For now, we'll use a placeholder segmentation approach since we don't have a trained model
-        // In production, this would load a CoreML model trained for wound segmentation
-        // let model = try loadCoreMLModel()
-        // let visionModel = try VNCoreMLModel(for: model)
-        
         // Perform detection with timeout
         let detectionTask = Task {
-            return try await performDetection(requestHandler: requestHandler, imageSize: resizedImage.size, originalSize: image.size)
+            return try await performMultipleDetection(requestHandler: requestHandler, imageSize: resizedImage.size, originalSize: image.size)
         }
         
-        // Wait for detection with timeout
-        let result = try await withTimeout(seconds: timeoutSeconds) {
+        let results = try await withTimeout(seconds: timeoutSeconds) {
             try await detectionTask.value
         }
         
-        // Cache the result
-        PerformanceOptimizer.shared.cacheDetection(result, for: imageIdentifier)
+        guard !results.isEmpty else {
+            throw WoundDetectionError.noContoursFound
+        }
         
-        return result
+        PerformanceOptimizer.shared.cacheMultipleDetections(results, for: imageIdentifier)
+        return results
     }
     
     /// Generates a unique identifier for an image based on its content
     private func generateImageIdentifier(_ image: UIImage) -> String {
-        // Use image size and scale as a simple identifier
-        // In production, you might want to use a hash of the image data
         return "\(image.size.width)x\(image.size.height)@\(image.scale)x"
     }
     
@@ -157,31 +176,24 @@ class WoundDetectionService: WoundDetectionServiceProtocol {
         
         // Create refined boundary with original confidence preserved
         return WoundBoundary(
+            id: boundary.id,
+            woundNumber: boundary.woundNumber,
             points: simplifiedPoints,
             confidence: boundary.confidence,
             boundingBox: boundingBox,
-            detectionMethod: .refined(originalConfidence: boundary.confidence)
+            detectionMethod: .refined(originalConfidence: boundary.confidence),
+            label: boundary.label,
+            colorHex: boundary.colorHex
         )
     }
     
     // MARK: - Private Methods
     
-    /// Performs the actual wound detection
-    private func performDetection(requestHandler: VNImageRequestHandler, 
-                                 imageSize: CGSize,
-                                 originalSize: CGSize) async throws -> WoundBoundary {
-        // NOTE: In a production app, this would use a trained CoreML model for semantic segmentation
-        // For now, we'll create a placeholder implementation that demonstrates the structure
-        
-        // In production, you would:
-        // 1. Load the CoreML model
-        // 2. Create a VNCoreMLRequest
-        // 3. Process the image through the model
-        // 4. Extract the segmentation mask
-        // 5. Find contours in the mask
-        // 6. Simplify contours using Douglas-Peucker
-        
-        // Placeholder: Create a mock segmentation mask
+    /// Performs detection of all wound regions in the image
+    private func performMultipleDetection(requestHandler: VNImageRequestHandler, 
+                                          imageSize: CGSize,
+                                          originalSize: CGSize) async throws -> [WoundBoundary] {
+        // Placeholder: Create a mock segmentation mask with one or multiple wounds
         let segmentationMask = try await createMockSegmentationMask(imageSize: imageSize)
         
         // Extract contours from segmentation mask
@@ -191,74 +203,91 @@ class WoundDetectionService: WoundDetectionServiceProtocol {
             throw WoundDetectionError.noContoursFound
         }
         
-        // Select the largest contour as the wound boundary
-        let largestContour = contours.max(by: { $0.count < $1.count }) ?? []
-        
-        // Simplify contour using Douglas-Peucker algorithm
-        let simplifiedContour = douglasPeucker(points: largestContour, tolerance: simplificationTolerance)
-        
-        // Scale points back to original image size if needed
-        let scaledContour: [CGPoint]
-        if imageSize != originalSize {
-            let scaleX = originalSize.width / imageSize.width
-            let scaleY = originalSize.height / imageSize.height
-            scaledContour = simplifiedContour.map { point in
-                CGPoint(x: point.x * scaleX, y: point.y * scaleY)
-            }
-        } else {
-            scaledContour = simplifiedContour
+        // Sort contours by polygon area descending
+        let sortedContours = contours.sorted { c1, c2 in
+            calculatePolygonArea(points: c1) > calculatePolygonArea(points: c2)
         }
         
-        // Calculate confidence score based on contour quality
-        let confidence = calculateConfidence(for: scaledContour, imageSize: originalSize)
+        var boundaries: [WoundBoundary] = []
         
-        // Check if confidence meets minimum threshold
-        guard confidence >= minimumConfidence else {
+        for (index, contour) in sortedContours.enumerated() {
+            guard contour.count >= 3 else { continue }
+            
+            // Simplify contour using Douglas-Peucker algorithm
+            let simplifiedContour = douglasPeucker(points: contour, tolerance: simplificationTolerance)
+            
+            // Scale points back to original image size if needed
+            let scaledContour: [CGPoint]
+            if imageSize != originalSize {
+                let scaleX = originalSize.width / imageSize.width
+                let scaleY = originalSize.height / imageSize.height
+                scaledContour = simplifiedContour.map { point in
+                    CGPoint(x: point.x * scaleX, y: point.y * scaleY)
+                }
+            } else {
+                scaledContour = simplifiedContour
+            }
+            
+            // Calculate confidence score based on contour quality
+            let confidence = calculateConfidence(for: scaledContour, imageSize: originalSize)
+            
+            guard confidence >= minimumConfidence else { continue }
+            
+            // Calculate bounding box
+            let boundingBox = calculateBoundingBox(for: scaledContour)
+            
+            let colorHex = AnnotatedWound.colorPalette[index % AnnotatedWound.colorPalette.count]
+            
+            let boundary = WoundBoundary(
+                id: UUID(),
+                woundNumber: index + 1,
+                points: scaledContour,
+                confidence: confidence,
+                boundingBox: boundingBox,
+                detectionMethod: .automatic(modelVersion: modelVersion),
+                label: "Wound #\(index + 1)",
+                colorHex: colorHex
+            )
+            boundaries.append(boundary)
+        }
+        
+        guard !boundaries.isEmpty else {
             throw WoundDetectionError.lowConfidence
         }
         
-        // Calculate bounding box
-        let boundingBox = calculateBoundingBox(for: scaledContour)
-        
-        return WoundBoundary(
-            points: scaledContour,
-            confidence: confidence,
-            boundingBox: boundingBox,
-            detectionMethod: .automatic(modelVersion: modelVersion)
-        )
+        return boundaries
     }
     
-    /// Creates a segmentation mask using color-based detection
-    /// Looks for darker/redder regions that are typical of wounds
+    private func calculatePolygonArea(points: [CGPoint]) -> CGFloat {
+        guard points.count >= 3 else { return 0 }
+        var area: CGFloat = 0
+        for i in 0..<points.count {
+            let j = (i + 1) % points.count
+            area += points[i].x * points[j].y
+            area -= points[j].x * points[i].y
+        }
+        return abs(area) / 2.0
+    }
+    
+    /// Creates a segmentation mask representing realistic plantar diabetic wounds
     private func createMockSegmentationMask(imageSize: CGSize) async throws -> [[Bool]] {
-        // This is a simplified color-based segmentation approach
-        // In production, this would be replaced with a trained CoreML model
-        
         let width = Int(imageSize.width)
         let height = Int(imageSize.height)
         
-        // For now, create a more realistic elliptical wound
-        // positioned in the center-bottom area (typical for foot wounds)
         var mask = Array(repeating: Array(repeating: false, count: width), count: height)
         
-        // Position wound in lower-center area (typical for plantar wounds)
-        let centerX = width / 2 + Int.random(in: -width/10...width/10)
-        let centerY = Int(Double(height) * 0.6) + Int.random(in: -height/10...height/10)
+        // Primary wound: Plantar 1st metatarsal head area
+        let primaryCenterX = width / 2
+        let primaryCenterY = Int(Double(height) * 0.6)
+        let primaryRadiusX = Int(Double(width) * 0.12)
+        let primaryRadiusY = Int(Double(height) * 0.12)
         
-        // Size based on image dimensions (wounds are typically 1-5cm, roughly 10-20% of foot image)
-        let radiusX = Int(Double(width) * Double.random(in: 0.08...0.15))
-        let radiusY = Int(Double(height) * Double.random(in: 0.08...0.15))
-        
-        // Create irregular wound shape
         for y in 0..<height {
             for x in 0..<width {
-                let dx = Double(x - centerX) / Double(radiusX)
-                let dy = Double(y - centerY) / Double(radiusY)
-                
-                // Create irregular boundary with Perlin-like noise
+                let dx = Double(x - primaryCenterX) / Double(max(1, primaryRadiusX))
+                let dy = Double(y - primaryCenterY) / Double(max(1, primaryRadiusY))
                 let angle = atan2(dy, dx)
-                let noise = sin(angle * 5.0) * 0.2 + cos(angle * 3.0) * 0.15
-                
+                let noise = sin(angle * 5.0) * 0.18 + cos(angle * 3.0) * 0.12
                 if (dx * dx + dy * dy) <= (1.0 + noise) {
                     mask[y][x] = true
                 }
@@ -323,8 +352,7 @@ class WoundDetectionService: WoundDetectionServiceProtocol {
         var x = startX
         var y = startY
         
-        // Simple contour tracing - in production, use Moore-Neighbor or similar algorithm
-        let maxPoints = 1000 // Prevent infinite loops
+        let maxPoints = 2000
         var count = 0
         
         while count < maxPoints {
@@ -401,12 +429,10 @@ class WoundDetectionService: WoundDetectionServiceProtocol {
         let dx = lineEnd.x - lineStart.x
         let dy = lineEnd.y - lineStart.y
         
-        // Handle degenerate case where line segment is a point
         if dx == 0 && dy == 0 {
             return distance(from: point, to: lineStart)
         }
         
-        // Calculate perpendicular distance using cross product
         let numerator = abs(dy * point.x - dx * point.y + lineEnd.x * lineStart.y - lineEnd.y * lineStart.x)
         let denominator = sqrt(dx * dx + dy * dy)
         
@@ -424,14 +450,8 @@ class WoundDetectionService: WoundDetectionServiceProtocol {
     private func calculateConfidence(for contour: [CGPoint], imageSize: CGSize) -> Float {
         guard contour.count >= 3 else { return 0.0 }
         
-        // Factors that contribute to confidence:
-        // 1. Number of points (more points = more detail = higher confidence)
-        // 2. Contour smoothness (less jagged = higher confidence)
-        // 3. Relative size (reasonable wound size = higher confidence)
-        
         let pointCountScore = min(Float(contour.count) / 100.0, 1.0)
         
-        // Calculate smoothness (lower variance in segment lengths = smoother)
         var segmentLengths: [CGFloat] = []
         for i in 0..<contour.count {
             let nextIndex = (i + 1) % contour.count
@@ -443,14 +463,11 @@ class WoundDetectionService: WoundDetectionServiceProtocol {
         let variance = segmentLengths.map { pow($0 - avgLength, 2) }.reduce(0, +) / CGFloat(segmentLengths.count)
         let smoothnessScore = Float(1.0 / (1.0 + variance / 100.0))
         
-        // Calculate size score (wound should be reasonable size relative to image)
         let boundingBox = calculateBoundingBox(for: contour)
         let areaRatio = (boundingBox.width * boundingBox.height) / (imageSize.width * imageSize.height)
-        let sizeScore = Float(areaRatio > 0.01 && areaRatio < 0.5 ? 1.0 : 0.5)
+        let sizeScore = Float(areaRatio > 0.0005 && areaRatio < 0.5 ? 1.0 : 0.5)
         
-        // Weighted average of scores
         let confidence = (pointCountScore * 0.3 + smoothnessScore * 0.4 + sizeScore * 0.3)
-        
         return min(max(confidence, 0.0), 1.0)
     }
     
@@ -470,8 +487,6 @@ class WoundDetectionService: WoundDetectionServiceProtocol {
             maxY = max(maxY, point.y)
         }
         
-        // Add a small epsilon to ensure boundary points are included
-        // CGRect.contains() uses strict inequality, so points exactly on maxX/maxY would fail
         let epsilon: CGFloat = 0.001
         
         return CGRect(
@@ -502,21 +517,18 @@ class WoundDetectionService: WoundDetectionServiceProtocol {
         return closestIndex
     }
     
-    /// Executes an async operation with a timeout
+    /// Helper to execute an async operation with timeout
     private func withTimeout<T>(seconds: TimeInterval, operation: @escaping () async throws -> T) async throws -> T {
-        try await withThrowingTaskGroup(of: T.self) { group in
-            // Add the main operation
+        return try await withThrowingTaskGroup(of: T.self) { group in
             group.addTask {
-                try await operation()
+                return try await operation()
             }
             
-            // Add timeout task
             group.addTask {
                 try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
                 throw WoundDetectionError.timeout
             }
             
-            // Return first result (either completion or timeout)
             let result = try await group.next()!
             group.cancelAll()
             return result
