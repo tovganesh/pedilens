@@ -126,3 +126,41 @@ struct AspectFitGeometry {
                viewPoint.y <= offset.y + displayedSize.height
     }
 }
+
+/// Zoom about the container center followed by a pan, matching SwiftUI's
+/// `.scaleEffect(scale)` (center anchor) then `.offset(offset)`
+struct ZoomPanTransform {
+    let containerSize: CGSize
+    let scale: CGFloat
+    let offset: CGSize
+
+    private var center: CGPoint {
+        CGPoint(x: containerSize.width / 2, y: containerSize.height / 2)
+    }
+
+    /// Unzoomed view point → on-screen point
+    func apply(_ point: CGPoint) -> CGPoint {
+        CGPoint(
+            x: center.x + (point.x - center.x) * scale + offset.width,
+            y: center.y + (point.y - center.y) * scale + offset.height
+        )
+    }
+
+    /// On-screen point → unzoomed view point
+    func invert(_ point: CGPoint) -> CGPoint {
+        CGPoint(
+            x: center.x + (point.x - offset.width - center.x) / scale,
+            y: center.y + (point.y - offset.height - center.y) / scale
+        )
+    }
+
+    /// Largest pan that keeps the zoomed content covering the container
+    func clampedOffset(_ proposed: CGSize) -> CGSize {
+        let maxX = containerSize.width * (scale - 1) / 2
+        let maxY = containerSize.height * (scale - 1) / 2
+        return CGSize(
+            width: min(max(proposed.width, -maxX), maxX),
+            height: min(max(proposed.height, -maxY), maxY)
+        )
+    }
+}

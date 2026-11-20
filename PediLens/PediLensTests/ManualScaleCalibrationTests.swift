@@ -219,5 +219,46 @@ class ManualScaleCalibrationTests: XCTestCase {
         XCTAssertTrue(presets.contains(where: { $0.id == "adultLesserToe" }))
         XCTAssertTrue(presets.contains(where: { $0.id == "adultFinger" }))
     }
+
+    // MARK: - Zoom Transform
+
+    func testZoomPanTransform_RoundTripsAndMatchesScaleEffect() {
+        let transform = ZoomPanTransform(containerSize: CGSize(width: 400, height: 600), scale: 4, offset: CGSize(width: 30, height: -50))
+
+        // The container center is the zoom anchor: it only moves by the pan offset
+        XCTAssertEqual(transform.apply(CGPoint(x: 200, y: 300)), CGPoint(x: 230, y: 250))
+        // A point 10 pt right of center lands 40 pt right of center at 4×
+        XCTAssertEqual(transform.apply(CGPoint(x: 210, y: 300)), CGPoint(x: 270, y: 250))
+
+        let point = CGPoint(x: 123.4, y: 456.7)
+        let roundTrip = transform.invert(transform.apply(point))
+        XCTAssertEqual(roundTrip.x, point.x, accuracy: 1e-9)
+        XCTAssertEqual(roundTrip.y, point.y, accuracy: 1e-9)
+    }
+
+    func testZoomPanTransform_ZoomingImprovesPinPrecision() {
+        // A 4032×3024 photo shown 390 pt wide: one screen point spans ~10 image pixels
+        let fit = AspectFitGeometry(imageSize: CGSize(width: 4032, height: 3024), containerSize: CGSize(width: 390, height: 600))
+        let unzoomed = ZoomPanTransform(containerSize: fit.containerSize, scale: 1, offset: .zero)
+        let zoomed = ZoomPanTransform(containerSize: fit.containerSize, scale: 8, offset: .zero)
+
+        func imagePixelsPerScreenPoint(_ transform: ZoomPanTransform) -> CGFloat {
+            let a = fit.viewToImage(transform.invert(CGPoint(x: 195, y: 300)))
+            let b = fit.viewToImage(transform.invert(CGPoint(x: 196, y: 300)))
+            return b.x - a.x
+        }
+
+        XCTAssertEqual(imagePixelsPerScreenPoint(unzoomed), 4032.0 / 390.0, accuracy: 0.01)
+        XCTAssertEqual(imagePixelsPerScreenPoint(zoomed), 4032.0 / 390.0 / 8, accuracy: 0.01)
+    }
+
+    func testZoomPanTransform_ClampKeepsContentCoveringContainer() {
+        let transform = ZoomPanTransform(containerSize: CGSize(width: 400, height: 600), scale: 2, offset: .zero)
+        XCTAssertEqual(transform.clampedOffset(CGSize(width: 500, height: -900)), CGSize(width: 200, height: -300))
+        XCTAssertEqual(transform.clampedOffset(CGSize(width: 50, height: 60)), CGSize(width: 50, height: 60))
+
+        let unzoomed = ZoomPanTransform(containerSize: CGSize(width: 400, height: 600), scale: 1, offset: .zero)
+        XCTAssertEqual(unzoomed.clampedOffset(CGSize(width: 50, height: 60)), .zero)
+    }
 }
 

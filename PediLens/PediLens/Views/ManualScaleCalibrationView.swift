@@ -133,10 +133,18 @@ struct ManualScaleCalibrationView: View {
     @State private var customLengthText: String = "10.0"
     @State private var customUnitIsCM: Bool = false
     
-    // Caliper Pin positions in view coordinates
+    // Caliper pin positions in image coordinates, so precision is set by the photo's
+    // resolution rather than the screen's and pins survive zooming and window resizes
     @State private var pinA: CGPoint = .zero
     @State private var pinB: CGPoint = .zero
     @State private var isInitialized: Bool = false
+    
+    // Pinch-zoom and pan of the photo canvas
+    @State private var zoomScale: CGFloat = 1.0
+    @State private var zoomOffset: CGSize = .zero
+    @GestureState private var pinchScale: CGFloat = 1.0
+    @GestureState private var panTranslation: CGSize = .zero
+    private let maximumZoom: CGFloat = 8.0
     
     // Active dragging state
     @State private var draggingPin: PinID? = nil
@@ -166,12 +174,58 @@ struct ManualScaleCalibrationView: View {
     
     // Caliper distance in image pixels
     private var pixelDistance: Double {
-        guard containerSize.width > 0, containerSize.height > 0 else { return 0 }
-        let imgA = aspectFitGeometry.viewToImage(pinA)
-        let imgB = aspectFitGeometry.viewToImage(pinB)
-        let dx = Double(imgB.x - imgA.x)
-        let dy = Double(imgB.y - imgA.y)
+        guard isInitialized else { return 0 }
+        let dx = Double(pinB.x - pinA.x)
+        let dy = Double(pinB.y - pinA.y)
         return sqrt(dx * dx + dy * dy)
+    }
+    
+    // MARK: - Zoom Transform
+    
+    private var effectiveZoom: CGFloat {
+        min(max(zoomScale * pinchScale, 1.0), maximumZoom)
+    }
+    
+    private var effectiveOffset: CGSize {
+        CGSize(width: zoomOffset.width + panTranslation.width, height: zoomOffset.height + panTranslation.height)
+    }
+    
+    /// Matches the `.scaleEffect` + `.offset` applied to the photo
+    private var zoomTransform: ZoomPanTransform {
+        ZoomPanTransform(containerSize: containerSize, scale: effectiveZoom, offset: effectiveOffset)
+    }
+    
+    /// Image point → on-screen point (aspect fit, then zoom and pan)
+    private func screenPoint(forImagePoint point: CGPoint) -> CGPoint {
+        zoomTransform.apply(aspectFitGeometry.imageToView(point))
+    }
+    
+    /// On-screen point → image point
+    private func imagePoint(forScreenPoint point: CGPoint) -> CGPoint {
+        aspectFitGeometry.viewToImage(zoomTransform.invert(point))
+    }
+    
+    /// Keeps the zoomed photo covering the canvas instead of panning off into empty space
+    private func clampedOffset(_ offset: CGSize, zoom: CGFloat) -> CGSize {
+        ZoomPanTransform(containerSize: containerSize, scale: zoom, offset: .zero).clampedOffset(offset)
+    }
+    
+    private var zoomGesture: some Gesture {
+        SimultaneousGesture(
+            MagnificationGesture()
+                .updating($pinchScale) { value, state, _ in state = value }
+                .onEnded { value in
+                    zoomScale = min(max(zoomScale * value, 1.0), maximumZoom)
+                    zoomOffset = clampedOffset(zoomOffset, zoom: zoomScale)
+                },
+            DragGesture(minimumDistance: 10)
+                .updating($panTranslation) { value, state, _ in state = value.translation }
+                .onEnded { value in
+                    let moved = CGSize(width: zoomOffset.width + value.translation.width,
+                                       height: zoomOffset.height + value.translation.height)
+                    zoomOffset = clampedOffset(moved, zoom: zoomScale)
+                }
+        )
     }
     
     // Computed pixels per millimeter
@@ -242,7 +296,7 @@ struct ManualScaleCalibrationView: View {
         HStack(spacing: 8) {
             Image(systemName: "info.circle.fill")
                 .foregroundColor(.accentColor)
-            Text("Drag the calipers to span the reference object (e.g. coin, card, or ruler markings).")
+            Text("Drag the calipers to span the reference object (e.g. coin, card, or ruler markings). Pinch to zoom for precise placement.")
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
@@ -255,29 +309,42 @@ struct ManualScaleCalibrationView: View {
     private var photoCanvas: some View {
         GeometryReader { geometry in
             ZStack {
-                // Background image
+                // Background image (zoomed and panned; overlays below are positioned through
+                // the same transform so handles stay a constant, touchable size)
                 Image(uiImage: image)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .scaleEffect(effectiveZoom)
+                    .offset(effectiveOffset)
                     .contentShape(Rectangle())
+                    .gesture(zoomGesture)
+                    .onTapGesture(count: 2) {
+                        withAnimation(.easeOut(duration: 0.2)) {
+                            zoomScale = 1.0
+                            zoomOffset = .zero
+                        }
+                    }
                 
                 if isInitialized {
+                    let screenA = screenPoint(forImagePoint: pinA)
+                    let screenB = screenPoint(forImagePoint: pinB)
+                    
                     // Caliper line and endcaps
                     CaliperOverlay(
-                        pinA: pinA,
-                        pinB: pinB,
+                        pinA: screenA,
+                        pinB: screenB,
                         pixelDistance: pixelDistance
                     )
                     
                     // Pin A Handle
                     PinHandleView(
                         pinID: .pinA,
-                        position: pinA,
+                        position: screenA,
                         isSelected: selectedPin == .pinA,
                         isDragging: draggingPin == .pinA,
                         onDrag: { newPos in
-                            pinA = clampPoint(newPos, in: geometry.size)
+                            pinA = clampToImage(imagePoint(forScreenPoint: newPos))
                             selectedPin = .pinA
                         },
                         onDragStateChanged: { isDragging in
@@ -289,11 +356,11 @@ struct ManualScaleCalibrationView: View {
                     // Pin B Handle
                     PinHandleView(
                         pinID: .pinB,
-                        position: pinB,
+                        position: screenB,
                         isSelected: selectedPin == .pinB,
                         isDragging: draggingPin == .pinB,
                         onDrag: { newPos in
-                            pinB = clampPoint(newPos, in: geometry.size)
+                            pinB = clampToImage(imagePoint(forScreenPoint: newPos))
                             selectedPin = .pinB
                         },
                         onDragStateChanged: { isDragging in
@@ -304,19 +371,39 @@ struct ManualScaleCalibrationView: View {
                     
                     // Magnifier Loupe during drag
                     if let activePin = draggingPin {
-                        let targetPos = activePin == .pinA ? pinA : pinB
+                        let targetPos = activePin == .pinA ? screenA : screenB
+                        // The loupe magnifies the unzoomed photo around the pin
                         MagnifierLoupeView(
                             image: image,
                             aspectFit: aspectFitGeometry,
-                            focusPoint: targetPos
+                            focusPoint: aspectFitGeometry.imageToView(activePin == .pinA ? pinA : pinB)
                         )
                         .position(
                             x: min(max(targetPos.x, 50), geometry.size.width - 50),
                             y: max(targetPos.y - 70, 50)
                         )
                     }
+                    
+                    if zoomScale > 1.0 {
+                        Button {
+                            withAnimation(.easeOut(duration: 0.2)) {
+                                zoomScale = 1.0
+                                zoomOffset = .zero
+                            }
+                        } label: {
+                            Label(String(format: "%.1f×", zoomScale), systemImage: "arrow.down.right.and.arrow.up.left")
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
+                        }
+                        .pediLensGlassPill(tint: .accentColor)
+                        .accessibilityLabel("Reset zoom")
+                        .position(x: geometry.size.width - 50, y: 22)
+                    }
                 }
             }
+            .clipped()
             .onAppear {
                 containerSize = geometry.size
                 initializePins(in: geometry.size)
@@ -562,23 +649,28 @@ struct ManualScaleCalibrationView: View {
             }
         }
         
-        pinA = CGPoint(x: cx - initialSpan / 2, y: cy)
-        pinB = CGPoint(x: cx + initialSpan / 2, y: cy)
+        // Pins are stored in image coordinates; the view starts unzoomed
+        pinA = clampToImage(aspectFitGeometry.viewToImage(CGPoint(x: cx - initialSpan / 2, y: cy)))
+        pinB = clampToImage(aspectFitGeometry.viewToImage(CGPoint(x: cx + initialSpan / 2, y: cy)))
         isInitialized = true
     }
     
+    /// Moves the selected pin by (dx, dy) screen points, so nudges get finer as you zoom in
     private func nudgeActivePin(dx: CGFloat, dy: CGFloat) {
+        let pointsPerImagePixel = aspectFitGeometry.scale * effectiveZoom
+        guard pointsPerImagePixel > 0 else { return }
+        let delta = CGPoint(x: dx / pointsPerImagePixel, y: dy / pointsPerImagePixel)
         if selectedPin == .pinA {
-            pinA = clampPoint(CGPoint(x: pinA.x + dx, y: pinA.y + dy), in: containerSize)
+            pinA = clampToImage(CGPoint(x: pinA.x + delta.x, y: pinA.y + delta.y))
         } else {
-            pinB = clampPoint(CGPoint(x: pinB.x + dx, y: pinB.y + dy), in: containerSize)
+            pinB = clampToImage(CGPoint(x: pinB.x + delta.x, y: pinB.y + delta.y))
         }
     }
     
-    private func clampPoint(_ p: CGPoint, in size: CGSize) -> CGPoint {
+    private func clampToImage(_ p: CGPoint) -> CGPoint {
         CGPoint(
-            x: min(max(p.x, 10), size.width - 10),
-            y: min(max(p.y, 10), size.height - 10)
+            x: min(max(p.x, 0), image.size.width),
+            y: min(max(p.y, 0), image.size.height)
         )
     }
     
