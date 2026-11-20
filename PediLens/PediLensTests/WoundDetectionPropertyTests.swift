@@ -605,3 +605,65 @@ final class WoundDetectionPropertyTests: XCTestCase {
                      "Image size scaling property failed for \(failedCases.count) out of \(iterations) cases")
     }
 }
+
+/// Tests for the CoreML-backed detection pipeline used by the app
+final class CoreMLWoundDetectionServiceTests: XCTestCase {
+
+    /// Renders a skin-toned frame with a red elliptical "wound" in raw (sensor) pixel space
+    private func makeRawWoundImage(size: CGSize, woundRect: CGRect) -> UIImage {
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        return UIGraphicsImageRenderer(size: size, format: format).image { ctx in
+            UIColor(red: 0.87, green: 0.72, blue: 0.62, alpha: 1).setFill()
+            ctx.fill(CGRect(origin: .zero, size: size))
+            UIColor(red: 0.70, green: 0.10, blue: 0.10, alpha: 1).setFill()
+            ctx.cgContext.fillEllipse(in: woundRect)
+        }
+    }
+
+    private func polygonArea(_ points: [CGPoint]) -> Double {
+        var sum = 0.0
+        for i in 0..<points.count {
+            let a = points[i], b = points[(i + 1) % points.count]
+            sum += Double(a.x * b.y - b.x * a.y)
+        }
+        return abs(sum) / 2.0
+    }
+
+    /// Detects with the CoreML model and checks the boundary matches the expected display-space ellipse
+    private func assertDetectsEllipse(in image: UIImage, expectedBox: CGRect, file: StaticString = #filePath, line: UInt = #line) async throws {
+        let boundaries = try await CoreMLWoundDetectionService().detectMultipleWoundBoundaries(in: image, calibration: nil)
+        XCTAssertEqual(boundaries.count, 1, file: file, line: line)
+        let boundary = try XCTUnwrap(boundaries.first, file: file, line: line)
+
+        // The model path must be used, not the heuristic fallback
+        XCTAssertEqual(boundary.detectionMethod, .automatic(modelVersion: "CoreML-1.0"), file: file, line: line)
+
+        // One mask pixel is 1600 / 256 = 6.25 image px; allow ~2 mask px of boundary error
+        let tolerance = 12.5
+        XCTAssertEqual(Double(boundary.boundingBox.minX), Double(expectedBox.minX), accuracy: tolerance, file: file, line: line)
+        XCTAssertEqual(Double(boundary.boundingBox.minY), Double(expectedBox.minY), accuracy: tolerance, file: file, line: line)
+        XCTAssertEqual(Double(boundary.boundingBox.maxX), Double(expectedBox.maxX), accuracy: tolerance, file: file, line: line)
+        XCTAssertEqual(Double(boundary.boundingBox.maxY), Double(expectedBox.maxY), accuracy: tolerance, file: file, line: line)
+
+        // Area of the traced polygon should match the ellipse area within 5%
+        let expectedArea = Double.pi * Double(expectedBox.width / 2) * Double(expectedBox.height / 2)
+        XCTAssertEqual(polygonArea(boundary.points), expectedArea, accuracy: expectedArea * 0.05, file: file, line: line)
+    }
+
+    func testDetection_UprightImage_UsesModelAndLocatesWound() async throws {
+        let woundRect = CGRect(x: 300, y: 450, width: 300, height: 200)
+        let image = makeRawWoundImage(size: CGSize(width: 1600, height: 1200), woundRect: woundRect)
+        try await assertDetectsEllipse(in: image, expectedBox: woundRect)
+    }
+
+    func testDetection_EXIFRotatedImage_ReturnsBoundaryInDisplaySpace() async throws {
+        // Camera captures store sensor-oriented pixels with an orientation tag.
+        // With .right, raw (x, y) is displayed at (rawHeight - y, x).
+        let raw = makeRawWoundImage(size: CGSize(width: 1600, height: 1200), woundRect: CGRect(x: 300, y: 450, width: 300, height: 200))
+        let tagged = try XCTUnwrap(raw.cgImage.map { UIImage(cgImage: $0, scale: 1, orientation: .right) })
+        XCTAssertEqual(tagged.size, CGSize(width: 1200, height: 1600))
+
+        try await assertDetectsEllipse(in: tagged, expectedBox: CGRect(x: 550, y: 300, width: 200, height: 300))
+    }
+}

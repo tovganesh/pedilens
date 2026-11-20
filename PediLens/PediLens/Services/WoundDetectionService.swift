@@ -64,7 +64,7 @@ enum WoundDetectionError: LocalizedError {
         case .timeout:
             return "Detection took too long and was cancelled"
         case .noContoursFound:
-            return "No wound boundary could be detected in the image"
+            return "No wound boundary could be detected in the image. Use manual tracing to outline the wound."
         }
     }
 }

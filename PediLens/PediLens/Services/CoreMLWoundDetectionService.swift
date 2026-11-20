@@ -21,17 +21,16 @@ class CoreMLWoundDetectionService: WoundDetectionServiceProtocol {
     /// The loaded CoreML model for wound segmentation
     private var woundModel: VNCoreMLModel?
     
-    /// Target input size for the ML model (standard 512x512)
-    private let modelInputSize = CGSize(width: 512, height: 512)
-    
     /// Confidence threshold for binary segmentation mask
     private let segmentationThreshold: Float = 0.50
-    
+
     /// Minimum contour area in pixels to be considered a wound (suppresses micro-noise)
     private let minimumWoundAreaPixels: CGFloat = 80.0
-    
-    /// Douglas-Peucker simplification tolerance in points
-    private let simplificationTolerance: CGFloat = 2.0
+
+    /// Douglas-Peucker simplification tolerance in mask pixels.
+    /// Applied before scaling to image space so it removes staircase jaggies
+    /// without eroding real shape detail, independent of mask resolution.
+    private let maskSimplificationTolerance: CGFloat = 0.5
     
     // MARK: - Initialization
     
@@ -77,38 +76,45 @@ class CoreMLWoundDetectionService: WoundDetectionServiceProtocol {
     
     /// Detects all distinct wound boundaries in an image
     func detectMultipleWoundBoundaries(in image: UIImage, calibration: MeasurementCalibration?) async throws -> [WoundBoundary] {
-        guard let cgImage = image.cgImage else {
-            throw WoundDetectionError.invalidImage
-        }
-        
         // Check cache first
         let cacheKey = "wound_multi_\(image.hashValue)"
         if let cachedBoundaries = PerformanceOptimizer.shared.getCachedMultipleDetections(for: cacheKey) {
             print("✅ Returning cached multi-wound boundaries")
             return cachedBoundaries
         }
-        
+
+        // Boundaries are expressed in `image.size` (display orientation), but `cgImage`
+        // holds the raw sensor-oriented pixels. Normalize so both agree before analysis.
+        let orientedImage = Self.orientationNormalized(image)
+        guard let cgImage = orientedImage.cgImage else {
+            throw WoundDetectionError.invalidImage
+        }
+
         let startTime = CFAbsoluteTimeGetCurrent()
-        
+
         // If real model is available, use it; otherwise use advanced algorithmic multi-wound extraction
         if let model = woundModel {
             do {
                 let output = try await performVisionRequest(cgImage: cgImage, model: model)
-                let boundaries = try processMultiWoundSegmentationOutput(output, originalImage: image)
-                
+                let boundaries = try processMultiWoundSegmentationOutput(output, originalImage: orientedImage)
+
                 PerformanceOptimizer.shared.cacheMultipleDetections(boundaries, for: cacheKey)
-                
+
                 let executionTime = CFAbsoluteTimeGetCurrent() - startTime
-                print("⏱️ Multi-wound detection completed in \(String(format: "%.3f", executionTime))s, found \(boundaries.count) wound(s)")
-                
+                print("⏱️ CoreML multi-wound detection completed in \(String(format: "%.3f", executionTime))s, found \(boundaries.count) wound(s)")
+
                 return boundaries
+            } catch WoundDetectionError.noContoursFound {
+                // The model ran successfully and found no wound; don't second-guess it with the heuristic
+                throw WoundDetectionError.noContoursFound
             } catch {
                 print("⚠️ CoreML Vision request failed: \(error.localizedDescription), falling back to algorithmic detection")
             }
         }
-        
+
         // Algorithmic multi-wound detection fallback
-        let boundaries = try await detectMultipleBoundariesAlgorithmically(in: image, cgImage: cgImage)
+        print("ℹ️ Using heuristic color-based wound detection")
+        let boundaries = try await detectMultipleBoundariesAlgorithmically(in: orientedImage, cgImage: cgImage)
         PerformanceOptimizer.shared.cacheMultipleDetections(boundaries, for: cacheKey)
         return boundaries
     }
@@ -143,22 +149,18 @@ class CoreMLWoundDetectionService: WoundDetectionServiceProtocol {
         for (index, component) in components.enumerated() {
             guard component.pixelCount >= Int(minimumWoundAreaPixels) else { continue }
             
-            // Extract perimeter contour of component
-            let rawContour = extractContour(for: component, maskWidth: maskWidth, maskHeight: maskHeight)
+            // Extract perimeter contour of component (mask coordinates)
+            let rawContour = extractContour(for: component)
             guard rawContour.count >= 3 else { continue }
-            
+
             // Filter out border-touching false positives (sheets, garment edges)
             if touchesFrameEdge(contour: rawContour, maskWidth: maskWidth, maskHeight: maskHeight, margin: 4) {
                 continue
             }
-            
-            // Scale points to original image coordinate space
-            let scaledPoints = rawContour.map { pt in
-                CGPoint(x: pt.x * scaleX, y: pt.y * scaleY)
-            }
-            
-            // Simplify contour
-            let simplified = douglasPeucker(points: scaledPoints, tolerance: simplificationTolerance)
+
+            // Simplify in mask space, then scale points to original image coordinate space
+            let simplified = douglasPeucker(points: rawContour, tolerance: maskSimplificationTolerance)
+                .map { pt in CGPoint(x: pt.x * scaleX, y: pt.y * scaleY) }
             guard simplified.count >= 3 else { continue }
             
             let boundingBox = calculateBoundingBox(for: simplified)
@@ -283,19 +285,16 @@ class CoreMLWoundDetectionService: WoundDetectionServiceProtocol {
         
         // Take up to top 6 distinct lesions
         for (idx, comp) in sorted.prefix(6).enumerated() {
-            let contour = extractContour(for: comp, maskWidth: targetW, maskHeight: targetH)
+            let contour = extractContour(for: comp)
             guard contour.count >= 3 else { continue }
-            
+
             // Reject any contour touching the outer frame edge
             if touchesFrameEdge(contour: contour, maskWidth: targetW, maskHeight: targetH, margin: 4) {
                 continue
             }
-            
-            let scaledContour = contour.map { pt in
-                CGPoint(x: pt.x * scaleBackX, y: pt.y * scaleBackY)
-            }
-            
-            let simplified = douglasPeucker(points: scaledContour, tolerance: max(2.0, simplificationTolerance))
+
+            let simplified = douglasPeucker(points: contour, tolerance: maskSimplificationTolerance)
+                .map { pt in CGPoint(x: pt.x * scaleBackX, y: pt.y * scaleBackY) }
             guard simplified.count >= 3 else { continue }
             
             let bbox = calculateBoundingBox(for: simplified)
@@ -315,23 +314,11 @@ class CoreMLWoundDetectionService: WoundDetectionServiceProtocol {
             boundaries.append(boundary)
         }
         
-        // Fallback: If no high-contrast components were identified, generate central fallback
-        if boundaries.isEmpty {
-            let defaultPoints = generateDefaultPlantarBoundary(imageSize: imageSize)
-            let bbox = calculateBoundingBox(for: defaultPoints)
-            let boundary = WoundBoundary(
-                id: UUID(),
-                woundNumber: 1,
-                points: defaultPoints,
-                confidence: 0.85,
-                boundingBox: bbox,
-                detectionMethod: .automatic(modelVersion: "Plantar-Template-1.0"),
-                label: "Wound #1",
-                colorHex: AnnotatedWound.colorPalette[0]
-            )
-            boundaries.append(boundary)
+        // Never fabricate a boundary: report failure so the user can trace manually
+        guard !boundaries.isEmpty else {
+            throw WoundDetectionError.noContoursFound
         }
-        
+
         return boundaries
     }
     
@@ -369,10 +356,13 @@ class CoreMLWoundDetectionService: WoundDetectionServiceProtocol {
                     // Flood fill / BFS
                     var compPixels: [CGPoint] = []
                     var queue: [(Int, Int)] = [(x, y)]
+                    var head = 0
                     visited[y][x] = true
-                    
-                    while !queue.isEmpty {
-                        let (cx, cy) = queue.removeFirst()
+
+                    // Index-based dequeue keeps BFS linear (removeFirst is O(n))
+                    while head < queue.count {
+                        let (cx, cy) = queue[head]
+                        head += 1
                         compPixels.append(CGPoint(x: cx, y: cy))
                         
                         let neighbors = [
@@ -403,36 +393,80 @@ class CoreMLWoundDetectionService: WoundDetectionServiceProtocol {
     
     // MARK: - Contour Extraction & Simplification
     
-    private func extractContour(for component: Component, maskWidth: Int, maskHeight: Int) -> [CGPoint] {
-        let pixelSet = Set(component.pixels.map { "\(Int($0.x)),\(Int($0.y))" })
-        
-        // Identify edge pixels (pixels whose 4-neighbors are not all in pixelSet)
-        var edgePixels: [CGPoint] = []
+    /// Traces the outer boundary of a 4-connected component as an ordered, closed polygon.
+    ///
+    /// Walks the pixel-edge ("crack") boundary clockwise with the region always on the
+    /// right-hand side, so concave shapes are followed correctly and interior holes are
+    /// ignored. Each emitted vertex is the midpoint of a boundary edge, which chamfers
+    /// the pixel staircase: the enclosed area closely matches the pixel count and the
+    /// perimeter is not inflated by stair-stepping.
+    /// - Returns: Polygon in mask coordinates, where pixel (x, y) spans [x, x+1] × [y, y+1].
+    private func extractContour(for component: Component) -> [CGPoint] {
+        guard !component.pixels.isEmpty else { return [] }
+
+        // Rasterize the component into a local grid padded by one pixel on each side
+        var minX = Int.max, minY = Int.max, maxX = Int.min, maxY = Int.min
         for pt in component.pixels {
-            let x = Int(pt.x)
-            let y = Int(pt.y)
-            let isEdge = !pixelSet.contains("\(x+1),\(y)") ||
-                         !pixelSet.contains("\(x-1),\(y)") ||
-                         !pixelSet.contains("\(x),\(y+1)") ||
-                         !pixelSet.contains("\(x),\(y-1)")
-            if isEdge {
-                edgePixels.append(pt)
+            minX = min(minX, Int(pt.x)); maxX = max(maxX, Int(pt.x))
+            minY = min(minY, Int(pt.y)); maxY = max(maxY, Int(pt.y))
+        }
+        let originX = minX - 1
+        let originY = minY - 1
+        let gridW = maxX - minX + 3
+        let gridH = maxY - minY + 3
+        var grid = [Bool](repeating: false, count: gridW * gridH)
+        for pt in component.pixels {
+            grid[(Int(pt.y) - originY) * gridW + (Int(pt.x) - originX)] = true
+        }
+        func inside(_ x: Int, _ y: Int) -> Bool {
+            x >= 0 && x < gridW && y >= 0 && y < gridH && grid[y * gridW + x]
+        }
+
+        // Start at the top-left corner of the first pixel in row-major order. Its top
+        // edge is guaranteed to be on the outer boundary.
+        guard let startIndex = grid.firstIndex(of: true) else { return [] }
+        let startX = startIndex % gridW
+        let startY = startIndex / gridW
+
+        // Directions: 0 = +x (right), 1 = +y (down), 2 = -x (left), 3 = -y (up)
+        let stepX = [1, 0, -1, 0]
+        let stepY = [0, 1, 0, -1]
+
+        var vx = startX, vy = startY, dir = 0
+        var contour: [CGPoint] = []
+        let maxSteps = 4 * (gridW + 1) * (gridH + 1)
+
+        for _ in 0..<maxSteps {
+            // Emit midpoint of the edge being traversed, converted back to mask coordinates
+            contour.append(CGPoint(
+                x: CGFloat(vx + originX) + CGFloat(stepX[dir]) * 0.5,
+                y: CGFloat(vy + originY) + CGFloat(stepY[dir]) * 0.5
+            ))
+            vx += stepX[dir]
+            vy += stepY[dir]
+
+            // The two pixels ahead of vertex (vx, vy), on the left and right of travel
+            let aheadLeft: Bool
+            let aheadRight: Bool
+            switch dir {
+            case 0: aheadLeft = inside(vx, vy - 1); aheadRight = inside(vx, vy)
+            case 1: aheadLeft = inside(vx, vy); aheadRight = inside(vx - 1, vy)
+            case 2: aheadLeft = inside(vx - 1, vy); aheadRight = inside(vx - 1, vy - 1)
+            default: aheadLeft = inside(vx - 1, vy - 1); aheadRight = inside(vx, vy - 1)
+            }
+
+            if !aheadRight {
+                dir = (dir + 1) % 4      // Region falls away: turn right
+            } else if aheadLeft {
+                dir = (dir + 3) % 4      // Region blocks the way: turn left
+            }                            // Otherwise continue straight
+
+            if vx == startX && vy == startY && dir == 0 {
+                break
             }
         }
-        
-        guard edgePixels.count >= 3 else { return edgePixels }
-        
-        // Sort edge pixels angularly around centroid to form a closed polygon
-        let cx = edgePixels.reduce(0.0) { $0 + $1.x } / CGFloat(edgePixels.count)
-        let cy = edgePixels.reduce(0.0) { $0 + $1.y } / CGFloat(edgePixels.count)
-        
-        let sorted = edgePixels.sorted { p1, p2 in
-            let angle1 = atan2(p1.y - cy, p1.x - cx)
-            let angle2 = atan2(p2.y - cy, p2.x - cx)
-            return angle1 < angle2
-        }
-        
-        return sorted
+
+        return contour
     }
     
     private func douglasPeucker(points: [CGPoint], tolerance: CGFloat) -> [CGPoint] {
@@ -484,21 +518,23 @@ class CoreMLWoundDetectionService: WoundDetectionServiceProtocol {
         return CGRect(x: minX, y: minY, width: max(1.0, maxX - minX), height: max(1.0, maxY - minY))
     }
     
-    private func generateDefaultPlantarBoundary(imageSize: CGSize) -> [CGPoint] {
-        let cx = imageSize.width * 0.5
-        let cy = imageSize.height * 0.55
-        let rx = imageSize.width * 0.12
-        let ry = imageSize.height * 0.10
-        let count = 20
-        var pts: [CGPoint] = []
-        for i in 0..<count {
-            let theta = (Double(i) / Double(count)) * 2.0 * .pi
-            let wobble = 1.0 + 0.12 * sin(theta * 3.0) + 0.08 * cos(theta * 5.0)
-            let px = cx + CGFloat(cos(theta) * wobble) * rx
-            let py = cy + CGFloat(sin(theta) * wobble) * ry
-            pts.append(CGPoint(x: px, y: py))
+    // MARK: - Orientation Normalization
+    
+    /// Returns an image whose `cgImage` pixel layout matches its displayed orientation.
+    ///
+    /// Camera captures and library photos usually store sensor-oriented pixels plus an
+    /// EXIF orientation tag. Analysis reads `cgImage` directly, while boundaries are
+    /// expressed in `image.size` (display space), so the two must agree.
+    static func orientationNormalized(_ image: UIImage) -> UIImage {
+        guard image.imageOrientation != .up else { return image }
+        
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = image.scale
+        format.opaque = true
+        let renderer = UIGraphicsImageRenderer(size: image.size, format: format)
+        return renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: image.size))
         }
-        return pts
     }
     
     // MARK: - Vision & CoreML Helpers
@@ -512,21 +548,27 @@ class CoreMLWoundDetectionService: WoundDetectionServiceProtocol {
                     return
                 }
                 
-                guard let results = request.results as? [VNPixelBufferObservation],
-                      let pixelBuffer = results.first?.pixelBuffer else {
-                    continuation.resume(throwing: WoundDetectionError.detectionFailed)
-                    return
-                }
-                
                 do {
-                    let output = try self.extractSegmentationOutput(from: pixelBuffer)
-                    continuation.resume(returning: output)
+                    // The bundled model emits a MultiArray (1 × 256 × 256 × 1), which Vision
+                    // surfaces as a feature-value observation. Image-output models surface as
+                    // pixel-buffer observations; support both.
+                    if let multiArray = (request.results?.first as? VNCoreMLFeatureValueObservation)?
+                        .featureValue.multiArrayValue {
+                        continuation.resume(returning: try self.extractSegmentationOutput(from: multiArray))
+                    } else if let pixelBuffer = (request.results?.first as? VNPixelBufferObservation)?.pixelBuffer {
+                        continuation.resume(returning: try self.extractSegmentationOutput(from: pixelBuffer))
+                    } else {
+                        print("❌ Unexpected CoreML result type: \(String(describing: request.results?.first))")
+                        continuation.resume(throwing: WoundDetectionError.detectionFailed)
+                    }
                 } catch {
                     continuation.resume(throwing: error)
                 }
             }
             
-            request.imageCropAndScaleOption = .scaleFit
+            // The model was trained on images stretched to 256 × 256 (no letterboxing), so the
+            // mask maps linearly onto the full image: mask x/y ∝ image x/y.
+            request.imageCropAndScaleOption = .scaleFill
             
             let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
             do {
@@ -542,34 +584,91 @@ class CoreMLWoundDetectionService: WoundDetectionServiceProtocol {
         let averageConfidence: Float
     }
     
-    private func extractSegmentationOutput(from pixelBuffer: CVPixelBuffer) throws -> ModelSegmentationOutput {
-        CVPixelBufferLockBaseAddress(pixelBuffer, .readOnly)
-        defer { CVPixelBufferUnlockBaseAddress(pixelBuffer, .readOnly) }
-        
-        let width = CVPixelBufferGetWidth(pixelBuffer)
-        let height = CVPixelBufferGetHeight(pixelBuffer)
-        
-        guard let baseAddress = CVPixelBufferGetBaseAddress(pixelBuffer) else {
-            throw WoundDetectionError.detectionFailed
-        }
-        
-        let floatBuffer = baseAddress.assumingMemoryBound(to: Float.self)
+    /// Thresholds a probability map into a binary mask, tracking mean wound-pixel confidence
+    private func buildSegmentationOutput(width: Int, height: Int, probability: (Int, Int) -> Float) -> ModelSegmentationOutput {
         var mask = Array(repeating: Array(repeating: false, count: width), count: height)
         var sum: Float = 0.0
         var woundPixelCount = 0
         
         for y in 0..<height {
             for x in 0..<width {
-                let probability = floatBuffer[y * width + x]
-                if probability >= segmentationThreshold {
+                let p = probability(x, y)
+                if p >= segmentationThreshold {
                     mask[y][x] = true
-                    sum += probability
+                    sum += p
                     woundPixelCount += 1
                 }
             }
         }
         
-        let avgConf = woundPixelCount > 0 ? (sum / Float(woundPixelCount)) : 0.8
+        let avgConf = woundPixelCount > 0 ? (sum / Float(woundPixelCount)) : 0.0
         return ModelSegmentationOutput(mask: mask, averageConfidence: avgConf)
+    }
+    
+    /// Reads a segmentation probability map from a MultiArray output.
+    /// Accepts any layout whose non-singleton dimensions are exactly (height, width),
+    /// e.g. NHWC [1, H, W, 1], NCHW [1, 1, H, W], or [H, W].
+    private func extractSegmentationOutput(from multiArray: MLMultiArray) throws -> ModelSegmentationOutput {
+        let shape = multiArray.shape.map { $0.intValue }
+        let strides = multiArray.strides.map { $0.intValue }
+        let spatialDims = shape.indices.filter { shape[$0] > 1 }
+        guard spatialDims.count == 2 else {
+            print("❌ Unsupported segmentation output shape: \(shape)")
+            throw WoundDetectionError.detectionFailed
+        }
+        
+        let height = shape[spatialDims[0]]
+        let width = shape[spatialDims[1]]
+        let strideY = strides[spatialDims[0]]
+        let strideX = strides[spatialDims[1]]
+        
+        switch multiArray.dataType {
+        case .float32:
+            let pointer = multiArray.dataPointer.assumingMemoryBound(to: Float32.self)
+            return buildSegmentationOutput(width: width, height: height) { x, y in
+                pointer[y * strideY + x * strideX]
+            }
+        case .double:
+            let pointer = multiArray.dataPointer.assumingMemoryBound(to: Double.self)
+            return buildSegmentationOutput(width: width, height: height) { x, y in
+                Float(pointer[y * strideY + x * strideX])
+            }
+        default:
+            // Slower generic path (e.g. Float16 outputs)
+            return buildSegmentationOutput(width: width, height: height) { x, y in
+                var index = [NSNumber](repeating: 0, count: shape.count)
+                index[spatialDims[0]] = NSNumber(value: y)
+                index[spatialDims[1]] = NSNumber(value: x)
+                return multiArray[index].floatValue
+            }
+        }
+    }
+    
+    /// Reads a segmentation probability map from an image-type output
+    private func extractSegmentationOutput(from pixelBuffer: CVPixelBuffer) throws -> ModelSegmentationOutput {
+        CVPixelBufferLockBaseAddress(pixelBuffer, .readOnly)
+        defer { CVPixelBufferUnlockBaseAddress(pixelBuffer, .readOnly) }
+        
+        let width = CVPixelBufferGetWidth(pixelBuffer)
+        let height = CVPixelBufferGetHeight(pixelBuffer)
+        let bytesPerRow = CVPixelBufferGetBytesPerRow(pixelBuffer)
+        
+        guard let baseAddress = CVPixelBufferGetBaseAddress(pixelBuffer) else {
+            throw WoundDetectionError.detectionFailed
+        }
+        
+        switch CVPixelBufferGetPixelFormatType(pixelBuffer) {
+        case kCVPixelFormatType_OneComponent32Float:
+            return buildSegmentationOutput(width: width, height: height) { x, y in
+                baseAddress.load(fromByteOffset: y * bytesPerRow + x * MemoryLayout<Float32>.size, as: Float32.self)
+            }
+        case kCVPixelFormatType_OneComponent8:
+            return buildSegmentationOutput(width: width, height: height) { x, y in
+                Float(baseAddress.load(fromByteOffset: y * bytesPerRow + x, as: UInt8.self)) / 255.0
+            }
+        default:
+            print("❌ Unsupported segmentation pixel format: \(CVPixelBufferGetPixelFormatType(pixelBuffer))")
+            throw WoundDetectionError.detectionFailed
+        }
     }
 }
