@@ -96,7 +96,8 @@ class CoreMLWoundDetectionService: WoundDetectionServiceProtocol {
         if let model = woundModel {
             do {
                 let output = try await performVisionRequest(cgImage: cgImage, model: model)
-                let boundaries = try processMultiWoundSegmentationOutput(output, originalImage: orientedImage)
+                let coarseBoundaries = try processMultiWoundSegmentationOutput(output, originalImage: orientedImage)
+                let boundaries = await refineBoundaries(coarseBoundaries, cgImage: cgImage, imageSize: orientedImage.size, model: model)
 
                 PerformanceOptimizer.shared.cacheMultipleDetections(boundaries, for: cacheKey)
 
@@ -184,6 +185,129 @@ class CoreMLWoundDetectionService: WoundDetectionServiceProtocol {
         }
         
         return boundaries
+    }
+    
+    // MARK: - Region-of-Interest Refinement
+    
+    /// Crop side relative to the wound's larger dimension. The model was trained on photos where
+    /// wounds occupy a modest share of the frame; tighter crops (e.g. 1.6×, wound filling ~60%
+    /// of the crop) under-segment by ~15%, while 3× keeps periwound context and traces cleanly.
+    private let refinementCropMargin: CGFloat = 3.0
+    
+    /// Re-segments each wound on a square crop around it.
+    ///
+    /// The full-frame pass sees the whole photo at 256 × 256, so one mask pixel spans several
+    /// millimetres on a typical photo and small ulcers are traced coarsely. Running the model
+    /// again on a tight crop gives the same wound many more mask pixels. A refined outline is
+    /// kept only when it is plausible; otherwise the coarse outline stands.
+    private func refineBoundaries(
+        _ boundaries: [WoundBoundary],
+        cgImage: CGImage,
+        imageSize: CGSize,
+        model: VNCoreMLModel
+    ) async -> [WoundBoundary] {
+        var refined: [WoundBoundary] = []
+        for boundary in boundaries {
+            if let improved = await refineBoundary(boundary, cgImage: cgImage, imageSize: imageSize, model: model) {
+                refined.append(improved)
+            } else {
+                refined.append(boundary)
+            }
+        }
+        return refined
+    }
+    
+    private func refineBoundary(
+        _ boundary: WoundBoundary,
+        cgImage: CGImage,
+        imageSize: CGSize,
+        model: VNCoreMLModel
+    ) async -> WoundBoundary? {
+        guard imageSize.width > 0, imageSize.height > 0 else { return nil }
+        
+        // Boundaries are in image points; crops are taken in pixels
+        let pixelsPerPoint = CGFloat(cgImage.width) / imageSize.width
+        let box = boundary.boundingBox
+        let imageWidth = CGFloat(cgImage.width)
+        let imageHeight = CGFloat(cgImage.height)
+        
+        // Square crop (the model expects undistorted content), shifted to stay inside the image
+        let side = (max(box.width, box.height) * refinementCropMargin * pixelsPerPoint).rounded(.up)
+        guard side >= 16, side < min(imageWidth, imageHeight) * 0.8 else {
+            // Large wounds already have ample resolution in the full-frame pass
+            return nil
+        }
+        let originX = min(max(0, box.midX * pixelsPerPoint - side / 2), imageWidth - side).rounded(.down)
+        let originY = min(max(0, box.midY * pixelsPerPoint - side / 2), imageHeight - side).rounded(.down)
+        let cropRect = CGRect(x: originX, y: originY, width: side, height: side)
+        
+        guard let crop = cgImage.cropping(to: cropRect),
+              let output = try? await performVisionRequest(cgImage: crop, model: model),
+              let maskWidth = output.mask.first?.count, maskWidth > 0 else {
+            return nil
+        }
+        let maskHeight = output.mask.count
+        let maskToPoints = CGSize(
+            width: cropRect.width / CGFloat(maskWidth) / pixelsPerPoint,
+            height: cropRect.height / CGFloat(maskHeight) / pixelsPerPoint
+        )
+        let cropOriginPoints = CGPoint(x: cropRect.minX / pixelsPerPoint, y: cropRect.minY / pixelsPerPoint)
+        
+        // Pick the component centered within the coarse wound's box (other wounds may share the crop)
+        let candidates = findConnectedComponents(in: output.mask).filter { component in
+            guard component.pixelCount >= Int(minimumWoundAreaPixels) else { return false }
+            let centroid = component.pixels.reduce(CGPoint.zero) { CGPoint(x: $0.x + $1.x, y: $0.y + $1.y) }
+            let center = CGPoint(
+                x: cropOriginPoints.x + (centroid.x / CGFloat(component.pixelCount) + 0.5) * maskToPoints.width,
+                y: cropOriginPoints.y + (centroid.y / CGFloat(component.pixelCount) + 0.5) * maskToPoints.height
+            )
+            return box.contains(center)
+        }
+        guard let component = candidates.max(by: { $0.pixelCount < $1.pixelCount }) else { return nil }
+        
+        let contour = extractContour(for: component)
+        // A wound running off the crop edge is not fully captured; keep the coarse outline
+        guard contour.count >= 3,
+              !touchesFrameEdge(contour: contour, maskWidth: maskWidth, maskHeight: maskHeight, margin: 2) else {
+            return nil
+        }
+        
+        let points = douglasPeucker(points: contour, tolerance: maskSimplificationTolerance).map { point in
+            CGPoint(
+                x: cropOriginPoints.x + point.x * maskToPoints.width,
+                y: cropOriginPoints.y + point.y * maskToPoints.height
+            )
+        }
+        guard points.count >= 3 else { return nil }
+        
+        // Reject outlines that disagree wildly with the coarse pass
+        let coarseArea = polygonArea(boundary.points)
+        let refinedArea = polygonArea(points)
+        guard coarseArea > 0, (0.5...2.0).contains(refinedArea / coarseArea) else {
+            print("⚠️ Discarding refined outline for wound #\(boundary.woundNumber): area ratio \(String(format: "%.2f", refinedArea / max(coarseArea, 1)))")
+            return nil
+        }
+        
+        return WoundBoundary(
+            id: boundary.id,
+            woundNumber: boundary.woundNumber,
+            points: points,
+            confidence: output.averageConfidence,
+            boundingBox: calculateBoundingBox(for: points),
+            detectionMethod: boundary.detectionMethod,
+            label: boundary.label,
+            colorHex: boundary.colorHex
+        )
+    }
+    
+    private func polygonArea(_ points: [CGPoint]) -> CGFloat {
+        guard points.count >= 3 else { return 0 }
+        var sum: CGFloat = 0
+        for i in 0..<points.count {
+            let a = points[i], b = points[(i + 1) % points.count]
+            sum += a.x * b.y - b.x * a.y
+        }
+        return abs(sum) / 2
     }
     
     // MARK: - Algorithmic Multi-Wound Detection Fallback
