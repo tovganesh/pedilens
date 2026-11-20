@@ -356,150 +356,198 @@ class MeasurementManager: MeasurementManagerProtocol {
     }
     
     /// Calculate depth and volume from depth data
+    ///
+    /// Depth is measured relative to the surrounding skin: a plane is fitted to depth samples
+    /// in a periwound band (2–6 mm outside the boundary), so foot curvature and camera tilt
+    /// don't masquerade as wound depth. Values are along the camera axis, which approximates
+    /// depth normal to the skin when the camera is roughly perpendicular to the wound.
     /// - Parameters:
-    ///   - boundary: Wound boundary polygon
-    ///   - calibration: Calibration data
-    ///   - depthData: Depth map from TrueDepth/LiDAR
+    ///   - boundary: Wound boundary polygon (image coordinates)
+    ///   - calibration: Calibration data (image pixels per mm)
+    ///   - depthData: Metric depth map (meters), aligned with the display-oriented image
     ///   - areaMM2: Previously calculated surface area
-    /// - Returns: (maxDepthMM, volumeMM3)
+    /// - Returns: (depthMM: 95th-percentile recess below the skin plane, volumeMM3)
     private func calculateDepthAndVolume(
         boundary: WoundBoundary,
         calibration: MeasurementCalibration,
         depthData: DepthData,
         areaMM2: Double
     ) -> (depthMM: Double?, volumeMM3: Double?) {
-        let depthMap = depthData.depthMap
+        // Relative depth (e.g. dual-camera disparity) has no metric scale
+        guard depthData.accuracy == .absolute,
+              boundary.points.count >= 3,
+              calibration.pixelsPerMillimeter > 0 else {
+            return (nil, nil)
+        }
         
-        // Lock depth map for reading
+        let depthMap = depthData.depthMap
+        guard CVPixelBufferGetPixelFormatType(depthMap) == kCVPixelFormatType_DepthFloat32 else {
+            return (nil, nil)
+        }
+        
         CVPixelBufferLockBaseAddress(depthMap, .readOnly)
         defer { CVPixelBufferUnlockBaseAddress(depthMap, .readOnly) }
         
         let width = CVPixelBufferGetWidth(depthMap)
         let height = CVPixelBufferGetHeight(depthMap)
-        
-        guard let baseAddress = CVPixelBufferGetBaseAddress(depthMap) else {
+        guard width > 0, height > 0, let baseAddress = CVPixelBufferGetBaseAddress(depthMap) else {
             return (nil, nil)
         }
-        
-        // Get surrounding healthy tissue reference plane (periwound skin)
-        let referenceDepth = calculatePeriwoundReferencePlane(
-            boundary: boundary,
-            depthMap: depthMap,
-            width: width,
-            height: height,
-            baseAddress: baseAddress
-        )
-        
-        guard let baselineDepth = referenceDepth else {
-            return (nil, nil)
-        }
-        
-        // Sample depth values inside the wound boundary
-        var maxDepth: Double = 0.0
-        var depthSum: Double = 0.0
-        var sampledPoints = 0
-        
-        // Bounding box for sampling
-        let boundingBox = boundary.boundingBox
-        let startX = max(0, Int(boundingBox.minX))
-        let endX = min(width - 1, Int(boundingBox.maxX))
-        let startY = max(0, Int(boundingBox.minY))
-        let endY = min(height - 1, Int(boundingBox.maxY))
-        
         let floatBuffer = baseAddress.assumingMemoryBound(to: Float32.self)
-        let bytesPerRow = CVPixelBufferGetBytesPerRow(depthMap)
-        let floatsPerRow = bytesPerRow / MemoryLayout<Float32>.size
+        let floatsPerRow = CVPixelBufferGetBytesPerRow(depthMap) / MemoryLayout<Float32>.size
         
-        // Sample points inside boundary
+        // Map boundary (image coordinates) into depth-map pixels; the depth map covers the
+        // same field of view at lower resolution
+        let referenceSize = depthData.referenceImageSize ?? CGSize(width: width, height: height)
+        guard referenceSize.width > 0, referenceSize.height > 0 else { return (nil, nil) }
+        let scaleX = Double(width) / Double(referenceSize.width)
+        let scaleY = Double(height) / Double(referenceSize.height)
+        let polygon = boundary.points.map { CGPoint(x: Double($0.x) * scaleX, y: Double($0.y) * scaleY) }
+        
+        // Periwound band, in depth pixels
+        let depthPixelsPerMM = calibration.pixelsPerMillimeter * (scaleX + scaleY) / 2.0
+        let bandInner = 2.0 * depthPixelsPerMM
+        let bandOuter = max(bandInner + 1.5, 6.0 * depthPixelsPerMM)
+        
+        let xs = polygon.map { Double($0.x) }
+        let ys = polygon.map { Double($0.y) }
+        guard let polyMinX = xs.min(), let polyMaxX = xs.max(),
+              let polyMinY = ys.min(), let polyMaxY = ys.max() else { return (nil, nil) }
+        let startX = max(0, Int((polyMinX - bandOuter).rounded(.down)))
+        let endX = min(width - 1, Int((polyMaxX + bandOuter).rounded(.up)))
+        let startY = max(0, Int((polyMinY - bandOuter).rounded(.down)))
+        let endY = min(height - 1, Int((polyMaxY + bandOuter).rounded(.up)))
+        guard startX <= endX, startY <= endY else { return (nil, nil) }
+        
+        var woundSamples: [DepthSample] = []
+        var periwoundSamples: [DepthSample] = []
+        
         for y in startY...endY {
             for x in startX...endX {
-                let point = CGPoint(x: x, y: y)
+                let z = Double(floatBuffer[y * floatsPerRow + x])
+                guard z > 0, z.isFinite else { continue }
                 
-                // Check if point is inside wound polygon
-                if isPointInPolygon(point: point, polygon: boundary.points) {
-                    let depthValue = Double(floatBuffer[y * floatsPerRow + x])
-                    
-                    // Depth value is distance from camera in meters
-                    // Wound bed should be further from camera than healthy skin (larger depth value)
-                    if depthValue > 0 && depthValue.isFinite {
-                        let relativeDepthMeters = depthValue - baselineDepth
-                        
-                        // Convert to millimeters (1 meter = 1000 mm)
-                        let relativeDepthMM = relativeDepthMeters * 1000.0
-                        
-                        // Only consider points that are deeper than the reference plane
-                        if relativeDepthMM > 0 {
-                            maxDepth = max(maxDepth, relativeDepthMM)
-                            depthSum += relativeDepthMM
-                            sampledPoints += 1
-                        }
+                // Sample at the pixel center
+                let point = CGPoint(x: Double(x) + 0.5, y: Double(y) + 0.5)
+                let sample = DepthSample(x: Double(point.x), y: Double(point.y), z: z)
+                if isPointInPolygon(point: point, polygon: polygon) {
+                    woundSamples.append(sample)
+                } else {
+                    let distance = distanceToPolygonEdge(point: point, polygon: polygon)
+                    if distance >= bandInner && distance <= bandOuter {
+                        periwoundSamples.append(sample)
                     }
                 }
             }
         }
         
-        guard sampledPoints > 0 else {
+        guard woundSamples.count >= 4, periwoundSamples.count >= 12,
+              let skinPlane = fitRobustPlane(to: periwoundSamples) else {
             return (nil, nil)
         }
         
-        // Calculate average depth
-        let averageDepthMM = depthSum / Double(sampledPoints)
+        // Depth below the skin plane in mm (positive = recessed, further from the camera).
+        // Raised tissue (negative) contributes no cavity depth or volume.
+        let recessMM = woundSamples.map { max(0.0, ($0.z - skinPlane.z(atX: $0.x, y: $0.y)) * 1000.0) }
         
-        // Calculate volume: V = Area * Average Depth (Riemann sum approximation)
-        let volumeMM3 = areaMM2 * averageDepthMM
+        // 95th percentile rejects isolated noisy depth pixels that would dominate a raw maximum
+        let depthMM = percentile(recessMM, 0.95)
         
-        return (maxDepth, volumeMM3)
+        // Volume: mean recess over the wound footprint times its surface area
+        let meanRecessMM = recessMM.reduce(0.0, +) / Double(recessMM.count)
+        let volumeMM3 = areaMM2 * meanRecessMM
+        
+        return (depthMM, volumeMM3)
     }
     
-    /// Calculate the reference plane depth from healthy skin surrounding the wound
-    private func calculatePeriwoundReferencePlane(
-        boundary: WoundBoundary,
-        depthMap: CVPixelBuffer,
-        width: Int,
-        height: Int,
-        baseAddress: UnsafeMutableRawPointer
-    ) -> Double? {
-        let floatBuffer = baseAddress.assumingMemoryBound(to: Float32.self)
-        let bytesPerRow = CVPixelBufferGetBytesPerRow(depthMap)
-        let floatsPerRow = bytesPerRow / MemoryLayout<Float32>.size
+    /// A depth sample in depth-map pixel coordinates; `z` is distance from the camera in meters
+    private struct DepthSample {
+        let x: Double
+        let y: Double
+        let z: Double
+    }
+    
+    /// Plane z = a·x + b·y + c in depth-map pixel coordinates
+    private struct DepthPlane {
+        let a: Double
+        let b: Double
+        let c: Double
         
-        var referenceDepths: [Double] = []
+        func z(atX x: Double, y: Double) -> Double {
+            a * x + b * y + c
+        }
+    }
+    
+    /// Least-squares plane fit, refit once after discarding outliers (hair, shadows, wound edge spill)
+    private func fitRobustPlane(to samples: [DepthSample]) -> DepthPlane? {
+        guard let initial = fitPlane(to: samples) else { return nil }
         
-        // Sample points in a band around the wound boundary (5-10mm margin)
-        // For simplicity, sample points just outside the boundary polygon
-        let marginPixels: CGFloat = 20.0 // Roughly 2mm at 10 px/mm
+        let residuals = samples.map { abs($0.z - initial.z(atX: $0.x, y: $0.y)) }
+        // Median absolute deviation, scaled to approximate a standard deviation
+        let sigma = 1.4826 * percentile(residuals, 0.5)
+        guard sigma > 0 else { return initial }
         
-        for point in boundary.points {
-            // Sample points in normal directions outward from boundary
-            let offsetPoints = [
-                CGPoint(x: point.x + marginPixels, y: point.y),
-                CGPoint(x: point.x - marginPixels, y: point.y),
-                CGPoint(x: point.x, y: point.y + marginPixels),
-                CGPoint(x: point.x, y: point.y - marginPixels)
-            ]
-            
-            for offsetPoint in offsetPoints {
-                let x = Int(offsetPoint.x)
-                let y = Int(offsetPoint.y)
-                
-                // Ensure point is within bounds and not inside the wound
-                if x >= 0 && x < width && y >= 0 && y < height {
-                    if !isPointInPolygon(point: offsetPoint, polygon: boundary.points) {
-                        let depth = Double(floatBuffer[y * floatsPerRow + x])
-                        if depth > 0 && depth.isFinite {
-                            referenceDepths.append(depth)
-                        }
-                    }
-                }
-            }
+        let inliers = zip(samples, residuals).filter { $0.1 <= 2.5 * sigma }.map { $0.0 }
+        guard inliers.count >= 12 else { return initial }
+        return fitPlane(to: inliers) ?? initial
+    }
+    
+    /// Ordinary least-squares fit of z = a·x + b·y + c (solves the 3×3 normal equations)
+    private func fitPlane(to samples: [DepthSample]) -> DepthPlane? {
+        guard samples.count >= 3 else { return nil }
+        
+        // Center coordinates for numerical stability
+        let n = Double(samples.count)
+        let meanX = samples.reduce(0.0) { $0 + $1.x } / n
+        let meanY = samples.reduce(0.0) { $0 + $1.y } / n
+        let meanZ = samples.reduce(0.0) { $0 + $1.z } / n
+        
+        var sxx = 0.0, sxy = 0.0, syy = 0.0, sxz = 0.0, syz = 0.0
+        for s in samples {
+            let dx = s.x - meanX, dy = s.y - meanY, dz = s.z - meanZ
+            sxx += dx * dx; sxy += dx * dy; syy += dy * dy
+            sxz += dx * dz; syz += dy * dz
         }
         
-        guard !referenceDepths.isEmpty else { return nil }
-        
-        // Use median to be robust against outliers
-        referenceDepths.sort()
-        let medianIndex = referenceDepths.count / 2
-        return referenceDepths[medianIndex]
+        let determinant = sxx * syy - sxy * sxy
+        let a: Double
+        let b: Double
+        if abs(determinant) > 1e-9 {
+            a = (sxz * syy - syz * sxy) / determinant
+            b = (syz * sxx - sxz * sxy) / determinant
+        } else {
+            // Degenerate (e.g. collinear samples): fall back to a flat plane
+            a = 0
+            b = 0
+        }
+        return DepthPlane(a: a, b: b, c: meanZ - a * meanX - b * meanY)
+    }
+    
+    /// Shortest distance from a point to the polygon's edges
+    private func distanceToPolygonEdge(point: CGPoint, polygon: [CGPoint]) -> Double {
+        var minDistance = Double.infinity
+        for i in 0..<polygon.count {
+            let a = polygon[i]
+            let b = polygon[(i + 1) % polygon.count]
+            let abx = Double(b.x - a.x), aby = Double(b.y - a.y)
+            let apx = Double(point.x - a.x), apy = Double(point.y - a.y)
+            let lengthSquared = abx * abx + aby * aby
+            let t = lengthSquared > 0 ? min(1, max(0, (apx * abx + apy * aby) / lengthSquared)) : 0
+            let dx = apx - t * abx, dy = apy - t * aby
+            minDistance = min(minDistance, (dx * dx + dy * dy).squareRoot())
+        }
+        return minDistance
+    }
+    
+    /// Linear-interpolated percentile (0...1) of the values
+    private func percentile(_ values: [Double], _ p: Double) -> Double {
+        guard !values.isEmpty else { return 0 }
+        let sorted = values.sorted()
+        let position = p * Double(sorted.count - 1)
+        let lower = Int(position.rounded(.down))
+        let upper = min(sorted.count - 1, lower + 1)
+        let fraction = position - Double(lower)
+        return sorted[lower] + (sorted[upper] - sorted[lower]) * fraction
     }
     
     /// Test if a point is inside a polygon using ray casting algorithm

@@ -28,11 +28,25 @@ struct DepthData {
     
     /// Depth accuracy level
     let accuracy: DepthAccuracy
-    
-    init(depthMap: CVPixelBuffer, calibrationData: AVCameraCalibrationData? = nil, accuracy: DepthAccuracy) {
+
+    /// Size of the display-oriented image the depth map is aligned with (in the same units as
+    /// wound boundary points). The depth map covers the same field of view at lower resolution.
+    /// `nil` means the depth map already shares the boundary's coordinate space.
+    let referenceImageSize: CGSize?
+
+    /// Format tag written with stored depth files: metric Float32 depth (meters), rotated to the
+    /// photo's display orientation. Files without this tag predate the fix and stored raw sensor
+    /// data (often 16-bit disparity) that cannot be interpreted reliably.
+    static let storageFormat = "depthFloat32-displayOriented-v2"
+
+    init(depthMap: CVPixelBuffer,
+         calibrationData: AVCameraCalibrationData? = nil,
+         accuracy: DepthAccuracy,
+         referenceImageSize: CGSize? = nil) {
         self.depthMap = depthMap
         self.calibrationData = calibrationData
         self.accuracy = accuracy
+        self.referenceImageSize = referenceImageSize
     }
 }
 
