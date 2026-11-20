@@ -876,7 +876,7 @@ struct CaptureSessionDetailView: View {
                 
                 var depthData: DepthData? = nil
                 if let depthPath = session.depthDataPath, let sessionID = session.id {
-                    depthData = try? await loadDepthData(sessionID: sessionID, depthPath: depthPath)
+                    depthData = try? await loadDepthData(sessionID: sessionID, depthPath: depthPath, imageSize: image.size)
                 }
                 
                 let detectionService = CoreMLWoundDetectionService()
@@ -974,7 +974,7 @@ struct CaptureSessionDetailView: View {
                 
                 var depthData: DepthData? = nil
                 if let depthPath = session.depthDataPath, let sessionID = session.id {
-                    depthData = try? await loadDepthData(sessionID: sessionID, depthPath: depthPath)
+                    depthData = try? await loadDepthData(sessionID: sessionID, depthPath: depthPath, imageSize: image.size)
                 }
                 
                 let measurementManager = MeasurementManager()
@@ -1175,7 +1175,8 @@ struct CaptureSessionDetailView: View {
         }
     }
     
-    private func loadDepthData(sessionID: UUID, depthPath: String) async throws -> DepthData {
+    /// Loads stored depth data aligned to the display-oriented photo of `imageSize`
+    private func loadDepthData(sessionID: UUID, depthPath: String, imageSize: CGSize) async throws -> DepthData {
         let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
         let fullDepthPath = documentsURL
             .appendingPathComponent("PediLens")
@@ -1188,6 +1189,8 @@ struct CaptureSessionDetailView: View {
         let depthDataEncoded = try await fileManager.loadPhoto(at: fullDepthPath)
         
         guard let depthDict = try JSONSerialization.jsonObject(with: depthDataEncoded) as? [String: Any],
+              // Older files hold raw sensor-oriented data (often disparity); never misread them as depth
+              depthDict["format"] as? String == DepthData.storageFormat,
               let width = depthDict["width"] as? Int,
               let height = depthDict["height"] as? Int,
               let depthBytesBase64 = depthDict["depthBytes"] as? String,
@@ -1213,9 +1216,17 @@ struct CaptureSessionDetailView: View {
         CVPixelBufferLockBaseAddress(depthMap, [])
         defer { CVPixelBufferUnlockBaseAddress(depthMap, []) }
         
-        if let baseAddress = CVPixelBufferGetBaseAddress(depthMap) {
-            _ = depthBytes.withUnsafeBytes { bytes in
-                memcpy(baseAddress, bytes.baseAddress!, min(depthBytes.count, bytesPerRow * height))
+        // Copy row by row: the new buffer's row padding can differ from the stored one
+        guard let baseAddress = CVPixelBufferGetBaseAddress(depthMap),
+              depthBytes.count >= bytesPerRow * height else {
+            throw NSError(domain: "DepthDataError", code: -3, userInfo: [NSLocalizedDescriptionKey: "Depth data is truncated"])
+        }
+        let destinationBytesPerRow = CVPixelBufferGetBytesPerRow(depthMap)
+        let rowLength = min(bytesPerRow, destinationBytesPerRow, width * MemoryLayout<Float32>.size)
+        depthBytes.withUnsafeBytes { bytes in
+            guard let source = bytes.baseAddress else { return }
+            for row in 0..<height {
+                memcpy(baseAddress + row * destinationBytesPerRow, source + row * bytesPerRow, rowLength)
             }
         }
         
@@ -1224,7 +1235,8 @@ struct CaptureSessionDetailView: View {
         return DepthData(
             depthMap: depthMap,
             calibrationData: nil,
-            accuracy: accuracy
+            accuracy: accuracy,
+            referenceImageSize: imageSize
         )
     }
     

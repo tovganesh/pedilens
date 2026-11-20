@@ -503,14 +503,24 @@ private class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate {
         self.photoData = photoData
         
         // Get depth data if available
-        if let depthDataMap = photo.depthData {
-            let depthPixelBuffer = depthDataMap.depthDataMap
-            let calibrationData = depthDataMap.cameraCalibrationData
-            let accuracy: DepthAccuracy = depthDataMap.depthDataAccuracy == .absolute ? .absolute : .relative
-            
+        if var avDepthData = photo.depthData {
+            // Cameras often deliver 16-bit disparity; measurements need metric depth in meters
+            if avDepthData.depthDataType != kCVPixelFormatType_DepthFloat32 {
+                avDepthData = avDepthData.converting(toDepthDataType: kCVPixelFormatType_DepthFloat32)
+            }
+
+            // Depth is delivered in sensor orientation, while the saved photo is displayed using
+            // its EXIF orientation. Rotate depth to match so boundary coordinates line up.
+            if let rawOrientation = photo.metadata[kCGImagePropertyOrientation as String] as? UInt32,
+               let orientation = CGImagePropertyOrientation(rawValue: rawOrientation) {
+                avDepthData = avDepthData.applyingExifOrientation(orientation)
+            }
+
+            let accuracy: DepthAccuracy = avDepthData.depthDataAccuracy == .absolute ? .absolute : .relative
+
             self.depthData = DepthData(
-                depthMap: depthPixelBuffer,
-                calibrationData: calibrationData,
+                depthMap: avDepthData.depthDataMap,
+                calibrationData: avDepthData.cameraCalibrationData,
                 accuracy: accuracy
             )
         }

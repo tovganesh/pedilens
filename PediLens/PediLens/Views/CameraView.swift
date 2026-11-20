@@ -328,6 +328,7 @@ struct CameraView: View {
         let depthBytes = Data(bytes: baseAddress, count: totalBytes)
         
         let depthDict: [String: Any] = [
+            "format": DepthData.storageFormat,
             "width": width,
             "height": height,
             "bytesPerRow": bytesPerRow,

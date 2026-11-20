@@ -668,4 +668,106 @@ class MeasurementManagerTests: XCTestCase {
             XCTAssertGreaterThan(volume.value, 0.0, "Volume should be greater than zero")
         }
     }
+
+    // MARK: - Depth Robustness Tests
+
+    /// Creates a DepthFloat32 buffer filled by `depthAt(x, y)` (meters)
+    private func makeDepthMap(width: Int, height: Int, format: OSType = kCVPixelFormatType_DepthFloat32, depthAt: (Int, Int) -> Float32) throws -> CVPixelBuffer {
+        var pixelBuffer: CVPixelBuffer?
+        let status = CVPixelBufferCreate(kCFAllocatorDefault, width, height, format, nil, &pixelBuffer)
+        XCTAssertEqual(status, kCVReturnSuccess)
+        let buffer = try XCTUnwrap(pixelBuffer)
+        if format == kCVPixelFormatType_DepthFloat32 {
+            CVPixelBufferLockBaseAddress(buffer, [])
+            let base = try XCTUnwrap(CVPixelBufferGetBaseAddress(buffer))
+            let bytesPerRow = CVPixelBufferGetBytesPerRow(buffer)
+            for y in 0..<height {
+                let row = base.advanced(by: y * bytesPerRow).assumingMemoryBound(to: Float32.self)
+                for x in 0..<width { row[x] = depthAt(x, y) }
+            }
+            CVPixelBufferUnlockBaseAddress(buffer, [])
+        }
+        return buffer
+    }
+
+    private func squareBoundary(from minValue: CGFloat, to maxValue: CGFloat) -> WoundBoundary {
+        let points = [
+            CGPoint(x: minValue, y: minValue), CGPoint(x: maxValue, y: minValue),
+            CGPoint(x: maxValue, y: maxValue), CGPoint(x: minValue, y: maxValue)
+        ]
+        return WoundBoundary(
+            points: points,
+            confidence: 0.95,
+            boundingBox: CGRect(x: minValue, y: minValue, width: maxValue - minValue, height: maxValue - minValue),
+            detectionMethod: .automatic(modelVersion: "1.0")
+        )
+    }
+
+    private func cavityDepthMap() throws -> CVPixelBuffer {
+        try makeDepthMap(width: 100, height: 100) { x, y in
+            (20...80).contains(x) && (20...80).contains(y) ? 0.305 : 0.300
+        }
+    }
+
+    func testDepth_RelativeAccuracy_IsNotReportedAsMillimeters() throws {
+        // Relative depth (e.g. dual-camera disparity) has no metric scale
+        let depthData = DepthData(depthMap: try cavityDepthMap(), accuracy: .relative)
+        let measurement = manager.calculateMeasurements(
+            boundary: squareBoundary(from: 10, to: 90),
+            calibration: MeasurementCalibration.estimated(pixelsPerMillimeter: 1.0),
+            depthData: depthData
+        )
+        XCTAssertNil(measurement.depth)
+        XCTAssertNil(measurement.volume)
+    }
+
+    func testDepth_UnconvertedPixelFormat_IsIgnored() throws {
+        // Raw 16-bit disparity must never be reinterpreted as Float32 meters
+        let disparity = try makeDepthMap(width: 100, height: 100, format: kCVPixelFormatType_DisparityFloat16) { _, _ in 0 }
+        let measurement = manager.calculateMeasurements(
+            boundary: squareBoundary(from: 10, to: 90),
+            calibration: MeasurementCalibration.estimated(pixelsPerMillimeter: 1.0),
+            depthData: DepthData(depthMap: disparity, accuracy: .absolute)
+        )
+        XCTAssertNil(measurement.depth)
+        XCTAssertNil(measurement.volume)
+    }
+
+    func testDepth_LowerResolutionDepthMap_MapsImageCoordinates() throws {
+        // Photo is 400×400 at 4 px/mm; the depth map covers the same view at 100×100.
+        // Boundary 40...360 (image) corresponds to 10...90 (depth); cavity is 20...80 (depth).
+        let depthData = DepthData(
+            depthMap: try cavityDepthMap(),
+            accuracy: .absolute,
+            referenceImageSize: CGSize(width: 400, height: 400)
+        )
+        let measurement = manager.calculateMeasurements(
+            boundary: squareBoundary(from: 40, to: 360),
+            calibration: MeasurementCalibration.estimated(pixelsPerMillimeter: 4.0),
+            depthData: depthData
+        )
+        let depth = try XCTUnwrap(measurement.depth)
+        XCTAssertEqual(depth.value, 5.0, accuracy: 0.1)
+    }
+
+    func testDepth_TiltedSkin_MeasuresRecessFromFittedPlane() throws {
+        // Skin slopes 0.2 mm per pixel across the frame (tilted camera / curved foot);
+        // the cavity sits 4 mm below that slope. A flat baseline would mis-measure it badly.
+        let depthMap = try makeDepthMap(width: 100, height: 100) { x, y in
+            let skin = 0.300 + 0.0002 * Float32(x)
+            return (20...80).contains(x) && (20...80).contains(y) ? skin + 0.004 : skin
+        }
+        let measurement = manager.calculateMeasurements(
+            boundary: squareBoundary(from: 10, to: 90),
+            calibration: MeasurementCalibration.estimated(pixelsPerMillimeter: 1.0),
+            depthData: DepthData(depthMap: depthMap, accuracy: .absolute)
+        )
+
+        let depth = try XCTUnwrap(measurement.depth)
+        XCTAssertEqual(depth.value, 4.0, accuracy: 0.1)
+
+        // Volume = area × mean recess: 6400 mm² × (4 mm × 3721 / 6400 sampled pixels) ≈ 14,884 mm³
+        let volume = try XCTUnwrap(measurement.volume)
+        XCTAssertEqual(volume.value, 14_884, accuracy: 14_884 * 0.03)
+    }
 }
