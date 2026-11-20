@@ -666,4 +666,24 @@ final class CoreMLWoundDetectionServiceTests: XCTestCase {
 
         try await assertDetectsEllipse(in: tagged, expectedBox: CGRect(x: 550, y: 300, width: 200, height: 300))
     }
+
+    func testDetection_SmallWound_IsRefinedToFineResolution() async throws {
+        // 120×80 wound in a 2400×1800 photo: the full-frame pass resolves it at ~9.4 px per
+        // mask pixel; the crop pass at ~0.75 px. Tolerances below need the refined outline.
+        let woundRect = CGRect(x: 1000, y: 900, width: 120, height: 80)
+        let image = makeRawWoundImage(size: CGSize(width: 2400, height: 1800), woundRect: woundRect)
+
+        let boundaries = try await CoreMLWoundDetectionService().detectMultipleWoundBoundaries(in: image, calibration: nil)
+        let boundary = try XCTUnwrap(boundaries.first)
+        XCTAssertEqual(boundaries.count, 1)
+
+        let box = boundary.boundingBox
+        XCTAssertEqual(Double(box.minX), 1000, accuracy: 3)
+        XCTAssertEqual(Double(box.minY), 900, accuracy: 3)
+        XCTAssertEqual(Double(box.maxX), 1120, accuracy: 3)
+        XCTAssertEqual(Double(box.maxY), 980, accuracy: 3)
+
+        let expectedArea = Double.pi * 60 * 40
+        XCTAssertEqual(polygonArea(boundary.points), expectedArea, accuracy: expectedArea * 0.03)
+    }
 }
