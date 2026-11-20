@@ -30,6 +30,25 @@ extension CGImagePropertyOrientation {
     }
 }
 
+extension UIImage {
+    /// Returns an image whose `cgImage` pixel layout matches its displayed orientation.
+    ///
+    /// Camera captures and library photos usually store sensor-oriented pixels plus an
+    /// EXIF orientation tag. Analysis reads `cgImage` directly, while boundaries and
+    /// calibration are expressed in `size` (display space), so the two must agree.
+    func orientationNormalized() -> UIImage {
+        guard imageOrientation != .up else { return self }
+
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = scale
+        format.opaque = true
+        let renderer = UIGraphicsImageRenderer(size: size, format: format)
+        return renderer.image { _ in
+            draw(in: CGRect(origin: .zero, size: size))
+        }
+    }
+}
+
 /// Service for detecting reference scale objects in images
 class ScaleDetectionService {
     
@@ -52,7 +71,11 @@ class ScaleDetectionService {
     func detectReferenceScale(in image: UIImage) async throws -> ReferenceScaleInfo? {
         print("🔍 Detecting reference scale in image...")
         
-        // 1. Try Calibration Card (ground truth calibration targets with QR/Barcode)
+        // Normalize once so every detector sees pixels in display orientation
+        let image = image.orientationNormalized()
+        
+        // Objects with manufactured, known dimensions are tried first, most reliable first.
+        // 1. Calibration Card (ground truth calibration targets with QR/Barcode)
         do {
             if let calibrationCard = try await detectCalibrationCard(in: image) {
                 print("✅ Detected calibration card")
@@ -62,7 +85,7 @@ class ScaleDetectionService {
             print("⚠️ Calibration card detection error: \(error.localizedDescription)")
         }
         
-        // 2. Try Credit Card (verified rectangular target with ISO 7810 aspect ratio 1.586)
+        // 2. Credit Card (verified rectangular target with ISO 7810 aspect ratio 1.586)
         do {
             if let creditCard = try await detectCreditCard(in: image) {
                 print("✅ Detected credit card")
@@ -72,19 +95,7 @@ class ScaleDetectionService {
             print("⚠️ Credit card detection error: \(error.localizedDescription)")
         }
         
-        // 3. Try Fuzzy Anatomical Scale Detection (Foot & Great Toe, Hand & Finger)
-        // IN CLINICAL FOOT ULCER PHOTOGRAPHY, PATIENT ANATOMY IS THE PRIMARY INHERENT FRAME OF REFERENCE!
-        // Automatically identifies greater toe or foot breadth and applies anatomical calibration.
-        do {
-            if let anatomical = try await detectAnatomicalScale(in: image) {
-                print("✅ Detected fuzzy anatomical scale (\(anatomical.objectType.displayName))")
-                return anatomical
-            }
-        } catch {
-            print("⚠️ Anatomical detection error: \(error.localizedDescription)")
-        }
-        
-        // 4. Try US Quarter detection (with strict verification: non-skin, non-wound, high circularity)
+        // 3. US Quarter (with strict verification: non-skin, non-wound, high circularity)
         do {
             if let quarter = try await detectUSQuarter(in: image) {
                 print("✅ Detected verified US quarter")
@@ -94,7 +105,7 @@ class ScaleDetectionService {
             print("⚠️ Quarter detection error: \(error.localizedDescription)")
         }
         
-        // 5. Try Indian 1 Rupee Coin detection (with strict verification)
+        // 4. Indian 1 Rupee Coin (with strict verification)
         do {
             if let rupeeCoin = try await detectINROneRupee(in: image) {
                 print("✅ Detected verified INR 1 Rupee coin")
@@ -104,14 +115,38 @@ class ScaleDetectionService {
             print("⚠️ INR coin detection error: \(error.localizedDescription)")
         }
         
+        // 5. Last resort: fuzzy anatomical scale (Foot & Great Toe, Hand & Finger).
+        // Relies on population-average dimensions, so it must never pre-empt a real
+        // reference object and is reported as low accuracy.
+        do {
+            if let anatomical = try await detectAnatomicalScale(in: image) {
+                print("⚠️ Using fuzzy anatomical scale (\(anatomical.objectType.displayName)) - low accuracy")
+                return anatomical
+            }
+        } catch {
+            print("⚠️ Anatomical detection error: \(error.localizedDescription)")
+        }
+        
         print("ℹ️ No reference scale detected")
         return nil
+    }
+    
+    /// Converts a Vision normalized rect (lower-left origin) to a top-left-origin pixel rect,
+    /// matching UIKit image coordinates used by boundaries and overlays.
+    private static func topLeftPixelRect(fromNormalized rect: CGRect, width: CGFloat, height: CGFloat) -> CGRect {
+        CGRect(
+            x: rect.minX * width,
+            y: (1.0 - rect.maxY) * height,
+            width: rect.width * width,
+            height: rect.height * height
+        )
     }
     
     // MARK: - Detection Methods
     
     /// Detects credit card in image (standard dimensions: 85.6mm × 53.98mm)
     func detectCreditCard(in image: UIImage) async throws -> ReferenceScaleInfo? {
+        let image = image.orientationNormalized()
         guard let cgImage = image.cgImage else { return nil }
         
         let orientation = CGImagePropertyOrientation(image.imageOrientation)
@@ -126,40 +161,40 @@ class ScaleDetectionService {
         let tolerance: CGFloat = 0.18
         
         for rect in rectangles {
-            // Convert normalized coordinates to pixel coordinates
-            let pixelBox = VNImageRectForNormalizedRect(
-                rect.boundingBox,
-                Int(pixelWidth),
-                Int(pixelHeight)
-            )
-            
-            guard pixelBox.width > 0 && pixelBox.height > 0 else { continue }
-            let aspectRatio = pixelBox.width / pixelBox.height
-            
-            let isLandscape = abs(aspectRatio - creditCardAspectRatio) / creditCardAspectRatio < tolerance
-            let isPortrait = abs(aspectRatio - (1.0 / creditCardAspectRatio)) / (1.0 / creditCardAspectRatio) < tolerance
-            
-            if isLandscape || isPortrait {
-                let scale = image.scale > 0 ? image.scale : 1.0
-                let pointsBox = CGRect(
-                    x: pixelBox.origin.x / scale,
-                    y: pixelBox.origin.y / scale,
-                    width: pixelBox.size.width / scale,
-                    height: pixelBox.size.height / scale
-                )
-                
-                let longDimension = max(pointsBox.width, pointsBox.height)
-                let shortDimension = min(pointsBox.width, pointsBox.height)
-                
-                return ReferenceScaleInfo(
-                    objectType: .creditCard,
-                    boundingBox: pointsBox,
-                    pixelWidth: longDimension,
-                    pixelHeight: shortDimension,
-                    confidence: rect.confidence,
-                    detectedDimensions: CGSize(width: 85.6, height: 53.98)
-                )
+            // Measure side lengths from the detected corners rather than the axis-aligned
+            // bounding box, which overestimates a card that is rotated in the frame.
+            func pixel(_ p: CGPoint) -> CGPoint {
+                CGPoint(x: p.x * pixelWidth, y: p.y * pixelHeight)
             }
+            let tl = pixel(rect.topLeft), tr = pixel(rect.topRight)
+            let bl = pixel(rect.bottomLeft), br = pixel(rect.bottomRight)
+            let horizontalSide = (hypot(tr.x - tl.x, tr.y - tl.y) + hypot(br.x - bl.x, br.y - bl.y)) / 2.0
+            let verticalSide = (hypot(bl.x - tl.x, bl.y - tl.y) + hypot(br.x - tr.x, br.y - tr.y)) / 2.0
+
+            let longSide = max(horizontalSide, verticalSide)
+            let shortSide = min(horizontalSide, verticalSide)
+            guard shortSide > 0 else { continue }
+
+            let aspectRatio = longSide / shortSide
+            guard abs(aspectRatio - creditCardAspectRatio) / creditCardAspectRatio < tolerance else { continue }
+
+            let scale = image.scale > 0 ? image.scale : 1.0
+            let pixelBox = Self.topLeftPixelRect(fromNormalized: rect.boundingBox, width: pixelWidth, height: pixelHeight)
+            let pointsBox = CGRect(
+                x: pixelBox.origin.x / scale,
+                y: pixelBox.origin.y / scale,
+                width: pixelBox.size.width / scale,
+                height: pixelBox.size.height / scale
+            )
+
+            return ReferenceScaleInfo(
+                objectType: .creditCard,
+                boundingBox: pointsBox,
+                pixelWidth: longSide / scale,
+                pixelHeight: shortSide / scale,
+                confidence: rect.confidence,
+                detectedDimensions: CGSize(width: 85.6, height: 53.98)
+            )
         }
         
         return nil
@@ -168,6 +203,7 @@ class ScaleDetectionService {
     /// Detects US quarter in image (standard diameter: 24.26mm)
     /// Enforces non-skin and non-wound tissue verification to prevent ulcers from being mistaken for coins.
     func detectUSQuarter(in image: UIImage) async throws -> ReferenceScaleInfo? {
+        let image = image.orientationNormalized()
         guard let cgImage = image.cgImage else { return nil }
         
         let orientation = CGImagePropertyOrientation(image.imageOrientation)
@@ -195,7 +231,7 @@ class ScaleDetectionService {
         let scale = image.scale > 0 ? image.scale : 1.0
         let pointsBox = CGRect(
             x: bestCircle.boundingBox.origin.x / scale,
-            y: bestCircle.boundingBox.origin.y / scale,
+            y: (pixelHeight - bestCircle.boundingBox.maxY) / scale,
             width: bestCircle.boundingBox.size.width / scale,
             height: bestCircle.boundingBox.size.height / scale
         )
@@ -213,6 +249,7 @@ class ScaleDetectionService {
     
     /// Detects calibration card in image
     func detectCalibrationCard(in image: UIImage) async throws -> ReferenceScaleInfo? {
+        let image = image.orientationNormalized()
         guard let cgImage = image.cgImage else { return nil }
         
         let orientation = CGImagePropertyOrientation(image.imageOrientation)
@@ -225,11 +262,7 @@ class ScaleDetectionService {
         for barcode in barcodes {
             if let payloadString = barcode.payloadStringValue,
                payloadString.contains("PediLens") {
-                let pixelBox = VNImageRectForNormalizedRect(
-                    barcode.boundingBox,
-                    Int(pixelWidth),
-                    Int(pixelHeight)
-                )
+                let pixelBox = Self.topLeftPixelRect(fromNormalized: barcode.boundingBox, width: pixelWidth, height: pixelHeight)
                 
                 let scale = image.scale > 0 ? image.scale : 1.0
                 let pointsBox = CGRect(
@@ -255,6 +288,7 @@ class ScaleDetectionService {
     
     /// Detects INR 1 Rupee coin in image (standard diameter: 20.00mm)
     func detectINROneRupee(in image: UIImage) async throws -> ReferenceScaleInfo? {
+        let image = image.orientationNormalized()
         guard let cgImage = image.cgImage else { return nil }
         
         let orientation = CGImagePropertyOrientation(image.imageOrientation)
@@ -280,7 +314,7 @@ class ScaleDetectionService {
         let scale = image.scale > 0 ? image.scale : 1.0
         let pointsBox = CGRect(
             x: bestCircle.boundingBox.origin.x / scale,
-            y: bestCircle.boundingBox.origin.y / scale,
+            y: (pixelHeight - bestCircle.boundingBox.maxY) / scale,
             width: bestCircle.boundingBox.size.width / scale,
             height: bestCircle.boundingBox.size.height / scale
         )
@@ -313,6 +347,7 @@ class ScaleDetectionService {
     
     /// Detects hand or finger in image using Vision human hand pose
     func detectHandOrFinger(in image: UIImage) async throws -> ReferenceScaleInfo? {
+        let image = image.orientationNormalized()
         guard let cgImage = image.cgImage else { return nil }
         let orientation = CGImagePropertyOrientation(image.imageOrientation)
         let pixelWidth = CGFloat(cgImage.width)
@@ -365,6 +400,7 @@ class ScaleDetectionService {
     
     /// Detects human foot anatomy and automatically identifies the Great Toe (Hallux) or Forefoot breadth
     func detectFootAnatomy(in image: UIImage) async throws -> ReferenceScaleInfo? {
+        let image = image.orientationNormalized()
         guard let cgImage = image.cgImage else { return nil }
         let orientation = CGImagePropertyOrientation(image.imageOrientation)
         let pixelWidth = CGFloat(cgImage.width)
@@ -409,8 +445,8 @@ class ScaleDetectionService {
             
             guard let normBox = detectedBox else { return nil }
             
-            // Convert normalized box to pixel coordinates
-            let pixelBox = VNImageRectForNormalizedRect(normBox, Int(pixelWidth), Int(pixelHeight))
+            // Convert normalized box to top-left-origin pixel coordinates
+            let pixelBox = Self.topLeftPixelRect(fromNormalized: normBox, width: pixelWidth, height: pixelHeight)
             guard pixelBox.width > 40 && pixelBox.height > 40 else { return nil }
             
             let scale = image.scale > 0 ? image.scale : 1.0
@@ -419,7 +455,7 @@ class ScaleDetectionService {
             // The Great Toe is the widest distal digit lobe (standard adult breadth: 26.0mm / 2.6cm).
             // In foot photography, it occupies approximately 20% to 35% of the transverse forefoot width.
             if let pixelBuffer = detectedPixelBuffer,
-               let toeWidthInPixels = Self.detectGreatToeWidth(from: pixelBuffer, footBox: pixelBox) {
+               let toeWidthInPixels = Self.detectGreatToeWidth(from: pixelBuffer, normalizedFootBox: normBox, imagePixelSize: CGSize(width: pixelWidth, height: pixelHeight)) {
                 
                 let toePoints = toeWidthInPixels / scale
                 let halluxBox = CGRect(
@@ -464,7 +500,12 @@ class ScaleDetectionService {
     }
     
     /// Analyzes the distal margin of the foot mask to isolate the Great Toe (Hallux) breadth
-    private static func detectGreatToeWidth(from pixelBuffer: CVPixelBuffer, footBox: CGRect) -> CGFloat? {
+    /// - Parameters:
+    ///   - pixelBuffer: Person segmentation mask (lower resolution than the photo)
+    ///   - normalizedFootBox: Foot bounding box in Vision normalized coordinates (lower-left origin)
+    ///   - imagePixelSize: Pixel size of the analyzed photo
+    /// - Returns: Toe breadth in photo pixels, if a plausible toe lobe is found
+    private static func detectGreatToeWidth(from pixelBuffer: CVPixelBuffer, normalizedFootBox: CGRect, imagePixelSize: CGSize) -> CGFloat? {
         CVPixelBufferLockBaseAddress(pixelBuffer, .readOnly)
         defer { CVPixelBufferUnlockBaseAddress(pixelBuffer, .readOnly) }
         
@@ -472,16 +513,23 @@ class ScaleDetectionService {
         let height = CVPixelBufferGetHeight(pixelBuffer)
         let bytesPerRow = CVPixelBufferGetBytesPerRow(pixelBuffer)
         
-        guard let baseAddress = CVPixelBufferGetBaseAddress(pixelBuffer) else { return nil }
+        guard width > 0, height > 0, let baseAddress = CVPixelBufferGetBaseAddress(pixelBuffer) else { return nil }
         
-        let forefootBreadth = min(footBox.width, footBox.height)
+        // Work in mask pixels; the mask resolution differs from the photo's
+        let maskBox = topLeftPixelRect(fromNormalized: normalizedFootBox, width: CGFloat(width), height: CGFloat(height))
+        let maskToImageX = imagePixelSize.width / CGFloat(width)
+        let maskToImageY = imagePixelSize.height / CGFloat(height)
+        
+        let forefootBreadth = min(maskBox.width * maskToImageX, maskBox.height * maskToImageY)
         guard forefootBreadth > 50 else { return nil }
         
-        // Scan the distal 25% margin of the segmented foot where the toe digits reside
-        // In Vision orientation, Y=0 is top of image in pixel buffer coordinates
-        let scanStart = max(0, Int(footBox.minY))
-        let scanEnd = min(height - 1, Int(footBox.minY + footBox.height * 0.30))
-        guard scanEnd > scanStart else { return nil }
+        // Scan the distal 30% margin of the segmented foot where the toe digits reside
+        // (mask rows are top-origin; assumes toes point toward the top of the frame)
+        let scanStart = max(0, Int(maskBox.minY))
+        let scanEnd = min(height - 1, Int(maskBox.minY + maskBox.height * 0.30))
+        let columnStart = max(0, Int(maskBox.minX))
+        let columnEnd = min(width, Int(maskBox.maxX.rounded(.up)))
+        guard scanEnd > scanStart, columnEnd > columnStart else { return nil }
         
         var maxLobeWidth = 0
         
@@ -489,24 +537,20 @@ class ScaleDetectionService {
             let rowOffset = y * bytesPerRow
             var currentRun = 0
             
-            for x in 0..<width {
+            for x in columnStart..<columnEnd {
                 let pixel = baseAddress.load(fromByteOffset: rowOffset + x, as: UInt8.self)
                 if pixel > 64 {
                     currentRun += 1
                 } else {
-                    if currentRun > maxLobeWidth {
-                        maxLobeWidth = currentRun
-                    }
+                    maxLobeWidth = max(maxLobeWidth, currentRun)
                     currentRun = 0
                 }
             }
-            if currentRun > maxLobeWidth {
-                maxLobeWidth = currentRun
-            }
+            maxLobeWidth = max(maxLobeWidth, currentRun)
         }
         
         // Great toe breadth is typically 20% to 35% of the total forefoot breadth
-        let candidateWidth = CGFloat(maxLobeWidth)
+        let candidateWidth = CGFloat(maxLobeWidth) * maskToImageX
         let ratio = candidateWidth / forefootBreadth
         if ratio >= 0.18 && ratio <= 0.38 && candidateWidth >= 15.0 {
             return candidateWidth

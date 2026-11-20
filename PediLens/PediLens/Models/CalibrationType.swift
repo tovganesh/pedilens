@@ -44,13 +44,15 @@ enum CalibrationType: Codable, Equatable {
         switch self {
         case .lidar:
             return .high
-        case .referenceScale:
-            return .medium
+        case .referenceScale(let type, _):
+            // Anatomical references assume population-average dimensions; individual
+            // variation (±15-25%) makes them no better than a rough estimate.
+            return type.isAnatomical ? .low : .medium
         case .estimated:
             return .low
         }
     }
-    
+
     var displayName: String {
         switch self {
         case .lidar(let depth, _):

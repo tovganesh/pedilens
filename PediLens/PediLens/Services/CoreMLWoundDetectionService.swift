@@ -85,7 +85,7 @@ class CoreMLWoundDetectionService: WoundDetectionServiceProtocol {
 
         // Boundaries are expressed in `image.size` (display orientation), but `cgImage`
         // holds the raw sensor-oriented pixels. Normalize so both agree before analysis.
-        let orientedImage = Self.orientationNormalized(image)
+        let orientedImage = image.orientationNormalized()
         guard let cgImage = orientedImage.cgImage else {
             throw WoundDetectionError.invalidImage
         }
@@ -516,25 +516,6 @@ class CoreMLWoundDetectionService: WoundDetectionServiceProtocol {
             maxY = max(maxY, p.y)
         }
         return CGRect(x: minX, y: minY, width: max(1.0, maxX - minX), height: max(1.0, maxY - minY))
-    }
-    
-    // MARK: - Orientation Normalization
-    
-    /// Returns an image whose `cgImage` pixel layout matches its displayed orientation.
-    ///
-    /// Camera captures and library photos usually store sensor-oriented pixels plus an
-    /// EXIF orientation tag. Analysis reads `cgImage` directly, while boundaries are
-    /// expressed in `image.size` (display space), so the two must agree.
-    static func orientationNormalized(_ image: UIImage) -> UIImage {
-        guard image.imageOrientation != .up else { return image }
-        
-        let format = UIGraphicsImageRendererFormat()
-        format.scale = image.scale
-        format.opaque = true
-        let renderer = UIGraphicsImageRenderer(size: image.size, format: format)
-        return renderer.image { _ in
-            image.draw(in: CGRect(origin: .zero, size: image.size))
-        }
     }
     
     // MARK: - Vision & CoreML Helpers

@@ -175,7 +175,7 @@ class ManualScaleCalibrationTests: XCTestCase {
         )
         
         XCTAssertEqual(calibration.pixelsPerMillimeter, 5.0, accuracy: 0.001)
-        XCTAssertEqual(calibration.accuracy, .medium)
+        XCTAssertEqual(calibration.accuracy, .low)
         XCTAssertEqual(calibration.calibrationType.displayName, "Fuzzy Scale (Adult Forefoot (~9.8cm))")
         XCTAssertEqual(calibration.metadata?["isFuzzyAnatomical"], "true")
         XCTAssertEqual(calibration.metadata?["calibrationMethod"], "fuzzyAnatomical")
