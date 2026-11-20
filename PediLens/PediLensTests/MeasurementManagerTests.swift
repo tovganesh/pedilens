@@ -770,4 +770,119 @@ class MeasurementManagerTests: XCTestCase {
         let volume = try XCTUnwrap(measurement.volume)
         XCTAssertEqual(volume.value, 14_884, accuracy: 14_884 * 0.03)
     }
+
+    // MARK: - Depth-Based Metric Scale & Tilt Tests
+
+    /// 640×480 pinhole camera, f = 500 px, principal point at the image center
+    private let testIntrinsics = CameraIntrinsics(fx: 500, fy: 500, cx: 320, cy: 240, referenceSize: CGSize(width: 640, height: 480))
+
+    /// Depth map (320×240, half the image resolution) of the plane Z = c + a·X in camera space
+    private func planeDepthMap(c: Double, a: Double) throws -> CVPixelBuffer {
+        try makeDepthMap(width: 320, height: 240) { x, _ in
+            // Ray through the depth pixel center, in image pixels
+            let u = (Double(x) + 0.5) * 2.0
+            let rayX = (u - self.testIntrinsics.cx) / self.testIntrinsics.fx
+            return Float32(c / (1.0 - a * rayX))
+        }
+    }
+
+    /// Image outline of a square of `sideMM` lying on the plane Z = c + a·X, centered on the optical axis
+    private func projectedSquare(sideMM: Double, c: Double, a: Double) -> [CGPoint] {
+        let tilt = atan(a)
+        let half = sideMM / 2000.0
+        // In-plane axes: e1 runs along the tilt, e2 along camera Y
+        let corners = [(-half, -half), (half, -half), (half, half), (-half, half)]
+        return corners.map { s, t in
+            let X = s * cos(tilt)
+            let Y = t
+            let Z = c + s * sin(tilt)
+            return CGPoint(x: testIntrinsics.fx * X / Z + testIntrinsics.cx,
+                           y: testIntrinsics.fy * Y / Z + testIntrinsics.cy)
+        }
+    }
+
+    private func depthData(_ map: CVPixelBuffer) -> DepthData {
+        DepthData(depthMap: map, accuracy: .absolute,
+                  referenceImageSize: CGSize(width: 640, height: 480),
+                  intrinsics: testIntrinsics)
+    }
+
+    func testIntrinsics_Oriented_MapsPrincipalPointLikePixels() throws {
+        // Sensor-oriented 4000×3000 intrinsics with an off-center principal point
+        let raw = CameraIntrinsics(fx: 3000, fy: 3010, cx: 2010, cy: 1480, referenceSize: CGSize(width: 4000, height: 3000))
+
+        // .right displays raw (x, y) at (H - y, x)
+        let right = try XCTUnwrap(raw.oriented(.right))
+        XCTAssertEqual(right.referenceSize, CGSize(width: 3000, height: 4000))
+        XCTAssertEqual(right.cx, 3000 - 1480)
+        XCTAssertEqual(right.cy, 2010)
+        XCTAssertEqual(right.fx, 3010)
+        XCTAssertEqual(right.fy, 3000)
+
+        // .left displays raw (x, y) at (y, W - x)
+        let left = try XCTUnwrap(raw.oriented(.left))
+        XCTAssertEqual(left.cx, 1480)
+        XCTAssertEqual(left.cy, 4000 - 2010)
+
+        XCTAssertEqual(raw.oriented(.up), raw)
+        XCTAssertNil(raw.oriented(.upMirrored))
+    }
+
+    func testDepthCalibration_FlatSkin_ScaleIsFocalLengthOverDistance() throws {
+        let square = projectedSquare(sideMM: 20, c: 0.3, a: 0)
+        let calibration = try XCTUnwrap(manager.depthCalibration(for: square, depthData: depthData(try planeDepthMap(c: 0.3, a: 0))))
+
+        // 500 px / 300 mm
+        XCTAssertEqual(calibration.pixelsPerMillimeter, 500.0 / 300.0, accuracy: 0.01)
+        XCTAssertEqual(calibration.accuracy, .high)
+        XCTAssertEqual(Double(try XCTUnwrap(calibration.captureDistance)), 0.3, accuracy: 0.001)
+        XCTAssertEqual(try XCTUnwrap(calibration.surfaceTilt).angleDegrees, 0, accuracy: 0.5)
+
+        let measurement = manager.calculateMeasurements(boundary: WoundBoundary(points: square, confidence: 1, boundingBox: .zero, detectionMethod: .manual), calibration: calibration, depthData: nil)
+        XCTAssertEqual(measurement.length.value, 20, accuracy: 0.2)
+        XCTAssertEqual(measurement.area.value, 400, accuracy: 4)
+    }
+
+    func testDepthCalibration_TiltedSkin_CorrectsForeshortening() throws {
+        // Skin tilted 30° about the camera's vertical axis
+        let slope = tan(30.0 * .pi / 180.0)
+        let square = projectedSquare(sideMM: 20, c: 0.3, a: slope)
+        let calibration = try XCTUnwrap(manager.depthCalibration(for: square, depthData: depthData(try planeDepthMap(c: 0.3, a: slope))))
+
+        let tilt = try XCTUnwrap(calibration.surfaceTilt)
+        XCTAssertEqual(tilt.angleDegrees, 30, accuracy: 1)
+        XCTAssertEqual(abs(tilt.directionX), 1, accuracy: 0.02)
+
+        let boundary = WoundBoundary(points: square, confidence: 1, boundingBox: .zero, detectionMethod: .manual)
+        let corrected = manager.calculateMeasurements(boundary: boundary, calibration: calibration, depthData: nil)
+        XCTAssertEqual(corrected.length.value, 20, accuracy: 0.6)
+        XCTAssertEqual(corrected.width.value, 20, accuracy: 0.6)
+        XCTAssertEqual(corrected.area.value, 400, accuracy: 400 * 0.03)
+
+        // Without tilt correction the square reads ~13% small (cos 30° ≈ 0.87)
+        let uncorrected = MeasurementCalibration(pixelsPerMillimeter: calibration.pixelsPerMillimeter, calibrationType: .estimated)
+        let foreshortened = manager.calculateMeasurements(boundary: boundary, calibration: uncorrected, depthData: nil)
+        XCTAssertLessThan(foreshortened.area.value, 400 * 0.9)
+    }
+
+    func testDepthCalibration_RelativeDepthOrMissingIntrinsics_ReturnsNil() throws {
+        let map = try planeDepthMap(c: 0.3, a: 0)
+        let square = projectedSquare(sideMM: 20, c: 0.3, a: 0)
+
+        let relative = DepthData(depthMap: map, accuracy: .relative, referenceImageSize: CGSize(width: 640, height: 480), intrinsics: testIntrinsics)
+        XCTAssertNil(manager.depthCalibration(for: square, depthData: relative))
+
+        let noIntrinsics = DepthData(depthMap: map, accuracy: .absolute, referenceImageSize: CGSize(width: 640, height: 480))
+        XCTAssertNil(manager.depthCalibration(for: square, depthData: noIntrinsics))
+    }
+
+    func testCalibration_SurfaceTilt_SurvivesCodableRoundTrip() throws {
+        let calibration = MeasurementCalibration(
+            pixelsPerMillimeter: 1.6,
+            calibrationType: .lidar(depth: 0.3, confidence: 0.9),
+            surfaceTilt: SurfaceTilt(angleDegrees: 25, directionX: 0.6, directionY: 0.8)
+        )
+        let decoded = try JSONDecoder().decode(MeasurementCalibration.self, from: JSONEncoder().encode(calibration))
+        XCTAssertEqual(decoded.surfaceTilt, calibration.surfaceTilt)
+    }
 }

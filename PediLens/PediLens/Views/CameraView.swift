@@ -327,7 +327,7 @@ struct CameraView: View {
         let totalBytes = bytesPerRow * height
         let depthBytes = Data(bytes: baseAddress, count: totalBytes)
         
-        let depthDict: [String: Any] = [
+        var depthDict: [String: Any] = [
             "format": DepthData.storageFormat,
             "width": width,
             "height": height,
@@ -335,6 +335,17 @@ struct CameraView: View {
             "depthBytes": depthBytes.base64EncodedString(),
             "accuracy": depthData.accuracy == .absolute ? "absolute" : "relative"
         ]
+        
+        if let intrinsics = depthData.intrinsics {
+            depthDict["intrinsics"] = [
+                "fx": intrinsics.fx,
+                "fy": intrinsics.fy,
+                "cx": intrinsics.cx,
+                "cy": intrinsics.cy,
+                "referenceWidth": Double(intrinsics.referenceSize.width),
+                "referenceHeight": Double(intrinsics.referenceSize.height)
+            ]
+        }
         
         return try JSONSerialization.data(withJSONObject: depthDict)
     }

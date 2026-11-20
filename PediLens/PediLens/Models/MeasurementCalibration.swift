@@ -37,6 +37,10 @@ struct MeasurementCalibration: Codable, Equatable {
     /// Depth calibration data (if available)
     let depthCalibration: DepthCalibration?
     
+    /// Tilt of the skin surface relative to the image plane, measured from depth (if available).
+    /// Used to undo foreshortening so measurements reflect the true skin surface.
+    let surfaceTilt: SurfaceTilt?
+    
     /// Convenience: pixels per centimeter
     var pixelsPerCentimeter: Double {
         return pixelsPerMillimeter * 10.0
@@ -59,7 +63,8 @@ struct MeasurementCalibration: Codable, Equatable {
          captureAngle: Float? = nil,
          metadata: [String: String]? = nil,
          referenceObject: ReferenceObject? = nil,
-         depthCalibration: DepthCalibration? = nil) {
+         depthCalibration: DepthCalibration? = nil,
+         surfaceTilt: SurfaceTilt? = nil) {
         self.pixelsPerMillimeter = pixelsPerMillimeter
         self.calibrationType = calibrationType
         self.accuracy = calibrationType.accuracy
@@ -69,6 +74,7 @@ struct MeasurementCalibration: Codable, Equatable {
         self.metadata = metadata
         self.referenceObject = referenceObject
         self.depthCalibration = depthCalibration
+        self.surfaceTilt = surfaceTilt
     }
     
     /// Creates calibration from LiDAR depth info
@@ -229,6 +235,7 @@ struct MeasurementCalibration: Codable, Equatable {
         self.captureAngle = nil
         self.referenceObject = referenceObject
         self.depthCalibration = depthCalibration
+        self.surfaceTilt = nil
         
         // Convert legacy reference object to new calibration type
         if let refObj = referenceObject {
@@ -269,6 +276,7 @@ struct MeasurementCalibration: Codable, Equatable {
         case metadata
         case referenceObject
         case depthCalibration
+        case surfaceTilt
     }
     
     init(from decoder: Decoder) throws {
@@ -281,6 +289,7 @@ struct MeasurementCalibration: Codable, Equatable {
         let refObj = try container.decodeIfPresent(ReferenceObject.self, forKey: .referenceObject)
         referenceObject = refObj
         depthCalibration = try container.decodeIfPresent(DepthCalibration.self, forKey: .depthCalibration)
+        surfaceTilt = try container.decodeIfPresent(SurfaceTilt.self, forKey: .surfaceTilt)
         
         if let type = try container.decodeIfPresent(CalibrationType.self, forKey: .calibrationType) {
             calibrationType = type
@@ -306,6 +315,20 @@ struct MeasurementCalibration: Codable, Equatable {
             accuracy = .low
         }
     }
+}
+
+/// Orientation of the skin surface relative to the image plane
+struct SurfaceTilt: Codable, Equatable {
+    /// Angle between the surface normal and the camera axis, in degrees
+    let angleDegrees: Double
+    
+    /// Unit direction in image coordinates along which the surface recedes from the camera
+    /// (the foreshortened direction)
+    let directionX: Double
+    let directionY: Double
+    
+    /// Tilt beyond which measurements are unreliable even after correction
+    static let warningThresholdDegrees = 20.0
 }
 
 // MARK: - Legacy Support

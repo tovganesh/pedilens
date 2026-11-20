@@ -59,17 +59,20 @@ class MeasurementManager: MeasurementManagerProtocol {
         calibration: MeasurementCalibration,
         depthData: DepthData?
     ) -> WoundMeasurement {
+        // Undo surface-tilt foreshortening for planar metrics
+        let planarPoints = rectifiedPoints(boundary.points, for: calibration)
+        
         // Calculate area using Shoelace formula
-        let areaPixels = calculateAreaUsingShoelaceFormula(points: boundary.points)
+        let areaPixels = calculateAreaUsingShoelaceFormula(points: planarPoints)
         let areaMM2 = areaPixels / (calibration.pixelsPerMillimeter * calibration.pixelsPerMillimeter)
         
         // Calculate minimum bounding rectangle for length and width
-        let (lengthPixels, widthPixels) = calculateMinimumBoundingRectangle(points: boundary.points)
+        let (lengthPixels, widthPixels) = calculateMinimumBoundingRectangle(points: planarPoints)
         let lengthMM = lengthPixels / calibration.pixelsPerMillimeter
         let widthMM = widthPixels / calibration.pixelsPerMillimeter
         
         // Calculate perimeter from boundary points
-        let perimeterPixels = calculatePerimeter(points: boundary.points)
+        let perimeterPixels = calculatePerimeter(points: planarPoints)
         let perimeterMM = perimeterPixels / calibration.pixelsPerMillimeter
         
         // Calculate depth and volume if depth data is available
@@ -107,14 +110,16 @@ class MeasurementManager: MeasurementManagerProtocol {
         depthData: DepthData?,
         existing: AnnotatedWound? = nil
     ) -> AnnotatedWound {
-        let areaPixels = calculateAreaUsingShoelaceFormula(points: boundary.points)
+        let planarPoints = rectifiedPoints(boundary.points, for: calibration)
+        
+        let areaPixels = calculateAreaUsingShoelaceFormula(points: planarPoints)
         let areaMM2 = areaPixels / (calibration.pixelsPerMillimeter * calibration.pixelsPerMillimeter)
         
-        let (lengthPixels, widthPixels) = calculateMinimumBoundingRectangle(points: boundary.points)
+        let (lengthPixels, widthPixels) = calculateMinimumBoundingRectangle(points: planarPoints)
         let lengthMM = lengthPixels / calibration.pixelsPerMillimeter
         let widthMM = widthPixels / calibration.pixelsPerMillimeter
         
-        let perimeterPixels = calculatePerimeter(points: boundary.points)
+        let perimeterPixels = calculatePerimeter(points: planarPoints)
         let perimeterMM = perimeterPixels / calibration.pixelsPerMillimeter
         
         var depthMM: Double = 0.0
@@ -185,6 +190,158 @@ class MeasurementManager: MeasurementManagerProtocol {
             calibrationDate: Date(),
             depthCalibration: nil
         )
+    }
+    
+    /// Derives a metric calibration from absolute depth and camera intrinsics, without any
+    /// reference object.
+    ///
+    /// Fits a plane to the skin around the wound in camera space (meters), then:
+    /// - scale: image pixels per mm at the wound = focal length (px) / distance to the skin plane (mm)
+    /// - tilt: angle between the plane normal and the camera axis, plus its image direction
+    /// - Parameters:
+    ///   - points: Wound outline in image coordinates (display orientation)
+    ///   - depthData: Absolute depth aligned to the image, with intrinsics and reference image size
+    /// - Returns: Calibration, or nil when depth is relative, sparse, or lacks intrinsics
+    func depthCalibration(for points: [CGPoint], depthData: DepthData) -> MeasurementCalibration? {
+        guard depthData.accuracy == .absolute,
+              points.count >= 3,
+              let imageSize = depthData.referenceImageSize, imageSize.width > 0, imageSize.height > 0,
+              let intrinsics = depthData.intrinsics?.scaled(to: imageSize),
+              intrinsics.fx > 0, intrinsics.fy > 0 else {
+            return nil
+        }
+        
+        let depthMap = depthData.depthMap
+        guard CVPixelBufferGetPixelFormatType(depthMap) == kCVPixelFormatType_DepthFloat32 else { return nil }
+        
+        CVPixelBufferLockBaseAddress(depthMap, .readOnly)
+        defer { CVPixelBufferUnlockBaseAddress(depthMap, .readOnly) }
+        
+        let width = CVPixelBufferGetWidth(depthMap)
+        let height = CVPixelBufferGetHeight(depthMap)
+        guard width > 0, height > 0, let baseAddress = CVPixelBufferGetBaseAddress(depthMap) else { return nil }
+        let floatBuffer = baseAddress.assumingMemoryBound(to: Float32.self)
+        let floatsPerRow = CVPixelBufferGetBytesPerRow(depthMap) / MemoryLayout<Float32>.size
+        
+        let scaleX = Double(width) / Double(imageSize.width)
+        let scaleY = Double(height) / Double(imageSize.height)
+        let polygon = points.map { CGPoint(x: Double($0.x) * scaleX, y: Double($0.y) * scaleY) }
+        
+        func depth(atX x: Int, y: Int) -> Double? {
+            let z = Double(floatBuffer[y * floatsPerRow + x])
+            return z > 0 && z.isFinite ? z : nil
+        }
+        
+        let xs = polygon.map { Double($0.x) }
+        let ys = polygon.map { Double($0.y) }
+        guard let polyMinX = xs.min(), let polyMaxX = xs.max(),
+              let polyMinY = ys.min(), let polyMaxY = ys.max() else { return nil }
+        
+        // Rough distance from the wound region, to size the periwound band in pixels
+        let regionMinX = max(0, Int(polyMinX)), regionMaxX = min(width - 1, Int(polyMaxX))
+        let regionMinY = max(0, Int(polyMinY)), regionMaxY = min(height - 1, Int(polyMaxY))
+        guard regionMinX <= regionMaxX, regionMinY <= regionMaxY else { return nil }
+        var regionDepths: [Double] = []
+        for y in regionMinY...regionMaxY {
+            for x in regionMinX...regionMaxX {
+                if let z = depth(atX: x, y: y) { regionDepths.append(z) }
+            }
+        }
+        guard !regionDepths.isEmpty else { return nil }
+        let roughDistanceMM = percentile(regionDepths, 0.5) * 1000.0
+        let depthPixelsPerMM = intrinsics.fx / roughDistanceMM * (scaleX + scaleY) / 2.0
+        let bandInner = 2.0 * depthPixelsPerMM
+        let bandOuter = max(bandInner + 1.5, 6.0 * depthPixelsPerMM)
+        
+        // Back-project periwound skin samples to camera space (meters)
+        var skinSamples: [DepthSample] = []
+        let startX = max(0, Int((polyMinX - bandOuter).rounded(.down)))
+        let endX = min(width - 1, Int((polyMaxX + bandOuter).rounded(.up)))
+        let startY = max(0, Int((polyMinY - bandOuter).rounded(.down)))
+        let endY = min(height - 1, Int((polyMaxY + bandOuter).rounded(.up)))
+        guard startX <= endX, startY <= endY else { return nil }
+        
+        for y in startY...endY {
+            for x in startX...endX {
+                guard let z = depth(atX: x, y: y) else { continue }
+                let point = CGPoint(x: Double(x) + 0.5, y: Double(y) + 0.5)
+                guard !isPointInPolygon(point: point, polygon: polygon) else { continue }
+                let distance = distanceToPolygonEdge(point: point, polygon: polygon)
+                guard distance >= bandInner && distance <= bandOuter else { continue }
+                
+                let u = Double(point.x) / scaleX
+                let v = Double(point.y) / scaleY
+                skinSamples.append(DepthSample(
+                    x: (u - intrinsics.cx) / intrinsics.fx * z,
+                    y: (v - intrinsics.cy) / intrinsics.fy * z,
+                    z: z
+                ))
+            }
+        }
+        
+        // Skin plane Z = a·X + b·Y + c in camera space
+        guard skinSamples.count >= 12, let plane = fitRobustPlane(to: skinSamples) else { return nil }
+        
+        // Distance to the skin plane along the ray through the wound centroid
+        let centroidU = points.reduce(0.0) { $0 + Double($1.x) } / Double(points.count)
+        let centroidV = points.reduce(0.0) { $0 + Double($1.y) } / Double(points.count)
+        let rayX = (centroidU - intrinsics.cx) / intrinsics.fx
+        let rayY = (centroidV - intrinsics.cy) / intrinsics.fy
+        let denominator = 1.0 - plane.a * rayX - plane.b * rayY
+        guard denominator > 0 else { return nil }
+        let distanceMeters = plane.c / denominator
+        guard distanceMeters > 0.05, distanceMeters < 2.0 else { return nil }
+        
+        // Pixels per mm for a surface facing the camera at that distance
+        let focalLength = (intrinsics.fx + intrinsics.fy) / 2.0
+        let pixelsPerMillimeter = focalLength / (distanceMeters * 1000.0)
+        
+        // Tilt: normal (-a, -b, 1) vs camera axis; the surface recedes along the gradient (a, b)
+        let gradient = (plane.a * plane.a + plane.b * plane.b).squareRoot()
+        let tiltDegrees = atan(gradient) * 180.0 / .pi
+        let tilt = SurfaceTilt(
+            angleDegrees: tiltDegrees,
+            directionX: gradient > 1e-6 ? plane.a / gradient : 1.0,
+            directionY: gradient > 1e-6 ? plane.b / gradient : 0.0
+        )
+        
+        return MeasurementCalibration(
+            pixelsPerMillimeter: pixelsPerMillimeter,
+            calibrationType: .lidar(depth: Float(distanceMeters), confidence: 0.9),
+            captureDistance: Float(distanceMeters),
+            captureAngle: Float(tiltDegrees),
+            metadata: [
+                "calibrationMethod": "depthIntrinsics",
+                "distanceMM": String(format: "%.1f", distanceMeters * 1000.0),
+                "tiltDegrees": String(format: "%.1f", tiltDegrees)
+            ],
+            surfaceTilt: tilt
+        )
+    }
+    
+    /// Maximum tilt corrected; beyond this, foreshortening is too severe to undo reliably
+    private static let maximumCorrectableTiltDegrees = 60.0
+    
+    /// Undoes foreshortening of a tilted skin surface by stretching the outline along the
+    /// direction the surface recedes, by 1 / cos(tilt). This is the local affine rectification
+    /// of the skin plane, accurate when the wound is small relative to camera distance.
+    private func rectifiedPoints(_ points: [CGPoint], for calibration: MeasurementCalibration) -> [CGPoint] {
+        guard let tilt = calibration.surfaceTilt, tilt.angleDegrees > 0.5, points.count >= 3 else { return points }
+        
+        let angle = min(tilt.angleDegrees, Self.maximumCorrectableTiltDegrees) * .pi / 180.0
+        let stretch = 1.0 / cos(angle) - 1.0
+        let centerX = points.reduce(0.0) { $0 + Double($1.x) } / Double(points.count)
+        let centerY = points.reduce(0.0) { $0 + Double($1.y) } / Double(points.count)
+        
+        return points.map { point in
+            let dx = Double(point.x) - centerX
+            let dy = Double(point.y) - centerY
+            let along = dx * tilt.directionX + dy * tilt.directionY
+            return CGPoint(
+                x: Double(point.x) + stretch * along * tilt.directionX,
+                y: Double(point.y) + stretch * along * tilt.directionY
+            )
+        }
     }
     
     // MARK: - Private Calculation Methods

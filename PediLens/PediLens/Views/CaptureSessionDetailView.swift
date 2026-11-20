@@ -567,7 +567,17 @@ struct CaptureSessionDetailView: View {
                 
                 calibrationBadge(measurements: measurements)
             }
-            
+
+            if let tilt = measurements.calibrationUsed.surfaceTilt,
+               tilt.angleDegrees > SurfaceTilt.warningThresholdDegrees {
+                Label(
+                    "Camera was tilted \(Int(tilt.angleDegrees.rounded()))° from the skin. Measurements are corrected, but retake the photo facing the wound directly for best accuracy.",
+                    systemImage: "exclamationmark.triangle.fill"
+                )
+                .font(.caption)
+                .foregroundColor(.orange)
+            }
+
             // Highlighted Total Area Card
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
@@ -861,26 +871,25 @@ struct CaptureSessionDetailView: View {
         
         Task {
             do {
-                let calibration: MeasurementCalibration
-                if let custom = self.customCalibration {
-                    calibration = custom
-                } else {
-                    let scaleService = ScaleDetectionService()
-                    if let scaleInfo = try? await scaleService.detectReferenceScale(in: image),
-                       let detectedCalibration = MeasurementCalibration.fromReferenceScale(scaleInfo) {
-                        calibration = detectedCalibration
-                    } else {
-                        calibration = MeasurementCalibration.estimated()
-                    }
-                }
-                
                 var depthData: DepthData? = nil
                 if let depthPath = session.depthDataPath, let sessionID = session.id {
                     depthData = try? await loadDepthData(sessionID: sessionID, depthPath: depthPath, imageSize: image.size)
                 }
                 
+                // Detect first: depth-based calibration is measured around the wound itself
                 let detectionService = CoreMLWoundDetectionService()
-                let boundaries = try await detectionService.detectMultipleWoundBoundaries(in: image, calibration: calibration)
+                let boundaries = try await detectionService.detectMultipleWoundBoundaries(in: image, calibration: self.customCalibration)
+                
+                let calibration: MeasurementCalibration
+                if let custom = self.customCalibration {
+                    calibration = custom
+                } else {
+                    calibration = await automaticCalibration(
+                        for: image,
+                        depthData: depthData,
+                        woundPoints: boundaries.first?.points ?? []
+                    )
+                }
                 
                 let measurementManager = MeasurementManager()
                 
@@ -959,22 +968,23 @@ struct CaptureSessionDetailView: View {
         
         Task {
             do {
+                var depthData: DepthData? = nil
+                if let depthPath = session.depthDataPath, let sessionID = session.id {
+                    depthData = try? await loadDepthData(sessionID: sessionID, depthPath: depthPath, imageSize: image.size)
+                }
+                
                 let calibration: MeasurementCalibration
                 if let custom = self.customCalibration {
                     calibration = custom
                 } else if let existingCalData = session.measurement?.calibrationData,
                           let decodedCal = try? JSONDecoder().decode(MeasurementCalibration.self, from: existingCalData) {
                     calibration = decodedCal
-                } else if let scaleInfo = try? await ScaleDetectionService().detectReferenceScale(in: image),
-                          let detectedCal = MeasurementCalibration.fromReferenceScale(scaleInfo) {
-                    calibration = detectedCal
                 } else {
-                    calibration = MeasurementCalibration.estimated(pixelsPerMillimeter: 10.0)
-                }
-                
-                var depthData: DepthData? = nil
-                if let depthPath = session.depthDataPath, let sessionID = session.id {
-                    depthData = try? await loadDepthData(sessionID: sessionID, depthPath: depthPath, imageSize: image.size)
+                    calibration = await automaticCalibration(
+                        for: image,
+                        depthData: depthData,
+                        woundPoints: wounds.first?.points ?? []
+                    )
                 }
                 
                 let measurementManager = MeasurementManager()
@@ -1175,6 +1185,30 @@ struct CaptureSessionDetailView: View {
         }
     }
     
+    /// Picks the most reliable automatic calibration, in order: a physical reference object
+    /// (card, coin), metric depth with camera intrinsics, a fuzzy anatomical estimate, and
+    /// finally a flagged low-accuracy default.
+    private func automaticCalibration(for image: UIImage, depthData: DepthData?, woundPoints: [CGPoint]) async -> MeasurementCalibration {
+        let scaleService = ScaleDetectionService()
+        if let scaleInfo = try? await scaleService.detectReferenceScale(in: image, includeAnatomical: false),
+           let calibration = MeasurementCalibration.fromReferenceScale(scaleInfo) {
+            return calibration
+        }
+        
+        if let depthData,
+           let calibration = MeasurementManager().depthCalibration(for: woundPoints, depthData: depthData) {
+            print("✅ Using depth-based calibration: \(calibration.metadata?["distanceMM"] ?? "?") mm away, tilt \(calibration.metadata?["tiltDegrees"] ?? "?")°")
+            return calibration
+        }
+        
+        if let scaleInfo = try? await scaleService.detectAnatomicalScale(in: image.orientationNormalized()),
+           let calibration = MeasurementCalibration.fromReferenceScale(scaleInfo) {
+            return calibration
+        }
+        
+        return MeasurementCalibration.estimated()
+    }
+    
     /// Loads stored depth data aligned to the display-oriented photo of `imageSize`
     private func loadDepthData(sessionID: UUID, depthPath: String, imageSize: CGSize) async throws -> DepthData {
         let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
@@ -1232,11 +1266,22 @@ struct CaptureSessionDetailView: View {
         
         let accuracy: DepthAccuracy = (depthDict["accuracy"] as? String) == "absolute" ? .absolute : .relative
         
+        var intrinsics: CameraIntrinsics?
+        if let values = depthDict["intrinsics"] as? [String: Double],
+           let fx = values["fx"], let fy = values["fy"], let cx = values["cx"], let cy = values["cy"],
+           let referenceWidth = values["referenceWidth"], let referenceHeight = values["referenceHeight"] {
+            intrinsics = CameraIntrinsics(
+                fx: fx, fy: fy, cx: cx, cy: cy,
+                referenceSize: CGSize(width: referenceWidth, height: referenceHeight)
+            )
+        }
+        
         return DepthData(
             depthMap: depthMap,
             calibrationData: nil,
             accuracy: accuracy,
-            referenceImageSize: imageSize
+            referenceImageSize: imageSize,
+            intrinsics: intrinsics
         )
     }
     

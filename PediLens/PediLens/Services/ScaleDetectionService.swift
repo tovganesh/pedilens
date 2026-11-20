@@ -68,7 +68,9 @@ class ScaleDetectionService {
     /// Detects reference scale or object in an image
     /// - Parameter image: Image to analyze
     /// - Returns: Reference scale information if detected
-    func detectReferenceScale(in image: UIImage) async throws -> ReferenceScaleInfo? {
+    /// - Parameter includeAnatomical: Whether to fall back to fuzzy anatomical scale. Callers with a
+    ///   better reference-free option (e.g. metric depth) can try that first and request anatomy later.
+    func detectReferenceScale(in image: UIImage, includeAnatomical: Bool = true) async throws -> ReferenceScaleInfo? {
         print("🔍 Detecting reference scale in image...")
         
         // Normalize once so every detector sees pixels in display orientation
@@ -118,6 +120,10 @@ class ScaleDetectionService {
         // 5. Last resort: fuzzy anatomical scale (Foot & Great Toe, Hand & Finger).
         // Relies on population-average dimensions, so it must never pre-empt a real
         // reference object and is reported as low accuracy.
+        guard includeAnatomical else {
+            print("ℹ️ No reference object detected")
+            return nil
+        }
         do {
             if let anatomical = try await detectAnatomicalScale(in: image) {
                 print("⚠️ Using fuzzy anatomical scale (\(anatomical.objectType.displayName)) - low accuracy")
