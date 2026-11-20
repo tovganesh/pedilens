@@ -165,6 +165,9 @@ class CameraManager: NSObject, CameraManagerProtocol, ObservableObject {
             throw CameraError.deviceConfigurationFailed
         }
         
+        // Must follow addInput: adding the input applies the session preset's format
+        configureDepthFormat(videoDevice)
+        
         // Create and configure photo output
         let photoOutput = AVCapturePhotoOutput()
         
@@ -236,9 +239,49 @@ class CameraManager: NSObject, CameraManagerProtocol, ObservableObject {
         }
     }
     
+    /// On the LiDAR camera, selects the highest-resolution format that supports depth so photos
+    /// carry absolute (metric) depth, which enables reference-free scale and tilt correction.
+    private func configureDepthFormat(_ device: AVCaptureDevice) {
+        guard device.deviceType == .builtInLiDARDepthCamera else { return }
+        
+        func pixelCount(_ description: CMFormatDescription) -> Int {
+            let dimensions = CMVideoFormatDescriptionGetDimensions(description)
+            return Int(dimensions.width) * Int(dimensions.height)
+        }
+        
+        let metricDepthTypes: Set<FourCharCode> = [kCVPixelFormatType_DepthFloat32, kCVPixelFormatType_DepthFloat16]
+        func metricDepthFormats(of format: AVCaptureDevice.Format) -> [AVCaptureDevice.Format] {
+            format.supportedDepthDataFormats.filter {
+                metricDepthTypes.contains(CMFormatDescriptionGetMediaSubType($0.formatDescription))
+            }
+        }
+        
+        guard let format = device.formats
+                .filter({ !metricDepthFormats(of: $0).isEmpty })
+                .max(by: { pixelCount($0.formatDescription) < pixelCount($1.formatDescription) }),
+              let depthFormat = metricDepthFormats(of: format)
+                .max(by: { pixelCount($0.formatDescription) < pixelCount($1.formatDescription) }) else {
+            print("⚠️ LiDAR camera has no metric depth format; depth will be unavailable")
+            return
+        }
+        
+        do {
+            try device.lockForConfiguration()
+            device.activeFormat = format
+            device.activeDepthDataFormat = depthFormat
+            device.unlockForConfiguration()
+        } catch {
+            print("⚠️ Failed to configure LiDAR depth format: \(error.localizedDescription)")
+        }
+    }
+    
     private func getBestCameraDevice() -> AVCaptureDevice? {
         // Try to get the best available camera
-        // Priority: Triple camera > Dual camera > Wide angle > Default
+        // Priority: LiDAR (metric depth) > Triple camera > Dual camera > Wide angle > Default
+        
+        if let device = AVCaptureDevice.default(.builtInLiDARDepthCamera, for: .video, position: .back) {
+            return device
+        }
         
         if let device = AVCaptureDevice.default(.builtInTripleCamera, for: .video, position: .back) {
             return device
@@ -510,18 +553,21 @@ private class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate {
             }
 
             // Depth is delivered in sensor orientation, while the saved photo is displayed using
-            // its EXIF orientation. Rotate depth to match so boundary coordinates line up.
-            if let rawOrientation = photo.metadata[kCGImagePropertyOrientation as String] as? UInt32,
-               let orientation = CGImagePropertyOrientation(rawValue: rawOrientation) {
-                avDepthData = avDepthData.applyingExifOrientation(orientation)
-            }
+            // its EXIF orientation. Rotate depth (and intrinsics) to match so coordinates line up.
+            let orientation = (photo.metadata[kCGImagePropertyOrientation as String] as? UInt32)
+                .flatMap { CGImagePropertyOrientation(rawValue: $0) } ?? .up
+            // Read intrinsics before rotating, so the orientation transform is applied exactly once
+            let intrinsics = avDepthData.cameraCalibrationData
+                .flatMap { CameraIntrinsics(calibrationData: $0).oriented(orientation) }
+            avDepthData = avDepthData.applyingExifOrientation(orientation)
 
             let accuracy: DepthAccuracy = avDepthData.depthDataAccuracy == .absolute ? .absolute : .relative
 
             self.depthData = DepthData(
                 depthMap: avDepthData.depthDataMap,
                 calibrationData: avDepthData.cameraCalibrationData,
-                accuracy: accuracy
+                accuracy: accuracy,
+                intrinsics: intrinsics
             )
         }
     }
