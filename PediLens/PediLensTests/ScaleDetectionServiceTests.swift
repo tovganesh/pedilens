@@ -155,8 +155,79 @@ class ScaleDetectionServiceTests: XCTestCase {
         }
     }
     
+    // MARK: - Orientation & Geometry Regression Tests
+
+    func testDetectUSQuarter_EXIFRotatedNonSquareImage_DetectsCircle() async throws {
+        // Camera captures store sensor-oriented pixels plus an orientation tag. Detection
+        // must not mix raw pixel dimensions with display-oriented Vision coordinates,
+        // which would stretch the circle by 4:3 and fail the circularity check.
+        let diameter: CGFloat = 120.0
+        // Off-center in raw pixels so a wrong orientation mapping moves the reported box
+        let raw = createCircleImage(imageSize: CGSize(width: 800, height: 600), diameter: diameter, center: CGPoint(x: 250, y: 200), scale: 1)
+        let tagged = try XCTUnwrap(raw.cgImage.map { UIImage(cgImage: $0, scale: 1, orientation: .right) })
+        XCTAssertEqual(tagged.size, CGSize(width: 600, height: 800))
+
+        let result = try await service.detectUSQuarter(in: tagged)
+        let info = try XCTUnwrap(result, "Quarter should be detected in an EXIF-rotated image")
+        let ppmm = try XCTUnwrap(info.pixelsPerMillimeter)
+        XCTAssertEqual(Double(ppmm), Double(diameter / 24.26), accuracy: 0.5)
+
+        // .right displays raw (x, y) at (rawHeight - y, x): (250, 200) -> (400, 250),
+        // reported in display (top-left origin) coordinates
+        XCTAssertEqual(Double(info.boundingBox.midX), 400, accuracy: 15)
+        XCTAssertEqual(Double(info.boundingBox.midY), 250, accuracy: 15)
+    }
+
+    func testDetectCreditCard_RotatedCard_UsesCornerDistances() async throws {
+        // A card rotated 20° has a larger axis-aligned bounding box than its true size.
+        let cardSize = CGSize(width: 317.2, height: 200.0)
+        let image = createCardImage(imageSize: CGSize(width: 800, height: 800), cardSize: cardSize, rotation: .pi / 9, scale: 1)
+
+        let result = try await service.detectCreditCard(in: image)
+        let info = try XCTUnwrap(result, "Rotated credit card should be detected")
+        let ppmm = try XCTUnwrap(info.pixelsPerMillimeter)
+
+        // True scale is 317.2 / 85.6 ≈ 3.71 px/mm; the bounding box would give ≈ 4.28
+        XCTAssertEqual(Double(ppmm), Double(cardSize.width / 85.6), accuracy: 0.15)
+    }
+
+    func testCalibrationAccuracy_AnatomicalReferencesAreLowAccuracy() {
+        XCTAssertEqual(CalibrationType.referenceScale(objectType: .adultHallux, confidence: 0.85).accuracy, .low)
+        XCTAssertEqual(CalibrationType.referenceScale(objectType: .adultForefoot, confidence: 0.85).accuracy, .low)
+        XCTAssertEqual(CalibrationType.referenceScale(objectType: .creditCard, confidence: 0.9).accuracy, .medium)
+        XCTAssertEqual(CalibrationType.referenceScale(objectType: .usQuarter, confidence: 0.9).accuracy, .medium)
+    }
+
     // MARK: - Helpers
-    
+
+    private func createCardImage(imageSize: CGSize, cardSize: CGSize, rotation: CGFloat, scale: CGFloat) -> UIImage {
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = scale
+        let renderer = UIGraphicsImageRenderer(size: imageSize, format: format)
+        return renderer.image { ctx in
+            UIColor.white.setFill()
+            ctx.fill(CGRect(origin: .zero, size: imageSize))
+
+            let cg = ctx.cgContext
+            cg.translateBy(x: imageSize.width / 2, y: imageSize.height / 2)
+            cg.rotate(by: rotation)
+            UIColor.black.setFill()
+            cg.fill(CGRect(x: -cardSize.width / 2, y: -cardSize.height / 2, width: cardSize.width, height: cardSize.height))
+        }
+    }
+
+    private func createCircleImage(imageSize: CGSize, diameter: CGFloat, center: CGPoint, scale: CGFloat) -> UIImage {
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = scale
+        let renderer = UIGraphicsImageRenderer(size: imageSize, format: format)
+        return renderer.image { ctx in
+            UIColor.white.setFill()
+            ctx.fill(CGRect(origin: .zero, size: imageSize))
+            UIColor.black.setFill()
+            ctx.cgContext.fillEllipse(in: CGRect(x: center.x - diameter / 2, y: center.y - diameter / 2, width: diameter, height: diameter))
+        }
+    }
+
     private func createCardImage(imageSize: CGSize, cardSize: CGSize) -> UIImage {
         let renderer = UIGraphicsImageRenderer(size: imageSize)
         return renderer.image { ctx in
